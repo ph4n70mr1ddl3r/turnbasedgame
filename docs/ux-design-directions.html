@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>turnbasedgame - Design Direction Exploration</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-bg: #0f172a;
+            --color-surface: #1e293b;
+            --color-text: #f1f5f9;
+            --color-primary: #3b82f6;
+            --color-secondary: #10b981;
+            --color-warning: #f59e0b;
+            --color-error: #ef4444;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--color-bg);
+            color: var(--color-text);
+        }
+        
+        .design-direction {
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .design-direction:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+        }
+        
+        .design-direction.active {
+            border-color: var(--color-primary);
+        }
+        
+        .poker-table {
+            position: relative;
+            background: var(--color-surface);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .poker-chip {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        .poker-card {
+            width: 60px;
+            height: 90px;
+            border-radius: 8px;
+            position: absolute;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .card-rank {
+            font-size: 24px;
+            line-height: 1;
+        }
+        
+        .card-suit {
+            font-size: 32px;
+            line-height: 1;
+        }
+        
+        .action-button {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+        
+        .feature-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        
+        .feature-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .tab-button {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            color: var(--color-text);
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+        
+        .tab-button.active {
+            color: var(--color-primary);
+            border-bottom-color: var(--color-primary);
+        }
+        
+        .direction-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+        
+        .direction-details.active {
+            max-height: 1000px;
+        }
+        
+        /* Direction-specific styles */
+        .direction-minimalist .poker-table {
+            background: #0f172a;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .direction-datacentric .poker-table {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        }
+        
+        .direction-traditional .poker-table {
+            background: #1a472a;
+            border: 2px solid #92400e;
+        }
+        
+        .direction-commandcenter .poker-table {
+            background: #0c4a6e;
+        }
+        
+        .direction-zen .poker-table {
+            background: #1e3a8a;
+        }
+        
+        .direction-progressive .poker-table {
+            background: #312e81;
+        }
+        
+        .direction-modular .poker-table {
+            background: #4c1d95;
+        }
+        
+        .direction-fluid .poker-table {
+            background: #5b21b6;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-6">
+    <div class="max-w-7xl mx-auto">
+        <header class="mb-12">
+            <h1 class="text-4xl font-bold mb-4">turnbasedgame - Design Direction Exploration</h1>
+            <p class="text-xl text-gray-300 mb-6">8 different visual approaches for your "no-distractions poker lab"</p>
+            
+            <div class="bg-blue-900/20 border border-blue-800 rounded-xl p-6 mb-8">
+                <h2 class="text-2xl font-semibold mb-3">🎯 Evaluation Framework</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="bg-blue-900/30 p-4 rounded-lg">
+                        <h3 class="font-semibold mb-2">Layout Intuitiveness</h3>
+                        <p class="text-sm text-gray-300">Which information hierarchy matches your priorities?</p>
+                    </div>
+                    <div class="bg-blue-900/30 p-4 rounded-lg">
+                        <h3 class="font-semibold mb-2">Interaction Style</h3>
+                        <p class="text-sm text-gray-300">Which interaction style fits your core experience?</p>
+                    </div>
+                    <div class="bg-blue-900/30 p-4 rounded-lg">
+                        <h3 class="font-semibold mb-2">Visual Weight</h3>
+                        <p class="text-sm text-gray-300">Which visual density feels right for your brand?</p>
+                    </div>
+                    <div class="bg-blue-900/30 p-4 rounded-lg">
+                        <h3 class="font-semibold mb-2">Navigation Approach</h3>
+                        <p class="text-sm text-gray-300">Which navigation pattern matches user expectations?</p>
+                    </div>
+                    <div class="bg-blue-900/30 p-4 rounded-lg">
+                        <h3 class="font-semibold mb-2">Component Usage</h3>
+                        <p class="text-sm text-gray-300">How well do components support user journeys?</p>
+                    </div>
+                    <div class="bg-blue-900/30 p-4 rounded-lg">
+                        <h3 class="font-semibold mb-2">Brand Alignment</h3>
+                        <p class="text-sm text-gray-300">Which direction best supports emotional goals?</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex space-x-4 mb-8">
+                <button onclick="showAllDirections()" class="tab-button active">All Directions</button>
+                <button onclick="filterByCategory('minimalist')" class="tab-button">Minimalist</button>
+                <button onclick="filterByCategory('datacentric')" class="tab-button">Data-Centric</button>
+                <button onclick="filterByCategory('traditional')" class="tab-button">Traditional</button>
+                <button onclick="filterByCategory('interactive')" class="tab-button">Interactive</button>
+            </div>
+        </header>
+
+        <main>
+            <div class="comparison-grid mb-12">
+                <!-- Direction 1: Minimalist Analytical -->
+                <div class="design-direction direction-minimalist" id="direction-1">
+                    <div class="bg-gray-900 p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="text-xl font-bold mb-2">1. Minimalist Analytical</h3>
+                                <span class="inline-block bg-gray-800 text-gray-300 text-xs px-2 py-1 rounded">Extreme Focus</span>
+                            </div>
+                            <button onclick="toggleDetails('details-1')" class="text-blue-400 hover:text-blue-300">Details ↓</button>
+                        </div>
+                        
+                        <div class="poker-table h-48 mb-4 relative">
+                            <!-- Central Pot -->
+                            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                                <div class="text-center">
+                                    <div class="text-sm text-gray-400">Pot</div>
+                                    <div class="text-2xl font-bold">$1,250</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Player 1 -->
+                            <div class="absolute top-4 left-4">
+                                <div class="text-xs text-gray-400">You</div>
+                                <div class="text-lg font-bold">$2,450</div>
+                                <div class="poker-chip" style="background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); top: 40px; left: 0;"></div>
+                            </div>
+                            
+                            <!-- Player 2 -->
+                            <div class="absolute top-4 right-4">
+                                <div class="text-xs text-gray-400">Opponent</div>
+                                <div class="text-lg font-bold">$1,980</div>
+                                <div class="poker-chip" style="background: linear-gradient(135deg, #10b981 0%, #34d399 100%); top: 40px; right: 0;"></div>
+                            </div>
+                            
+                            <!-- Community Cards -->
+                            <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                                <div class="poker-card bg-white text-gray-900">
+                                    <div class="card-rank">A</div>
+                                    <div class="card-suit">♠</div>
+                                </div>
+                                <div class="poker-card bg-white text-gray-900">
+                                    <div class="card-rank">K</div>
+                                    <div class="card-suit">♥</div>
+                                </div>
+                                <div class="poker-card bg-white text-gray-900">
+                                    <div class="card-rank">Q</div>
+                                    <div class="card-suit">♦</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="direction-details" id="details-1">
+                            <h4 class="font-semibold mb-2">Key Characteristics:</h4>
+                            <ul class="feature-list text-sm text-gray-300 mb-4">
+                                <li>✅ Extreme visual simplicity</li>
+                                <li>✅ Monochromatic with single accent color</li>
+                                <li>✅ Maximum information hierarchy</li>
+                                <li>✅ Reduced cognitive load</li>
+                                <li>✅ Perfect for extended focused sessions</li>
+                            </ul>
+                            
+                            <div class="flex space-x-2 mb-4">
+                                <div class="action-button bg-blue-600 text-white">Check</div>
+                                <div class="action-button bg-gray-800 text-gray-300">Fold</div>
+                                <div class="action-button bg-green-600 text-white">Call $250</div>
+                                <div class="action-button bg-yellow-600 text-white">Raise</div>
+                            </div>
+                            
+                            <p class="text-sm text-gray-400">
+                                <strong>Best for:</strong> Users who want absolute minimal distraction. Everything extraneous removed, only essential game state visible.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Direction 2: Data-Centric -->
+                <div class="design-direction direction-datacentric" id="direction-2">
+                    <div class="bg-gray-900 p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="text-xl font-bold mb-2">2. Data-Centric</h3>
+                                <span class="inline-block bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded">Analytical</span>
+                            </div>
+                            <button onclick="toggleDetails('details-2')" class="text-blue-400 hover:text-blue-300">Details ↓</button>
+                        </div>
+                        
+                        <div class="poker-table h-48 mb-4 relative">
+                            <!-- Data visualization integrated -->
+                            <div class="absolute top-2 left-2 w-24 h-20 bg-blue-900/50 rounded p-2">
+                                <div class="text-xs text-blue-300">Pot Odds</div>
+                                <div class="text-lg font-bold">2:1</div>
+                            </div>
+                            
+                            <div class="absolute top-2 right-2 w-24 h-20 bg-green-900/50 rounded p-2">
+                                <div class="text-xs text-green-300">Win %</div>
+                                <div class="text-lg font-bold">68%</div>
+                            </div>
+                            
+                            <!-- Central pot with data -->
+                            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+                                <div class="text-sm text-gray-400">Pot</div>
+                                <div class="text-2xl font-bold">$1,250</div>
+                                <div class="text-xs text-gray-500">+12% from last hand</div>
+                            </div>
+                            
+                            <!-- Player stats -->
+                            <div class="absolute bottom-2 left-2">
+                                <div class="text-xs">You: <span class="font-bold">$2,450</span></div>
+                                <div class="w-full bg-gray-700 h-1 rounded-full mt-1">
+                                    <div class="bg-blue-600 h-1 rounded-full" style="width: 65%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="direction-details" id="details-2">
+                            <h4 class="font-semibold mb-2">Key Characteristics:</h4>
+                            <ul class="feature-list text-sm text-gray-300 mb-4">
+                                <li>✅ Real-time statistics integrated</li>
+                                <li>✅ Data visualization during gameplay</li>
+                                <li>✅ Analytical decision support</li>
+                                <li>✅ Performance tracking visible</li>
+                                <li>✅ Skill validation through metrics</li>
+                            </ul>
+                            
+                            <p class="text-sm text-gray-400">
+                                <strong>Best for:</strong> Serious players who want data-driven decisions. Statistics aren't separate from gameplay - they're part of the interface.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Direction 3: Traditional Poker (Lab Version) -->
+                <div class="design-direction direction-traditional" id="direction-3">
+                    <div class="bg-gray-900 p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="text-xl font-bold mb-2">3. Traditional Poker</h3>
+                                <span class="inline-block bg-green-900 text-green-300 text-xs px-2 py-1 rounded">Familiar</span>
+                            </div>
+                            <button onclick="toggleDetails('details-3')" class="text-blue-400 hover:text-blue-300">Details ↓</button>
+                        </div>
+                        
+                        <div class="poker-table h-48 mb-4 relative">
+                            <!-- Traditional felt table -->
+                            <div class="absolute inset-0 bg-green-900/30"></div>
+                            
+                            <!-- Wooden table edge -->
+                            <div class="absolute inset-0 border-4 border-amber-900/50 rounded-lg"></div>
+                            
+                            <!-- Central pot with traditional chip stack -->
+                            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                                <div class="flex items-center space-x-2">
+                                    <div class="poker-chip" style="background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); width: 50px; height: 50px;"></div>
+                                    <div class="text-center">
+                                        <div class="text-sm text-amber-300">Pot</div>
+                                        <div class="text-2xl font-bold text-white">$1,250</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Traditional player positions -->
+                            <div class="absolute top-4 left-4 bg-gray-900/80 p-3 rounded-lg">
+                                <div class="text-xs text-gray-300">You</div>
+                                <div class="text-lg font-bold text-white">$2,450</div>
+                            </div>
+                        </div>
+                        
+                        <div class="direction-details" id="details-3">
+                            <h4 class="font-semibold mb-2">Key Characteristics:</h4>
+                            <ul class="feature-list text-sm text-gray-300 mb-4">
+                                <li>✅ Familiar poker table metaphor</li>
+                                <li>✅ Traditional colors (green felt, wood) but dark mode</li>
+                                <li>✅ Standard layout users expect</li>
+                                <li>✅ Comfortable for poker veterans</li>
+                                <li>✅ Lab aesthetic through minimal decoration</li>
+                            </ul>
+                            
+                            <p class="text-sm text-gray-400">
+                                <strong>Best for:</strong> Users who want familiar poker interface but without casino distractions. Traditional layout meets modern dark mode.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Direction 4: Command Center -->
+                <div class="design-direction direction-commandcenter" id="direction-4">
+                    <div class="bg-gray-900 p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="text-xl font-bold mb-2">4. Command Center</h3>
+                                <span class="inline-block bg-purple-900 text-purple-300 text-xs px-2 py-1 rounded">Technical</span>
+                            </div>
+                            <button onclick="toggleDetails('details-4')" class="text-blue-400 hover:text-blue-300">Details ↓</button>
+                        </div>
+                        
+                        <div class="poker-table h-48 mb-4 relative">
+                            <!-- Multi-panel layout -->
+                            <div class="absolute top-0 left-0 w-1/3 h-full border-r border-gray-700 p-2">
+                                <div class="text-xs text-gray-400">Connection</div>
+                                <div class="text-sm text-green-400">● Stable</div>
+                            </div>
+                            
+                            <div class="absolute top-0 right-0 w-1/3 h-full border-l border-gray-700 p-2">
+                                <div class="text-xs text-gray-400">Time</div>
+                                <div class="text-sm">00:24</div>
+                            </div>
+                            
+                            <!-- Central game state -->
+                            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+                                <div class="text-sm font-mono">MAIN GAME</div>
+                                <div class="text-2xl font-bold">$1,250</div>
+                            </div>
+                            
+                            <!-- Status indicators -->
+                            <div class="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-4">
+                                <div class="text-xs bg-blue-900/50 px-2 py-1 rounded">ACTIVE</div>
+                                <div class="text-xs bg-green-900/50 px-2 py-1 rounded">CONNECTED</div>
+                            </div>
+                        </div>
+                        
+                        <div class="direction-details" id="details-4">
+                            <h4 class="font-semibold mb-2">Key Characteristics:</h4>
+                            <ul class="feature-list text-sm text-gray-300 mb-4">
+                                <li>✅ Technical dashboard aesthetic</li>
+                                <li>✅ Multiple data panels visible</li>
+                                <li>✅ System status always visible</li>
+                                <li>✅ Feels like professional tool</li>
+                                <li>✅ Emphasizes technical reliability</li>
+                            </ul>
+                            
+                            <p class="text-sm text-gray-400">
+                                <strong>Best for:</strong> Users who value technical transparency. Feels like a trading desk or mission control - all system state visible.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Direction 5: Zen Focus -->
+                <div class="design-direction direction-zen" id="direction-5">
+                    <div class="bg-gray-900 p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="text-xl font-bold mb-2">5. Zen Focus</h3>
+                                <span class="inline-block bg-indigo-900 text-indigo-300 text-xs px-2 py-1 rounded">Calm</span>
+                            </div>
+                            <button onclick="toggleDetails('details-5')" class="text-blue-400 hover:text-blue-300">Details ↓</button>
+                        </div>
+                        
+                        <div class="poker-table h-48 mb-4 relative">
+                            <!-- Very calm, minimal design -->
+                            <div class="absolute inset-0 bg-indigo-900/20 rounded-lg flex items-center justify-center">
+                                <div class="text-center">
+                                    <div class="text-4xl mb-2">♠</div>
+                                    <div class="text-xl">$1,250</div>
+                                    <div class="text-sm text-gray-400 mt-2">pot</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Subtle player indicators -->
+                            <div class="absolute top-4 left-4 opacity-50">
+                                <div class="text-sm">$2,450</div>
+                            </div>
+                            
+                            <div class="absolute top-4 right-4 opacity-50">
+                                <div class="text-sm">$1,980</div>
+                            </div>
+                            
+                            <!-- Breathing animation indicator -->
+                            <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                                    <div class="text-xs text-gray-400">thinking</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="direction-details" id="details-5">
+                            <h4 class="font-semibold mb-2">Key Characteristics:</h4>
+                            <ul class="feature-list text-sm text-gray-300 mb-4">
+                                <li>✅ Ultra-reduced visual noise</li>
+                                <li>✅ Calming color palette</li>
+                                <li>✅ Breathing/animation for timer</li>
+                                <li>✅ Emphasis on thinking space</li>
+                                <li>✅ Meditative gameplay experience</li>
+                            </ul>
+                            
+                            <p class="text-sm text-gray-400">
+                                <strong>Best for:</strong> Users who want poker as meditation. Reduces anxiety, emphasizes calm decision-making, minimal visual stimulation.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Direction 6: Progressive Disclosure -->
+                <div class="design-direction direction-progressive" id="direction-6">
+                    <div class="bg-gray-900 p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="text-xl font-bold mb-2">6. Progressive Disclosure</h3>
+                                <span class="inline-block bg-pink-900 text-pink-300 text-xs px-2 py-1 rounded">Adaptive</span>
+                            </div>
+                            <button onclick="toggleDetails('details-6')" class="text-blue-400 hover:text-blue-300">Details ↓</button>
+                        </div>
+                        
+                        <div class="poker-table h-48 mb-4 relative">
+                            <!-- Clean base interface -->
+                            <div class="absolute inset-0 bg-gray-800 rounded-lg p-4">
+                                <div class="text-center mb-4">
+                                    <div class="text-2xl font-bold">$1,250</div>
+                                    <div class="text-sm text-gray-400">Pot</div>
+                                </div>
+                                
+                                <!-- Expandable sections -->
+                                <div class="flex justify-center space-x-4">
+                                    <button class="text-xs bg-gray-700 px-3 py-1 rounded hover:bg-gray-600">Show Stats</button>
+                                    <button class="text-xs bg-gray-700 px-3 py-1 rounded hover:bg-gray-600">Show History</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Hidden panel preview -->
+                            <div class="absolute bottom-2 left-2 right-2 bg-gray-900/80 p-2 rounded text-xs">
+                                <div class="flex justify-between">
+                                    <span>Stats panel available</span>
+                                    <span class="text-blue-400">+</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="direction-details" id="details-6">
+                            <h4 class="font-semibold mb-2">Key Characteristics:</h4>
+                            <ul class="feature-list text-sm text-gray-300 mb-4">
+                                <li>✅ Clean base interface</li>
+                                <li>✅ Advanced features hidden by default</li>
+                                <li>✅ Expandable panels for statistics</li>
+                                <li>✅ Adaptive complexity</li>
+                                <li>✅ Grows with user expertise</li>
+                            </ul>
+                            
+                            <p class="text-sm text-gray-400">
+                                <strong>Best for:</strong> Users who want simplicity initially but advanced features available. Interface complexity adapts to user needs.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Direction 7: Modular Grid -->
+                <div class="design-direction direction-modular" id="direction-7">
+                    <div class="bg-gray-900 p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="text-xl font-bold mb-2">7. Modular Grid</h3>
+                                <span class="inline-block bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded">Structured</span>
+                            </div>
+                            <button onclick="toggleDetails('details-7')" class="text-blue-400 hover:text-blue-300">Details ↓</button>
+                        </div>
+                        
+                        <div class="poker-table h-48 mb-4 relative">
+                            <!-- Grid layout -->
+                            <div class="absolute inset-0 grid grid-cols-3 grid-rows-3 gap-2 p-2">
+                                <div class="bg-gray-800 rounded p-2 col-span-2">
+                                    <div class="text-xs text-gray-400">Pot</div>
+                                    <div class="text-lg font-bold">$1,250</div>
+                                </div>
+                                <div class="bg-gray-800 rounded p-2 row-span-2">
+                                    <div class="text-xs text-gray-400">You</div>
+                                    <div class="text-lg font-bold">$2,450</div>
+                                </div>
+                                <div class="bg-gray-800 rounded p-2">
+                                    <div class="text-xs text-gray-400">Cards</div>
+                                    <div class="text-sm">A♠ K♥</div>
+                                </div>
+                                <div class="bg-gray-800 rounded p-2">
+                                    <div class="text-xs text-gray-400">Opponent</div>
+                                    <div class="text-lg font-bold">$1,980</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="direction-details" id="details-7">
+                            <h4 class="font-semibold mb-2">Key Characteristics:</h4>
+                            <ul class="feature-list text-sm text-gray-300 mb-4">
+                                <li>✅ Strict grid-based layout</li>
+                                <li>✅ Consistent component sizing</li>
+                                <li>✅ Highly structured information</li>
+                                <li>✅ Predictable layout patterns</li>
+                                <li>✅ Systematic design approach</li>
+                            </ul>
+                            
+                            <p class="text-sm text-gray-400">
+                                <strong>Best for:</strong> Users who appreciate systematic design. Everything has its place, consistent spacing, predictable layouts.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Direction 8: Fluid Organic -->
+                <div class="design-direction direction-fluid" id="direction-8">
+                    <div class="bg-gray-900 p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="text-xl font-bold mb-2">8. Fluid Organic</h3>
+                                <span class="inline-block bg-teal-900 text-teal-300 text-xs px-2 py-1 rounded">Natural</span>
+                            </div>
+                            <button onclick="toggleDetails('details-8')" class="text-blue-400 hover:text-blue-300">Details ↓</button>
+                        </div>
+                        
+                        <div class="poker-table h-48 mb-4 relative">
+                            <!-- Organic shapes and flow -->
+                            <div class="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-900/30 to-teal-900/30">
+                                <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                                    <div class="text-center">
+                                        <div class="text-3xl font-bold">$1,250</div>
+                                        <div class="text-sm text-gray-300">growing pot</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Organic chip clusters -->
+                                <div class="absolute top-4 left-4">
+                                    <div class="flex space-x-1">
+                                        <div class="w-8 h-8 bg-blue-500 rounded-full"></div>
+                                        <div class="w-8 h-8 bg-blue-500 rounded-full ml-[-10px]"></div>
+                                        <div class="w-8 h-8 bg-blue-500 rounded-full ml-[-10px]"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="direction-details" id="details-8">
+                            <h4 class="font-semibold mb-2">Key Characteristics:</h4>
+                            <ul class="feature-list text-sm text-gray-300 mb-4">
+                                <li>✅ Organic shapes and curves</li>
+                                <li>✅ Flowing layout patterns</li>
+                                <li>✅ Natural motion principles</li>
+                                <li>✅ Soft, approachable aesthetic</li>
+                                <li>✅ Human-centric design</li>
+                            </ul>
+                            
+                            <p class="text-sm text-gray-400">
+                                <strong>Best for:</strong> Users who want poker to feel natural and human. Soft shapes, flowing layouts, less rigid than traditional interfaces.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-900 rounded-xl p-8 mb-12">
+                <h2 class="text-2xl font-bold mb-6">Selection & Next Steps</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4">Choose Your Direction</h3>
+                        <p class="text-gray-300 mb-6">Click on any design direction above to select it as your preferred approach.</p>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span class="text-sm font-medium">Selected Direction:</span>
+                                    <span id="selected-direction" class="text-sm font-bold text-blue-400">None selected</span>
+                                </div>
+                                <div class="w-full bg-gray-800 rounded-full h-2">
+                                    <div id="selection-bar" class="bg-blue-600 h-2 rounded-full" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            
+                            <button onclick="confirmSelection()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition">
+                                Confirm Selection
+                            </button>
+                            
+                            <button onclick="showCombinationOptions()" class="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold py-3 px-6 rounded-lg transition">
+                                Combine Elements from Multiple
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4">Design Direction Analysis</h3>
+                        <div class="space-y-4">
+                            <div class="bg-gray-800 p-4 rounded-lg">
+                                <h4 class="font-medium mb-2">Alignment with Project Goals:</h4>
+                                <div class="space-y-2">
+                                    <div>
+                                        <div class="flex justify-between text-sm mb-1">
+                                            <span>No-Distractions Poker Lab</span>
+                                            <span id="goal-alignment">-</span>
+                                        </div>
+                                        <div class="w-full bg-gray-700 rounded-full h-2">
+                                            <div id="goal-bar" class="bg-green-600 h-2 rounded-full" style="width: 0%"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <div class="flex justify-between text-sm mb-1">
+                                            <span>Calm Confidence Under Pressure</span>
+                                            <span id="emotion-alignment">-</span>
+                                        </div>
+                                        <div class="w-full bg-gray-700 rounded-full h-2">
+                                            <div id="emotion-bar" class="bg-green-600 h-2 rounded-full" style="width: 0%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-gray-800 p-4 rounded-lg">
+                                <h4 class="font-medium mb-2">Implementation Considerations:</h4>
+                                <ul class="text-sm text-gray-300 list-disc pl-5">
+                                    <li>All directions use our established design tokens</li>
+                                    <li>Tailwind + headless components support all variations</li>
+                                    <li>Dark mode foundation maintained across all</li>
+                                    <li>Accessibility requirements met in each direction</li>
+                                    <li>Performance optimized for real-time gameplay</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let selectedDirection = null;
+        let allDirections = document.querySelectorAll('.design-direction');
+        
+        // Add click handlers to all direction cards
+        allDirections.forEach(direction => {
+            direction.addEventListener('click', function(e) {
+                if (e.target.tagName === 'BUTTON') return;
+                
+                // Remove active class from all
+                allDirections.forEach(d => d.classList.remove('active'));
+                
+                // Add active class to clicked
+                this.classList.add('active');
+                
+                // Update selected direction
+                selectedDirection = this.id;
+                const directionName = this.querySelector('h3').textContent;
+                document.getElementById('selected-direction').textContent = directionName;
+                
+                // Update selection bar
+                document.getElementById('selection-bar').style.width = '100%';
+                
+                // Update goal alignment based on direction
+                updateAlignmentMetrics(this);
+            });
+        });
+        
+        function toggleDetails(detailsId) {
+            const details = document.getElementById(detailsId);
+            details.classList.toggle('active');
+            const button = details.previousElementSibling.querySelector('button');
+            button.textContent = details.classList.contains('active') ? 'Details ↑' : 'Details ↓';
+        }
+        
+        function showAllDirections() {
+            allDirections.forEach(d => d.style.display = 'block');
+            updateTabButtons('all');
+        }
+        
+        function filterByCategory(category) {
+            allDirections.forEach(d => {
+                if (d.classList.contains(`direction-${category}`)) {
+                    d.style.display = 'block';
+                } else {
+                    d.style.display = 'none';
+                }
+            });
+            updateTabButtons(category);
+        }
+        
+        function updateTabButtons(activeCategory) {
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            if (activeCategory === 'all') {
+                document.querySelector('.tab-button').classList.add('active');
+            } else {
+                const activeBtn = Array.from(document.querySelectorAll('.tab-button')).find(btn => 
+                    btn.textContent.toLowerCase().includes(activeCategory)
+                );
+                if (activeBtn) activeBtn.classList.add('active');
+            }
+        }
+        
+        function updateAlignmentMetrics(directionElement) {
+            // Simple scoring based on direction characteristics
+            let goalScore = 70;
+            let emotionScore = 70;
+            
+            const directionClass = Array.from(directionElement.classList).find(c => c.startsWith('direction-'));
+            
+            switch(directionClass) {
+                case 'direction-minimalist':
+                    goalScore = 95;
+                    emotionScore = 90;
+                    break;
+                case 'direction-datacentric':
+                    goalScore = 85;
+                    emotionScore = 80;
+                    break;
+                case 'direction-traditional':
+                    goalScore = 75;
+                    emotionScore = 85;
+                    break;
+                case 'direction-commandcenter':
+                    goalScore = 90;
+                    emotionScore = 75;
+                    break;
+                case 'direction-zen':
+                    goalScore = 80;
+                    emotionScore = 95;
+                    break;
+                case 'direction-progressive':
+                    goalScore = 85;
+                    emotionScore = 85;
+                    break;
+                case 'direction-modular':
+                    goalScore = 90;
+                    emotionScore = 70;
+                    break;
+                case 'direction-fluid':
+                    goalScore = 70;
+                    emotionScore = 90;
+                    break;
+            }
+            
+            document.getElementById('goal-alignment').textContent = `${goalScore}%`;
+            document.getElementById('emotion-alignment').textContent = `${emotionScore}%`;
+            document.getElementById('goal-bar').style.width = `${goalScore}%`;
+            document.getElementById('emotion-bar').style.width = `${emotionScore}%`;
+        }
+        
+        function confirmSelection() {
+            if (!selectedDirection) {
+                alert('Please select a design direction first.');
+                return;
+            }
+            
+            const directionName = document.getElementById('selected-direction').textContent;
+            const directionElement = document.getElementById(selectedDirection);
+            const directionClass = Array.from(directionElement.classList).find(c => c.startsWith('direction-'));
+            
+            alert(`Selected: ${directionName}\n\nThis design direction will guide all our detailed design work. You can explore combinations or request modifications before we proceed.`);
+            
+            // In a real implementation, this would send the selection to the server
+            console.log('Design direction selected:', {
+                id: selectedDirection,
+                name: directionName,
+                class: directionClass,
+                goalAlignment: document.getElementById('goal-alignment').textContent,
+                emotionAlignment: document.getElementById('emotion-alignment').textContent
+            });
+        }
+        
+        function showCombinationOptions() {
+            alert('Combination feature would allow you to mix elements from different directions.\n\nExample: Minimalist layout + Data-centric statistics + Zen timer design.');
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateTabButtons('all');
+        });
+    </script>
+</body>
+</html>

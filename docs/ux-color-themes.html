@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>turnbasedgame - Color Theme Exploration</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --theme-analytical-primary: #1e40af;
+            --theme-analytical-secondary: #0f766e;
+            --theme-analytical-background: #f8fafc;
+            --theme-analytical-surface: #ffffff;
+            --theme-analytical-text: #1e293b;
+            
+            --theme-minimalist-primary: #374151;
+            --theme-minimalist-secondary: #6b7280;
+            --theme-minimalist-background: #ffffff;
+            --theme-minimalist-surface: #f9fafb;
+            --theme-minimalist-text: #111827;
+            
+            --theme-professional-primary: #065f46;
+            --theme-professional-secondary: #92400e;
+            --theme-professional-background: #f0fdf4;
+            --theme-professional-surface: #ffffff;
+            --theme-professional-text: #1c1917;
+            
+            --theme-darkfocus-primary: #3b82f6;
+            --theme-darkfocus-secondary: #10b981;
+            --theme-darkfocus-background: #0f172a;
+            --theme-darkfocus-surface: #1e293b;
+            --theme-darkfocus-text: #f1f5f9;
+        }
+        
+        .theme-card {
+            transition: all 0.3s ease;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .theme-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .color-swatch {
+            width: 100%;
+            height: 80px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .poker-table-preview {
+            width: 100%;
+            height: 200px;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .theme-analytical .poker-table-preview {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        }
+        
+        .theme-minimalist .poker-table-preview {
+            background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%);
+        }
+        
+        .theme-professional .poker-table-preview {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        }
+        
+        .theme-darkfocus .poker-table-preview {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        }
+        
+        .poker-chip {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .poker-card {
+            width: 60px;
+            height: 90px;
+            border-radius: 8px;
+            position: absolute;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 24px;
+        }
+        
+        .active-theme {
+            border: 3px solid #3b82f6;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-6">
+    <div class="max-w-7xl mx-auto">
+        <header class="mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">turnbasedgame - Color Theme Exploration</h1>
+            <p class="text-gray-600 text-lg">Choose a visual direction for your "no-distractions poker lab"</p>
+            <div class="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h2 class="font-semibold text-blue-900 mb-2">Project Context:</h2>
+                <ul class="text-blue-800 list-disc pl-5">
+                    <li><strong>Core Value</strong>: "Technical excellence eliminates variables so only poker skill determines outcomes"</li>
+                    <li><strong>Emotional Goal</strong>: "Calm confidence under pressure" in a focused environment</li>
+                    <li><strong>Aesthetic Vision</strong>: "No-distractions poker lab" - analytical, not casino</li>
+                    <li><strong>Key Differentiator</strong>: Strip casino aesthetics for serious skill competition</li>
+                </ul>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+            <!-- Theme 1: Analytical/Scientific -->
+            <div class="theme-card theme-analytical" id="theme-analytical">
+                <div class="p-6">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">Analytical/Scientific</h3>
+                    <div class="poker-table-preview mb-6">
+                        <div class="poker-chip" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); top: 40px; left: 40px;"></div>
+                        <div class="poker-chip" style="background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%); top: 40px; right: 40px;"></div>
+                        <div class="poker-card" style="background: white; color: #1e40af; top: 100px; left: 60px;">A♠</div>
+                        <div class="poker-card" style="background: white; color: #dc2626; top: 100px; right: 60px;">K♥</div>
+                    </div>
+                    
+                    <div class="grid grid-cols-4 gap-2 mb-4">
+                        <div>
+                            <div class="color-swatch" style="background-color: #1e40af;"></div>
+                            <div class="text-xs text-gray-600">Primary</div>
+                        </div>
+                        <div>
+                            <div class="color-swatch" style="background-color: #0f766e;"></div>
+                            <div class="text-xs text-gray-600">Secondary</div>
+                        </div>
+                        <div>
+                            <div class="color-swatch" style="background-color: #f8fafc;"></div>
+                            <div class="text-xs text-gray-600">Background</div>
+                        </div>
+                        <div>
+                            <div class="color-swatch" style="background-color: #1e293b;"></div>
+                            <div class="text-xs text-gray-600">Text</div>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-sm font-medium text-gray-700">Emotional Fit</span>
+                                <span class="text-sm text-gray-600">High</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-blue-600 h-2 rounded-full" style="width: 90%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-sm font-medium text-gray-700">Casino Avoidance</span>
+                                <span class="text-sm text-gray-600">High</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-green-600 h-2 rounded-full" style="width: 95%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p class="mt-4 text-gray-600 text-sm">
+                        <strong>Best for:</strong> Creating a "poker lab" feeling - analytical, scientific, focused on data and skill validation. Feels like trading platforms or chess analysis tools.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Theme 2: Minimalist Focus -->
+            <div class="theme-card theme-minimalist" id="theme-minimalist">
+                <div class="p-6">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">Minimalist Focus</h3>
+                    <div class="poker-table-preview mb-6">
+                        <div class="poker-chip" style="background: linear-gradient(135deg, #374151 0%, #6b7280 100%); top: 40px; left: 40px;"></div>
+                        <div class="poker-chip" style="background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%); top: 40px; right: 40px;"></div>
+                        <div class="poker-card" style="background: white; color: #374151; top: 100px; left: 60px;">Q♣</div>
+                        <div class="poker-card" style="background: white; color: #374151; top: 100px; right: 60px;">J♦</div>
+                    </div>
+                    
+                    <div class="grid grid-cols-4 gap-2 mb-4">
+                        <div>
+                            <div class="color-swatch" style="background-color: #374151;"></div>
+                            <div class="text-xs text-gray-600">Primary</div>
+                        </div>
+                        <div>
+                            <div class="color-swatch" style="background-color: #6b7280;"></div>
+                            <div class="text-xs text-gray-600">Secondary</div>
+                        </div>
+                        <div>
+                            <div class="color-swatch" style="background-color: #ffffff;"></div>
+                            <div class="text-xs text-gray-600">Background</div>
+                        </div>
+                        <div>
+                            <div class="color-swatch" style="background-color: #111827;"></div>
+                            <div class="text-xs text-gray-600">Text</div>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-sm font-medium text-gray-700">Emotional Fit</span>
+                                <span class="text-sm text-gray-600">Medium</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-blue-600 h-2 rounded-full" style="width: 70%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-sm font-medium text-gray-700">Casino Avoidance</span>
+                                <span class="text-sm text-gray-600">High</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-green-600 h-2 rounded-full" style="width: 90%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p class="mt-4 text-gray-600 text-sm">
+                        <strong>Best for:</strong> Maximum focus through minimal visual noise. Monochromatic approach puts game state first, removes all decorative elements.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Theme 3: Professional Poker -->
+            <div class="theme-card theme-professional" id="theme-professional">
+                <div class="p-6">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">Professional Poker</h3>
+                    <div class="poker-table-preview mb-6">
+                        <div class="poker-chip" style="background: linear-gradient(135deg, #065f46 0%, #10b981 100%); top: 40px; left: 40px;"></div>
+                        <div class="poker-chip" style="background: linear-gradient(135deg, #92400e 0%, #f59e0b 100%); top: 40px; right: 40px;"></div>
+                        <div class="poker-card" style="background: white; color: #065f46; top: 100px; left: 60px;">10♠</div>
+                        <div class="poker-card" style="background: white; color: #dc2626; top: 100px; right: 60px;">9♥</div>
+                    </div>
+                    
+                    <div class="grid grid-cols-4 gap-2 mb-4">
+                        <div>
+                            <div class="color-swatch" style="background-color: #065f46;"></div>
+                            <div class="text-xs text-gray-600">Primary</div>
+                        </div>
+                        <div>
+                            <div class="color-swatch" style="background-color: #92400e;"></div>
+                            <div class="text-xs text-gray-600">Secondary</div>
+                        </div>
+                        <div>
+                            <div class="color-swatch" style="background-color: #f0fdf4;"></div>
+                            <div class="text-xs text-gray-600">Background</div>
+                        </div>
+                        <div>
+                            <div class="color-swatch" style="background-color: #1c1917;"></div>
+                            <div class="text-xs text-gray-600">Text</div>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-sm font-medium text-gray-700">Emotional Fit</span>
+                                <span class="text-sm text-gray-600">Medium</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-blue-600 h-2 rounded-full" style="width: 65%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-sm font-medium text-gray-700">Casino Avoidance</span>
+                                <span class="text-sm text-gray-600">Medium</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-green-600 h-2 rounded-full" style="width: 60%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p class="mt-4 text-gray-600 text-sm">
+                        <strong>Best for:</strong> Traditional poker feel without casino flash. Uses clean versions of poker colors (green felt, wood accents) in a professional context.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Theme 4: Dark Mode Focus -->
+            <div class="theme-card theme-darkfocus active-theme" id="theme-darkfocus">
+                <div class="p-6">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">Dark Mode Focus <span class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Recommended</span></h3>
+                    <div class="poker-table-preview mb-6">
+                        <div class="poker-chip" style="background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); top: 40px; left: 40px;"></div>
+                        <div class="poker-chip" style="background: linear-gradient(135deg, #10b981 0%, #34d399 100%); top: 40px; right: 40px;"></div>
+                        <div class="poker-card" style="background: #1e293b; color: #f1f5f9; border: 2px solid #3b82f6; top: 100px; left: 60px;">A♣</div>
+                        <div class="poker-card" style="background: #1e293b; color: #f1f5f9; border: 2px solid #10b981; top: 100px; right: 60px;">K♦</div>
+                    </div>
+                    
+                    <div class="grid grid-cols-4 gap-2 mb-4">
+                        <div>
+                            <div class="color-swatch" style="background-color: #3b82f6;"></div>
+                            <div class="text-xs text-gray-600">Primary</div>
+                        </div>
+                        <div>
+                            <div class="color-swatch" style="background-color: #10b981;"></div>
+                            <div class="text-xs text-gray-600">Secondary</div>
+                        </div>
+                        <div>
+                            <div class="color-swatch" style="background-color: #0f172a;"></div>
+                            <div class="text-xs text-gray-600">Background</div>
+                        </div>
+                        <div>
+                            <div class="color-swatch" style="background-color: #f1f5f9;"></div>
+                            <div class="text-xs text-gray-600">Text</div>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-sm font-medium text-gray-700">Emotional Fit</span>
+                                <span class="text-sm text-gray-600">Very High</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-blue-600 h-2 rounded-full" style="width: 95%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-sm font-medium text-gray-700">Casino Avoidance</span>
+                                <span class="text-sm text-gray-600">High</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-green-600 h-2 rounded-full" style="width: 90%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p class="mt-4 text-gray-600 text-sm">
+                        <strong>Best for:</strong> Extended poker sessions with reduced eye strain. Creates a focused "command center" feel. Cards/chips pop against dark background for maximum clarity.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-8 shadow-lg mb-12">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Theme Analysis & Recommendation</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Alignment with Project Goals</h3>
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b">
+                                <th class="text-left py-2">Theme</th>
+                                <th class="text-left py-2">Calm Confidence</th>
+                                <th class="text-left py-2">No Casino Feel</th>
+                                <th class="text-left py-2">Focus Support</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b">
+                                <td class="py-2">Analytical/Scientific</td>
+                                <td class="py-2">✅ High</td>
+                                <td class="py-2">✅ Excellent</td>
+                                <td class="py-2">✅ Good</td>
+                            </tr>
+                            <tr class="border-b">
+                                <td class="py-2">Minimalist Focus</td>
+                                <td class="py-2">⚠️ Medium</td>
+                                <td class="py-2">✅ Excellent</td>
+                                <td class="py-2">✅ Excellent</td>
+                            </tr>
+                            <tr class="border-b">
+                                <td class="py-2">Professional Poker</td>
+                                <td class="py-2">⚠️ Medium</td>
+                                <td class="py-2">⚠️ Medium</td>
+                                <td class="py-2">⚠️ Medium</td>
+                            </tr>
+                            <tr>
+                                <td class="py-2">Dark Mode Focus</td>
+                                <td class="py-2">✅ Excellent</td>
+                                <td class="py-2">✅ Excellent</td>
+                                <td class="py-2">✅ Excellent</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Recommended: Dark Mode Focus</h3>
+                    <div class="space-y-4">
+                        <div class="p-4 bg-blue-50 rounded-lg">
+                            <h4 class="font-semibold text-blue-900 mb-2">Why This Fits Best:</h4>
+                            <ul class="text-blue-800 list-disc pl-5">
+                                <li><strong>Reduced Eye Strain</strong>: Dark backgrounds are easier on eyes during extended poker sessions</li>
+                                <li><strong>Maximum Contrast</strong>: Cards and chips pop against dark surfaces for instant recognition</li>
+                                <li><strong>"Command Center" Feel</strong>: Creates focused environment like trading desks or control rooms</li>
+                                <li><strong>Modern & Professional</strong>: Feels technical and serious, not casino entertainment</li>
+                                <li><strong>Emotional Calm</strong>: Dark colors reduce visual stimulation, supporting "calm under pressure"</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="p-4 bg-green-50 rounded-lg">
+                            <h4 class="font-semibold text-green-900 mb-2">Implementation Notes:</h4>
+                            <ul class="text-green-800 list-disc pl-5">
+                                <li>Use Tailwind's dark mode utilities for easy implementation</li>
+                                <li>Ensure WCAG AA contrast ratios for all text and interactive elements</li>
+                                <li>Test with color blindness simulators for accessibility</li>
+                                <li>Consider offering light mode as alternative for user preference</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-8 shadow-lg">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Next Steps</h2>
+            
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-3">Select Your Preferred Theme</h3>
+                    <p class="text-gray-600 mb-4">Click on a theme card above to select it, then choose an action below:</p>
+                    
+                    <div class="flex space-x-4">
+                        <button onclick="selectTheme('analytical')" class="px-6 py-3 bg-gray-100 text-gray-800 rounded-lg font-medium hover:bg-gray-200 transition">
+                            Select Analytical/Scientific
+                        </button>
+                        <button onclick="selectTheme('minimalist')" class="px-6 py-3 bg-gray-100 text-gray-800 rounded-lg font-medium hover:bg-gray-200 transition">
+                            Select Minimalist Focus
+                        </button>
+                        <button onclick="selectTheme('professional')" class="px-6 py-3 bg-gray-100 text-gray-800 rounded-lg font-medium hover:bg-gray-200 transition">
+                            Select Professional Poker
+                        </button>
+                        <button onclick="selectTheme('darkfocus')" class="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition">
+                            Select Dark Mode Focus (Recommended)
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="border-t pt-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-3">Typography Considerations</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="font-medium text-gray-700 mb-2">For Dark Mode Focus:</h4>
+                            <ul class="text-gray-600 list-disc pl-5">
+                                <li><strong>Primary Font</strong>: System font stack (Inter, -apple-system, sans-serif) for readability</li>
+                                <li><strong>Monospace for Data</strong>: JetBrains Mono or Fira Code for chip counts and statistics</li>
+                                <li><strong>Card Suits</strong>: Unicode symbols with clear differentiation at small sizes</li>
+                                <li><strong>Accessibility</strong>: Minimum 16px body text, 4.5:1 contrast ratio for normal text</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-gray-700 mb-2">Spacing System:</h4>
+                            <ul class="text-gray-600 list-disc pl-5">
+                                <li><strong>Base Unit</strong>: 4px for fine-grained control (Tailwind's default)</li>
+                                <li><strong>Card Dimensions</strong>: Standard poker proportions (2.5" x 3.5" ratio)</li>
+                                <li><strong>Chip Stack Spacing</strong>: Visual separation proportional to stack value</li>
+                                <li><strong>Table Layout</strong>: Consistent spacing between player positions, pot, community cards</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedTheme = 'darkfocus';
+        
+        function selectTheme(theme) {
+            selectedTheme = theme;
+            
+            // Remove active class from all theme cards
+            document.querySelectorAll('.theme-card').forEach(card => {
+                card.classList.remove('active-theme');
+            });
+            
+            // Add active class to selected theme card
+            const selectedCard = document.getElementById(`theme-${theme}`);
+            if (selectedCard) {
+                selectedCard.classList.add('active-theme');
+            }
+            
+            // Update button states
+            document.querySelectorAll('button').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white', 'hover:bg-blue-700');
+                btn.classList.add('bg-gray-100', 'text-gray-800', 'hover:bg-gray-200');
+            });
+            
+            // Highlight selected button
+            const selectedBtn = Array.from(document.querySelectorAll('button')).find(btn => 
+                btn.textContent.includes(theme.charAt(0).toUpperCase() + theme.slice(1))
+            );
+            if (selectedBtn) {
+                selectedBtn.classList.remove('bg-gray-100', 'text-gray-800', 'hover:bg-gray-200');
+                selectedBtn.classList.add('bg-blue-600', 'text-white', 'hover:bg-blue-700');
+            }
+            
+            console.log(`Selected theme: ${theme}`);
+        }
+        
+        // Initialize with dark focus selected
+        document.addEventListener('DOMContentLoaded', () => {
+            selectTheme('darkfocus');
+        });
+    </script>
+</body>
+</html>
