@@ -1,0 +1,35 @@
+{
+  "name": "turnbasedgame",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"cd client && npm run dev\" \"cd server && cmake -B build && cmake --build build && ./build/poker_server\"",
+    "build": "cd client && npm run build && cd ../server && cmake -B build && cmake --build build",
+    "start": "cd server && ./build/poker_server",
+    "test": "npm run test:component",
+    "test:e2e": "cd client && npm run test:e2e",
+    "test:e2e:ui": "cd client && npm run test:e2e:ui",
+    "test:e2e:headed": "cd client && npm run test:e2e:headed",
+    "test:component": "cd client && npm run test:component",
+    "test:component:watch": "cd client && npm run test:component:watch",
+    "test:server": "cd server && cmake -B build -DBUILD_TESTS=ON && cmake --build build && cd build && ctest --output-on-failure",
+    "test:all": "npm run test:server && npm run test:component && npm run test:e2e",
+    "test:ci": "npm run test:server && npm run test:component -- --ci --maxWorkers=2 && npm run test:e2e -- --reporter=html",
+    "test:install": "cd client && npm run test:install",
+    "lint": "cd client && npx eslint . --ext .ts,.tsx --fix || true",
+    "typecheck": "cd client && npx tsc --noEmit",
+    "install:all": "cd client && npm install && cd ../server && cmake -B build",
+    "clean": "rm -rf client/.next client/out server/build server/coverage"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "concurrently": "^8.2.2",
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^30.2.0",
+    "jest-watch-typeahead": "^3.0.1",
+    "ts-jest": "^29.4.6"
+  },
+  "workspaces": [
+    "client"
+  ]
+}
