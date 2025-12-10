@@ -28,11 +28,21 @@ export function ConnectionStatus() {
   const currentText = statusText[connectionStatus] || connectionStatus;
   
   return (
-    <div className="flex items-center space-x-4">
+    <div 
+      className="flex items-center space-x-4" 
+      data-testid="connection-status-container"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
       {/* Connection status indicator */}
       <div className="flex items-center space-x-2">
-        <div className={`w-3 h-3 rounded-full ${currentColor} animate-pulse`} />
-        <span className="font-medium">{currentText}</span>
+        <div 
+          className={`w-3 h-3 rounded-full ${currentColor} animate-pulse`}
+          data-testid="connection-status-icon"
+          aria-label={currentText}
+        />
+        <span className="font-medium" data-testid="connection-status">{currentText}</span>
       </div>
       
       {/* Latency indicator */}

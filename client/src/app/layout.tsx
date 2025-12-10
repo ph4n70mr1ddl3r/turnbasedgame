@@ -4,8 +4,7 @@ import "./globals.css";
 import dynamic from "next/dynamic";
 
 const ConnectionStatus = dynamic(
-  () => import("@/components/ui/ConnectionStatus"),
-  { ssr: false }
+  () => import("@/components/ui/ConnectionStatus").then(mod => mod.ConnectionStatus)
 );
 
 const inter = Inter({ subsets: ["latin"] });

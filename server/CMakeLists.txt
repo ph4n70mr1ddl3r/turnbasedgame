@@ -4,15 +4,31 @@ project(poker_server VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Fetch libhv from GitHub
+include(FetchContent)
+# Fetch libhv
+FetchContent_Declare(
+  libhv
+  GIT_REPOSITORY https://github.com/ithewei/libhv.git
+  GIT_TAG v1.3.0
+)
+# Fetch nlohmann/json
+FetchContent_Declare(
+  nlohmann_json
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG v3.11.2
+)
+FetchContent_MakeAvailable(libhv nlohmann_json)
+
 # Find libhv (assumes installed system-wide)
-# find_package(libhv REQUIRED)
+find_package(libhv REQUIRED)
 
-# Main application - commented out until dependencies are available
-# add_executable(poker_server src/main.cpp)
-# target_link_libraries(poker_server libhv::libhv)
+# Main application
+add_executable(poker_server src/main.cpp)
+target_link_libraries(poker_server libhv::libhv nlohmann_json::nlohmann_json)
 
-# Install target (commented out until server is implemented)
-# install(TARGETS poker_server DESTINATION bin)
+# Install target
+install(TARGETS poker_server DESTINATION bin)
 
 # Testing configuration
 option(BUILD_TESTS "Build tests" ON)

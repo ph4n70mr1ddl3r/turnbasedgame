@@ -1,0 +1,69 @@
+# generated: 2025-12-10 22:02
+# project: turnbasedgame
+# project_key: "{{project_key}}"
+# tracking_system: file-system
+# story_location: docs/sprint-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - drafted: Story file created in stories folder
+#   - ready-for-dev: Draft approved and story context created
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - completed: Retrospective has been done
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically drafts next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2025-12-10 22:02
+project: turnbasedgame
+project_key: "{{project_key}}"
+tracking_system: file-system
+story_location: docs/sprint-artifacts
+
+development_status:
+  # All epics, stories, and retrospectives in order
+  epic-1: in-progress
+  1-1-initialize-project-structure: backlog
+  1-2-establish-websocket-connection: drafted
+  1-3-join-heads-up-poker-table: backlog
+  1-4-view-basic-poker-table: backlog
+  1-5-manage-session-state: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-implement-poker-game-engine: backlog
+  2-2-handle-card-distribution-evaluation: backlog
+  2-3-process-betting-actions: backlog
+  2-4-manage-game-flow-timeouts: backlog
+  2-5-handle-disconnections-during-gameplay: backlog
+  2-6-implement-structured-logging: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-enhance-connection-status-display: backlog
+  3-2-implement-betting-control-interface: backlog
+  3-3-design-thinking-space-timer: backlog
+  3-4-improve-opponent-visibility: backlog
+  3-5-implement-accessibility-responsive-design: backlog
+  3-6-add-visual-polish-animations: backlog
+  epic-3-retrospective: optional

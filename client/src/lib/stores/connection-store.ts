@@ -28,8 +28,8 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
   isConnected: false,
   lastHeartbeat: null,
   latency: null,
-  sessionToken: localStorage.getItem("poker_session_token") || null,
-  playerId: localStorage.getItem("poker_player_id") || null,
+  sessionToken: typeof window !== 'undefined' ? localStorage.getItem("poker_session_token") || null : null,
+  playerId: typeof window !== 'undefined' ? localStorage.getItem("poker_player_id") || null : null,
   
   // Actions
   setStatus: (status) => set({ status }),
@@ -42,20 +42,26 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
   setLatency: (latency) => set({ latency }),
   
   setSession: (token, playerId) => {
-    localStorage.setItem("poker_session_token", token);
-    localStorage.setItem("poker_player_id", playerId);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("poker_session_token", token);
+      localStorage.setItem("poker_player_id", playerId);
+    }
     set({ sessionToken: token, playerId });
   },
   
   clearSession: () => {
-    localStorage.removeItem("poker_session_token");
-    localStorage.removeItem("poker_player_id");
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem("poker_session_token");
+      localStorage.removeItem("poker_player_id");
+    }
     set({ sessionToken: null, playerId: null });
   },
   
   reset: () => {
-    localStorage.removeItem("poker_session_token");
-    localStorage.removeItem("poker_player_id");
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem("poker_session_token");
+      localStorage.removeItem("poker_player_id");
+    }
     set({
       status: "disconnected",
       isConnected: false,
