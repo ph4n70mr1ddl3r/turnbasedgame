@@ -1,0 +1,175 @@
+// Game type definitions - must match docs/shared-types.md and C++ structures
+// All JSON fields use snake_case
+
+// Card representation: <rank><suit> e.g., "Ah", "Kd", "7c"
+export type Card = string; // Must match regex /^[2-9TJQKA][cdhs]$/
+
+export type PlayerPosition = "button" | "small_blind" | "big_blind" | "none";
+export type BettingRound = "preflop" | "flop" | "turn" | "river" | "showdown";
+export type GameStatus = "waiting" | "active" | "finished";
+export type BetAction = "check" | "call" | "raise" | "fold";
+export type ConnectionStatus = "connected" | "disconnected" | "reconnecting";
+
+// Player state
+export interface PlayerState {
+  player_id: string;           // "p1" or "p2"
+  chip_stack: number;          // Current chip count
+  hole_cards: [Card, Card];    // Player's private cards (empty array if not revealed)
+  position: PlayerPosition;    // Current position (button, blinds, etc.)
+  current_bet: number;         // Amount bet in current betting round
+  is_active: boolean;          // Whether player is still in the hand
+  is_folded: boolean;          // Whether player has folded
+  is_all_in: boolean;          // Whether player is all-in
+  last_action?: string;        // Last action taken (e.g., "check", "raise", "fold")
+  time_remaining: number;      // Milliseconds remaining for current action
+}
+
+// Game state
+export interface GameState {
+  players: PlayerState[];           // Array of 2 player states
+  community_cards: Card[];          // Community cards (0-5 cards)
+  pot: number;                      // Total pot amount
+  current_player: string | null;    // Player ID whose turn it is, or null if not betting round
+  time_remaining: number;           // Milliseconds remaining for current action
+  round: BettingRound;              // Current betting round
+  min_bet: number;                  // Minimum raise amount
+  max_bet: number;                  // Maximum bet (player's stack)
+  last_winner?: string;             // Player ID of last hand winner (if game ended)
+  winning_hand?: string;            // Description of winning hand (e.g., "Straight")
+  game_status: GameStatus;          // Overall game status
+}
+
+// WebSocket message base
+export interface BaseWebSocketMessage {
+  type: string;
+  data: any;
+  token?: string;
+}
+
+// Specific message types
+export interface GameStateUpdateMessage {
+  type: "game_state_update";
+  data: GameState;
+}
+
+export interface BetActionMessage {
+  type: "bet_action";
+  data: {
+    action: BetAction;
+    amount?: number;  // Required for "raise"
+  };
+  token: string;
+}
+
+export interface ConnectionStatusMessage {
+  type: "connection_status";
+  data: {
+    status: ConnectionStatus;
+    player_id?: string;
+    message?: string;
+  };
+}
+
+export interface ErrorMessage {
+  type: "error";
+  data: {
+    code: string;
+    message: string;
+    details?: any;
+  };
+}
+
+export interface HeartbeatMessage {
+  type: "heartbeat";
+  data: {
+    timestamp: number;
+  };
+}
+
+export interface SessionInitMessage {
+  type: "session_init";
+  data: {
+    player_name?: string;
+    reconnect_token?: string;
+  };
+}
+
+export interface ChatMessage {
+  type: "chat_message";
+  data: {
+    player_id: string;
+    message: string;
+    timestamp: number;
+  };
+  token?: string;
+}
+
+// Union type for all message types
+export type WebSocketMessage =
+  | GameStateUpdateMessage
+  | BetActionMessage
+  | ConnectionStatusMessage
+  | ErrorMessage
+  | HeartbeatMessage
+  | SessionInitMessage
+  | ChatMessage;
+
+// Type guards
+export function isGameStateUpdate(msg: any): msg is GameStateUpdateMessage {
+  return msg.type === "game_state_update";
+}
+
+export function isBetAction(msg: any): msg is BetActionMessage {
+  return msg.type === "bet_action";
+}
+
+export function isConnectionStatus(msg: any): msg is ConnectionStatusMessage {
+  return msg.type === "connection_status";
+}
+
+export function isErrorMessage(msg: any): msg is ErrorMessage {
+  return msg.type === "error";
+}
+
+export function isHeartbeat(msg: any): msg is HeartbeatMessage {
+  return msg.type === "heartbeat";
+}
+
+// Validation functions
+export function isValidCard(card: string): boolean {
+  return /^[2-9TJQKA][cdhs]$/.test(card);
+}
+
+export function isValidPlayerId(id: string): boolean {
+  return id === "p1" || id === "p2";
+}
+
+export function isValidBetAction(action: string): action is BetAction {
+  return ["check", "call", "raise", "fold"].includes(action);
+}
+
+// Helper to create messages
+export function createBetActionMessage(
+  token: string,
+  action: BetAction,
+  amount?: number
+): BetActionMessage {
+  return {
+    type: "bet_action",
+    data: { action, ...(amount !== undefined && { amount }) },
+    token,
+  };
+}
+
+export function createSessionInitMessage(
+  reconnectToken?: string,
+  playerName?: string
+): SessionInitMessage {
+  return {
+    type: "session_init",
+    data: {
+      ...(reconnectToken && { reconnect_token: reconnectToken }),
+      ...(playerName && { player_name: playerName }),
+    },
+  };
+}

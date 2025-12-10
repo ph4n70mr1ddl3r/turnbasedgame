@@ -1,0 +1,99 @@
+import { create } from "zustand";
+import { GameState, PlayerState } from "@/types/game-types";
+
+interface GameStore {
+  // Current game state
+  gameState: GameState | null;
+  
+  // UI state
+  isMyTurn: boolean;
+  availableActions: string[];
+  lastError: string | null;
+  
+  // Actions
+  setGameState: (gameState: GameState) => void;
+  updatePlayer: (playerId: string, updates: Partial<PlayerState>) => void;
+  setAvailableActions: (actions: string[]) => void;
+  setError: (error: string | null) => void;
+  clearError: () => void;
+  reset: () => void;
+  
+  // Derived selectors (computed)
+  getMyPlayer: () => PlayerState | null;
+  getOpponentPlayer: () => PlayerState | null;
+  getPlayer: (playerId: string) => PlayerState | null;
+}
+
+export const useGameStore = create<GameStore>((set, get) => ({
+  // Initial state
+  gameState: null,
+  isMyTurn: false,
+  availableActions: [],
+  lastError: null,
+  
+  // Actions
+  setGameState: (gameState) => {
+    const playerId = localStorage.getItem("poker_player_id");
+    const isMyTurn = gameState.current_player === playerId;
+    set({ gameState, isMyTurn });
+  },
+  
+  updatePlayer: (playerId, updates) =>
+    set((state) => {
+      if (!state.gameState) return state;
+      
+      const updatedPlayers = state.gameState.players.map((player) =>
+        player.player_id === playerId ? { ...player, ...updates } : player
+      );
+      
+      return {
+        gameState: { ...state.gameState, players: updatedPlayers },
+      };
+    }),
+  
+  setAvailableActions: (actions) => set({ availableActions: actions }),
+  
+  setError: (error) => set({ lastError: error }),
+  
+  clearError: () => set({ lastError: null }),
+  
+  reset: () =>
+    set({
+      gameState: null,
+      isMyTurn: false,
+      availableActions: [],
+      lastError: null,
+    }),
+  
+  // Derived selectors
+  getMyPlayer: () => {
+    const state = get();
+    const playerId = localStorage.getItem("poker_player_id");
+    if (!state.gameState || !playerId) return null;
+    
+    return state.gameState.players.find((p) => p.player_id === playerId) || null;
+  },
+  
+  getOpponentPlayer: () => {
+    const state = get();
+    const playerId = localStorage.getItem("poker_player_id");
+    if (!state.gameState || !playerId) return null;
+    
+    return state.gameState.players.find((p) => p.player_id !== playerId) || null;
+  },
+  
+  getPlayer: (playerId) => {
+    const state = get();
+    if (!state.gameState) return null;
+    
+    return state.gameState.players.find((p) => p.player_id === playerId) || null;
+  },
+}));
+
+// Selectors
+export const gameStateSelector = (state: GameStore) => state.gameState;
+export const isMyTurnSelector = (state: GameStore) => state.isMyTurn;
+export const availableActionsSelector = (state: GameStore) => state.availableActions;
+export const lastErrorSelector = (state: GameStore) => state.lastError;
+export const myPlayerSelector = (state: GameStore) => state.getMyPlayer();
+export const opponentPlayerSelector = (state: GameStore) => state.getOpponentPlayer();

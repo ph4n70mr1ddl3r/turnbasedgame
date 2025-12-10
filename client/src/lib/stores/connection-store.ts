@@ -1,0 +1,75 @@
+import { create } from "zustand";
+import { ConnectionStatus } from "@/types/game-types";
+
+interface ConnectionStore {
+  // Connection state
+  status: ConnectionStatus;
+  isConnected: boolean;
+  lastHeartbeat: number | null;
+  latency: number | null;
+  
+  // Session
+  sessionToken: string | null;
+  playerId: string | null;
+  
+  // Actions
+  setStatus: (status: ConnectionStatus) => void;
+  setConnected: (connected: boolean) => void;
+  updateHeartbeat: () => void;
+  setLatency: (latency: number) => void;
+  setSession: (token: string, playerId: string) => void;
+  clearSession: () => void;
+  reset: () => void;
+}
+
+export const useConnectionStore = create<ConnectionStore>((set) => ({
+  // Initial state
+  status: "disconnected",
+  isConnected: false,
+  lastHeartbeat: null,
+  latency: null,
+  sessionToken: localStorage.getItem("poker_session_token") || null,
+  playerId: localStorage.getItem("poker_player_id") || null,
+  
+  // Actions
+  setStatus: (status) => set({ status }),
+  
+  setConnected: (isConnected) =>
+    set({ isConnected, status: isConnected ? "connected" : "disconnected" }),
+  
+  updateHeartbeat: () => set({ lastHeartbeat: Date.now() }),
+  
+  setLatency: (latency) => set({ latency }),
+  
+  setSession: (token, playerId) => {
+    localStorage.setItem("poker_session_token", token);
+    localStorage.setItem("poker_player_id", playerId);
+    set({ sessionToken: token, playerId });
+  },
+  
+  clearSession: () => {
+    localStorage.removeItem("poker_session_token");
+    localStorage.removeItem("poker_player_id");
+    set({ sessionToken: null, playerId: null });
+  },
+  
+  reset: () => {
+    localStorage.removeItem("poker_session_token");
+    localStorage.removeItem("poker_player_id");
+    set({
+      status: "disconnected",
+      isConnected: false,
+      lastHeartbeat: null,
+      latency: null,
+      sessionToken: null,
+      playerId: null,
+    });
+  },
+}));
+
+// Selectors
+export const connectionStatusSelector = (state: ConnectionStore) => state.status;
+export const isConnectedSelector = (state: ConnectionStore) => state.isConnected;
+export const sessionTokenSelector = (state: ConnectionStore) => state.sessionToken;
+export const playerIdSelector = (state: ConnectionStore) => state.playerId;
+export const latencySelector = (state: ConnectionStore) => state.latency;
