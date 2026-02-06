@@ -44,7 +44,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   // Send bet action
   const sendBetAction = useCallback((action: BetAction, amount?: number) => {
     if (!managerRef.current) {
-      console.error("Connection manager not initialized");
+      if (process.env.NODE_ENV === "development") {
+        console.error("Connection manager not initialized");
+      }
       return false;
     }
     
@@ -85,8 +87,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   // Subscribe to connection status changes
   useEffect(() => {
     const unsubscribe = useConnectionStore.subscribe((state) => {
-      // Handle connection status changes if needed
-      console.log("Connection status changed:", state.status);
+      if (process.env.NODE_ENV === "development") {
+        console.log("Connection status changed:", state.status);
+      }
     });
     
     return unsubscribe;
@@ -95,7 +98,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   // Subscribe to game state changes
   useEffect(() => {
     const unsubscribe = useGameStore.subscribe((state) => {
-      if (state.gameState) {
+      if (state.gameState && process.env.NODE_ENV === "development") {
         console.log("Game state updated:", state.gameState);
       }
     });

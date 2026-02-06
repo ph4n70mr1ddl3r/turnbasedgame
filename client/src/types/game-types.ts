@@ -42,7 +42,7 @@ export interface GameState {
 // WebSocket message base
 export interface BaseWebSocketMessage {
   type: string;
-  data: any;
+  data: unknown;
   token?: string;
 }
 
@@ -75,7 +75,7 @@ export interface ErrorMessage {
   data: {
     code: string;
     message: string;
-    details?: any;
+    details?: Record<string, unknown>;
   };
 }
 
@@ -115,24 +115,29 @@ export type WebSocketMessage =
   | ChatMessage;
 
 // Type guards
-export function isGameStateUpdate(msg: any): msg is GameStateUpdateMessage {
-  return msg.type === "game_state_update";
+export function isGameStateUpdate(msg: unknown): msg is GameStateUpdateMessage {
+  const message = msg as Record<string, unknown>;
+  return message.type === "game_state_update";
 }
 
-export function isBetAction(msg: any): msg is BetActionMessage {
-  return msg.type === "bet_action";
+export function isBetAction(msg: unknown): msg is BetActionMessage {
+  const message = msg as Record<string, unknown>;
+  return message.type === "bet_action";
 }
 
-export function isConnectionStatus(msg: any): msg is ConnectionStatusMessage {
-  return msg.type === "connection_status";
+export function isConnectionStatus(msg: unknown): msg is ConnectionStatusMessage {
+  const message = msg as Record<string, unknown>;
+  return message.type === "connection_status";
 }
 
-export function isErrorMessage(msg: any): msg is ErrorMessage {
-  return msg.type === "error";
+export function isErrorMessage(msg: unknown): msg is ErrorMessage {
+  const message = msg as Record<string, unknown>;
+  return message.type === "error";
 }
 
-export function isHeartbeat(msg: any): msg is HeartbeatMessage {
-  return msg.type === "heartbeat";
+export function isHeartbeat(msg: unknown): msg is HeartbeatMessage {
+  const message = msg as Record<string, unknown>;
+  return message.type === "heartbeat";
 }
 
 // Validation functions

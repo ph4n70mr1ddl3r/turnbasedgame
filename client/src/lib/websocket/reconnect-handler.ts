@@ -17,19 +17,24 @@ const DEFAULT_OPTIONS: Required<ReconnectOptions> = {
   jitter: true,                  // Add jitter
 };
 
-export type ReconnectState = "connected" | "stopped" | "failed" | `attempt_${number}` | `waiting_${string}`;
+export type ReconnectState = "connected" | "disconnected" | "stopped" | "failed" | `attempt_${number}` | `waiting_${string}`;
 
 export class ReconnectHandler {
   private attempts = 0;
   private currentDelay: number;
   private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private isActive = false;
+  private connectFn: () => Promise<boolean>;
+  private onStateChange?: (_state: ReconnectState) => void; // eslint-disable-line no-unused-vars
+  private options: Required<ReconnectOptions>;
   
   constructor(
-    private _connectFn: () => Promise<boolean>,
-    private _onStateChange?: (_state: ReconnectState) => void,
-    private options: ReconnectOptions = {}
+    connectFn: () => Promise<boolean>,
+    _onStateChange?: (_state: ReconnectState) => void, // eslint-disable-line no-unused-vars
+    options: ReconnectOptions = {}
   ) {
+    this.connectFn = connectFn;
+    this.onStateChange = _onStateChange;
     const opts = { ...DEFAULT_OPTIONS, ...options };
     this.options = opts;
     this.currentDelay = opts.initialDelay;
@@ -42,7 +47,7 @@ export class ReconnectHandler {
     this.isActive = true;
     this.attempts = 0;
     this.currentDelay = this.options.initialDelay!;
-    this._onStateChange?.("reconnecting");
+    this.onStateChange?.("disconnected");
     
     this.attemptReconnect();
   }
@@ -54,7 +59,7 @@ export class ReconnectHandler {
       clearTimeout(this.timeoutId);
       this.timeoutId = null;
     }
-    this._onStateChange?.("stopped");
+    this.onStateChange?.("stopped");
   }
   
   // Reset attempts (call after successful connection)
@@ -66,7 +71,7 @@ export class ReconnectHandler {
       clearTimeout(this.timeoutId);
       this.timeoutId = null;
     }
-    this._onStateChange?.("connected");
+    this.onStateChange?.("connected");
   }
   
   // Manual reconnection attempt
@@ -91,16 +96,16 @@ export class ReconnectHandler {
     
     // Check max attempts
     if (this.options.maxAttempts! > 0 && this.attempts >= this.options.maxAttempts!) {
-      this._onStateChange?.("failed");
+      this.onStateChange?.("failed");
       this.isActive = false;
       return false;
     }
     
     this.attempts++;
-    this._onStateChange?.(`attempt_${this.attempts}`);
+    this.onStateChange?.(`attempt_${this.attempts}`);
     
     try {
-      const success = await this._connectFn();
+      const success = await this.connectFn();
       
       if (success) {
         this.reset();
@@ -110,7 +115,9 @@ export class ReconnectHandler {
         return false;
       }
     } catch (error) {
-      console.error("Reconnection attempt failed:", error);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Reconnection attempt failed:", error);
+      }
       this.scheduleNextAttempt();
       return false;
     }
@@ -142,11 +149,11 @@ export class ReconnectHandler {
       this.attemptReconnect();
     }, delay);
     
-    this._onStateChange?.(`waiting_${Math.round(delay / 1000)}s`);
+    this.onStateChange?.(`waiting_${Math.round(delay / 1000)}s`);
   }
   
   // Static helper to determine if reconnection should be attempted
-  static shouldReconnect(error: any): boolean {
+  static shouldReconnect(error: CloseEvent | Error | unknown): boolean {
     // Reconnect on network errors, but not on application errors
     if (error instanceof CloseEvent) {
       // Don't reconnect on normal closure (1000) or going away (1001)

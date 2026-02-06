@@ -37,7 +37,9 @@ export class SessionManager {
       
       return { token, playerId, expiry };
     } catch (error) {
-      console.error("Error reading session from localStorage:", error);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Error reading session from localStorage:", error);
+      }
       return null;
     }
   }
@@ -52,7 +54,9 @@ export class SessionManager {
       localStorage.setItem(PLAYER_ID_KEY, playerId);
       localStorage.setItem(SESSION_EXPIRY_KEY, expiry.toString());
     } catch (error) {
-      console.error("Error saving session to localStorage:", error);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Error saving session to localStorage:", error);
+      }
     }
     
     return session;
@@ -68,7 +72,9 @@ export class SessionManager {
       localStorage.setItem(SESSION_EXPIRY_KEY, newExpiry.toString());
       return true;
     } catch (error) {
-      console.error("Error updating session expiry:", error);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Error updating session expiry:", error);
+      }
       return false;
     }
   }
@@ -80,7 +86,9 @@ export class SessionManager {
       localStorage.removeItem(PLAYER_ID_KEY);
       localStorage.removeItem(SESSION_EXPIRY_KEY);
     } catch (error) {
-      console.error("Error clearing session from localStorage:", error);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Error clearing session from localStorage:", error);
+      }
     }
   }
   

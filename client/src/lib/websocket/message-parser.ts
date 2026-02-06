@@ -17,12 +17,16 @@ export class MessageParser {
       
       // Basic validation
       if (!parsed || typeof parsed !== "object") {
-        console.error("Invalid message: not an object", parsed);
+        if (process.env.NODE_ENV === "development") {
+          console.error("Invalid message: not an object", parsed);
+        }
         return null;
       }
       
       if (typeof parsed.type !== "string") {
-        console.error("Invalid message: missing type field", parsed);
+        if (process.env.NODE_ENV === "development") {
+          console.error("Invalid message: missing type field", parsed);
+        }
         return null;
       }
       
@@ -40,66 +44,106 @@ export class MessageParser {
         case "session_init":
         case "chat_message":
           // Client shouldn't receive these from server
-          console.warn(`Unexpected message type from server: ${parsed.type}`);
+          if (process.env.NODE_ENV === "development") {
+            console.warn(`Unexpected message type from server: ${parsed.type}`);
+          }
           return parsed;
         default:
-          console.error(`Unknown message type: ${parsed.type}`, parsed);
+          if (process.env.NODE_ENV === "development") {
+            console.error(`Unknown message type: ${parsed.type}`, parsed);
+          }
           return null;
       }
     } catch (error) {
-      console.error("Error parsing WebSocket message:", error, data);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Error parsing WebSocket message:", error, data);
+      }
       return null;
     }
   }
   
   // Validate game state update message
   private static validateGameStateUpdate(
-    msg: any
+    msg: unknown
   ): GameStateUpdateMessage | null {
-    if (!msg.data || typeof msg.data !== "object") {
-      console.error("Invalid game_state_update: missing data", msg);
+    if (!msg || typeof msg !== "object") {
+      if (process.env.NODE_ENV === "development") {
+        console.error("Invalid game_state_update: missing data", msg);
+      }
+      return null;
+    }
+
+    const message = msg as Record<string, unknown>;
+    
+    if (!message.data || typeof message.data !== "object") {
+      if (process.env.NODE_ENV === "development") {
+        console.error("Invalid game_state_update: missing data", msg);
+      }
       return null;
     }
     
-    const { data } = msg;
+    const data = message.data as Record<string, unknown>;
     
     // Basic validation
     if (!Array.isArray(data.players) || data.players.length !== 2) {
-      console.error("Invalid game_state_update: players array invalid", data);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Invalid game_state_update: players array invalid", data);
+      }
       return null;
     }
     
     if (!Array.isArray(data.community_cards)) {
-      console.error("Invalid game_state_update: community_cards not array", data);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Invalid game_state_update: community_cards not array", data);
+      }
       return null;
     }
     
     if (typeof data.pot !== "number" || data.pot < 0) {
-      console.error("Invalid game_state_update: invalid pot", data);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Invalid game_state_update: invalid pot", data);
+      }
       return null;
     }
     
     // Validate player data
     for (const player of data.players) {
-      if (!isValidPlayerId(player.player_id)) {
-        console.error("Invalid game_state_update: invalid player_id", player);
+      if (!player || typeof player !== "object") {
+        if (process.env.NODE_ENV === "development") {
+          console.error("Invalid game_state_update: invalid player", player);
+        }
         return null;
       }
       
-      if (typeof player.chip_stack !== "number" || player.chip_stack < 0) {
-        console.error("Invalid game_state_update: invalid chip_stack", player);
+      const playerObj = player as Record<string, unknown>;
+      
+      if (!isValidPlayerId(playerObj.player_id as string)) {
+        if (process.env.NODE_ENV === "development") {
+          console.error("Invalid game_state_update: invalid player_id", player);
+        }
         return null;
       }
       
-      if (!Array.isArray(player.hole_cards)) {
-        console.error("Invalid game_state_update: hole_cards not array", player);
+      if (typeof playerObj.chip_stack !== "number" || playerObj.chip_stack < 0) {
+        if (process.env.NODE_ENV === "development") {
+          console.error("Invalid game_state_update: invalid chip_stack", player);
+        }
+        return null;
+      }
+      
+      if (!Array.isArray(playerObj.hole_cards)) {
+        if (process.env.NODE_ENV === "development") {
+          console.error("Invalid game_state_update: hole_cards not array", player);
+        }
         return null;
       }
       
       // Validate cards if present
-      for (const card of player.hole_cards) {
+      for (const card of playerObj.hole_cards) {
         if (card && !isValidCard(card)) {
-          console.error("Invalid game_state_update: invalid card", card);
+          if (process.env.NODE_ENV === "development") {
+            console.error("Invalid game_state_update: invalid card", card);
+          }
           return null;
         }
       }
@@ -108,7 +152,9 @@ export class MessageParser {
     // Validate community cards
     for (const card of data.community_cards) {
       if (!isValidCard(card)) {
-        console.error("Invalid game_state_update: invalid community card", card);
+        if (process.env.NODE_ENV === "development") {
+          console.error("Invalid game_state_update: invalid community card", card);
+        }
         return null;
       }
     }
@@ -117,21 +163,36 @@ export class MessageParser {
   }
   
   // Validate error message
-  private static validateErrorMessage(msg: any): ErrorMessage | null {
-    if (!msg.data || typeof msg.data !== "object") {
-      console.error("Invalid error message: missing data", msg);
+  private static validateErrorMessage(msg: unknown): ErrorMessage | null {
+    if (!msg || typeof msg !== "object") {
+      if (process.env.NODE_ENV === "development") {
+        console.error("Invalid error message: missing data", msg);
+      }
+      return null;
+    }
+
+    const message = msg as Record<string, unknown>;
+    
+    if (!message.data || typeof message.data !== "object") {
+      if (process.env.NODE_ENV === "development") {
+        console.error("Invalid error message: missing data", msg);
+      }
       return null;
     }
     
-    const { data } = msg;
+    const data = message.data as Record<string, unknown>;
     
     if (typeof data.code !== "string") {
-      console.error("Invalid error message: missing code", data);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Invalid error message: missing code", data);
+      }
       return null;
     }
     
     if (typeof data.message !== "string") {
-      console.error("Invalid error message: missing message", data);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Invalid error message: missing message", data);
+      }
       return null;
     }
     
@@ -140,22 +201,37 @@ export class MessageParser {
   
   // Validate connection status message
   private static validateConnectionStatus(
-    msg: any
+    msg: unknown
   ): ConnectionStatusMessage | null {
-    if (!msg.data || typeof msg.data !== "object") {
-      console.error("Invalid connection_status: missing data", msg);
+    if (!msg || typeof msg !== "object") {
+      if (process.env.NODE_ENV === "development") {
+        console.error("Invalid connection_status: missing data", msg);
+      }
+      return null;
+    }
+
+    const message = msg as Record<string, unknown>;
+    
+    if (!message.data || typeof message.data !== "object") {
+      if (process.env.NODE_ENV === "development") {
+        console.error("Invalid connection_status: missing data", msg);
+      }
       return null;
     }
     
-    const { data } = msg;
+    const data = message.data as Record<string, unknown>;
     
-    if (!["connected", "disconnected", "reconnecting"].includes(data.status)) {
-      console.error("Invalid connection_status: invalid status", data);
+    if (!["connected", "disconnected", "reconnecting"].includes(data.status as string)) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("Invalid connection_status: invalid status", data);
+      }
       return null;
     }
     
-    if (data.player_id && !isValidPlayerId(data.player_id)) {
-      console.error("Invalid connection_status: invalid player_id", data);
+    if (data.player_id && !isValidPlayerId(data.player_id as string)) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("Invalid connection_status: invalid player_id", data);
+      }
       return null;
     }
     
@@ -163,16 +239,29 @@ export class MessageParser {
   }
   
   // Validate heartbeat message
-  private static validateHeartbeat(msg: any): HeartbeatMessage | null {
-    if (!msg.data || typeof msg.data !== "object") {
-      console.error("Invalid heartbeat: missing data", msg);
+  private static validateHeartbeat(msg: unknown): HeartbeatMessage | null {
+    if (!msg || typeof msg !== "object") {
+      if (process.env.NODE_ENV === "development") {
+        console.error("Invalid heartbeat: missing data", msg);
+      }
+      return null;
+    }
+
+    const message = msg as Record<string, unknown>;
+    
+    if (!message.data || typeof message.data !== "object") {
+      if (process.env.NODE_ENV === "development") {
+        console.error("Invalid heartbeat: missing data", msg);
+      }
       return null;
     }
     
-    const { data } = msg;
+    const data = message.data as Record<string, unknown>;
     
     if (typeof data.timestamp !== "number") {
-      console.error("Invalid heartbeat: invalid timestamp", data);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Invalid heartbeat: invalid timestamp", data);
+      }
       return null;
     }
     

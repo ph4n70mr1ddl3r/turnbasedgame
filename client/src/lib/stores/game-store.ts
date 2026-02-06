@@ -11,17 +11,17 @@ interface GameStore {
   lastError: string | null;
   
   // Actions
-  setGameState: (gameState: GameState) => void;
-  updatePlayer: (playerId: string, updates: Partial<PlayerState>) => void;
-  setAvailableActions: (actions: string[]) => void;
-  setError: (error: string | null) => void;
+  setGameState: (_gameState: GameState) => void; // eslint-disable-line no-unused-vars
+  updatePlayer: (_playerId: string, _updates: Partial<PlayerState>) => void; // eslint-disable-line no-unused-vars
+  setAvailableActions: (_actions: string[]) => void; // eslint-disable-line no-unused-vars
+  setError: (_error: string | null) => void; // eslint-disable-line no-unused-vars
   clearError: () => void;
   reset: () => void;
   
   // Derived selectors (computed)
   getMyPlayer: () => PlayerState | null;
   getOpponentPlayer: () => PlayerState | null;
-  getPlayer: (playerId: string) => PlayerState | null;
+  getPlayer: (_playerId: string) => PlayerState | null; // eslint-disable-line no-unused-vars
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -54,42 +54,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setAvailableActions: (_actions: string[]) => set({ availableActions: _actions }),
   
   setError: (_error: string | null) => set({ lastError: _error }),
-  
-  clearError: () => set({ lastError: null }),
-  
-  reset: () =>
-    set({
-      gameState: null,
-      isMyTurn: false,
-      availableActions: [],
-      lastError: null,
-    }),
-  
-  // Derived selectors
-  getMyPlayer: () => {
-    const state = get();
-    const playerId = localStorage.getItem("poker_player_id");
-    if (!state.gameState || !playerId) return null;
-    
-    return state.gameState.players.find((p) => p.player_id === playerId) || null;
-  },
-  
-  updatePlayer: (_playerId, _updates) =>
-    set((state) => {
-      if (!state.gameState) return state;
-      
-      const updatedPlayers = state.gameState.players.map((player) =>
-        player.player_id === _playerId ? { ...player, ..._updates } : player
-      );
-      
-      return {
-        gameState: { ...state.gameState, players: updatedPlayers },
-      };
-    }),
-  
-  setAvailableActions: (_actions) => set({ availableActions: _actions }),
-  
-  setError: (_error) => set({ lastError: _error }),
   
   clearError: () => set({ lastError: null }),
   

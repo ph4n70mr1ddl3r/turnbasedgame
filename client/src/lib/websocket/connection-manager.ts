@@ -3,7 +3,7 @@ import { ReconnectHandler, ReconnectOptions } from "./reconnect-handler";
 import { SessionManager } from "./session-manager";
 import { useConnectionStore } from "@/lib/stores/connection-store";
 import { useGameStore } from "@/lib/stores/game-store";
-import { WebSocketMessage, GameStateUpdateMessage, ErrorMessage, BetAction } from "@/types/game-types";
+import { WebSocketMessage, GameStateUpdateMessage, ErrorMessage, BetAction, ConnectionStatus } from "@/types/game-types";
 
 export interface ConnectionOptions {
   url?: string;
@@ -34,13 +34,12 @@ export class ConnectionManager {
       this.reconnectHandler = new ReconnectHandler(
         () => this.connect(),
         (state) => {
-          const validStates: Array<"connected" | "disconnected" | "reconnecting"> = [
+          const validStates: Array<ConnectionStatus> = [
             "connected",
             "disconnected",
-            "reconnecting",
           ];
-          if (validStates.includes(state as "connected" | "disconnected" | "reconnecting")) {
-            this.connectionStore.setStatus(state);
+          if (validStates.includes(state as ConnectionStatus)) {
+            this.connectionStore.setStatus(state as ConnectionStatus);
           }
         },
         this.options.reconnectOptions
@@ -70,7 +69,9 @@ export class ConnectionManager {
           }
         }, 10000); // 10 second timeout
       } catch (error) {
-        console.error("Error creating WebSocket:", error);
+        if (process.env.NODE_ENV === "development") {
+          console.error("Error creating WebSocket:", error);
+        }
         this.connectionStore.setConnected(false);
         resolve(false);
       }
@@ -108,7 +109,9 @@ export class ConnectionManager {
   // Send message to server
   sendMessage(message: WebSocketMessage): boolean {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      console.error("Cannot send message: WebSocket not connected");
+      if (process.env.NODE_ENV === "development") {
+        console.error("Cannot send message: WebSocket not connected");
+      }
       return false;
     }
     
@@ -126,7 +129,9 @@ export class ConnectionManager {
   sendBetAction(action: BetAction, amount?: number): boolean {
     const token = this.connectionStore.sessionToken;
     if (!token) {
-      console.error("Cannot send bet action: no session token");
+      if (process.env.NODE_ENV === "development") {
+        console.error("Cannot send bet action: no session token");
+      }
       return false;
     }
     
@@ -150,7 +155,9 @@ export class ConnectionManager {
   
   // Private event handlers
   private handleOpen(event: Event): void {
-    console.log("WebSocket connected:", event);
+    if (process.env.NODE_ENV === "development") {
+      console.log("WebSocket connected:", event);
+    }
     this.connectionStore.setConnected(true);
     this.connectionStore.setStatus("connected");
     
@@ -196,17 +203,23 @@ export class ConnectionManager {
         this.handleConnectionStatus(message);
         break;
       default:
-        console.log("Unhandled message type:", message.type, message);
+        if (process.env.NODE_ENV === "development") {
+          console.log("Unhandled message type:", message.type, message);
+        }
     }
   }
   
   private handleError(event: Event): void {
-    console.error("WebSocket error:", event);
+    if (process.env.NODE_ENV === "development") {
+      console.error("WebSocket error:", event);
+    }
     this.gameStore.setError("Connection error");
   }
   
   private handleClose(event: CloseEvent): void {
-    console.log("WebSocket closed:", event.code, event.reason);
+    if (process.env.NODE_ENV === "development") {
+      console.log("WebSocket closed:", event.code, event.reason);
+    }
     this.connectionStore.setConnected(false);
     
     // Clear heartbeat
@@ -224,7 +237,9 @@ export class ConnectionManager {
   }
   
   private handleConnectionTimeout(): void {
-    console.error("WebSocket connection timeout");
+    if (process.env.NODE_ENV === "development") {
+      console.error("WebSocket connection timeout");
+    }
     this.disconnect();
     
     if (this.options.autoReconnect && this.reconnectHandler) {
@@ -249,7 +264,9 @@ export class ConnectionManager {
   }
   
   private handleErrorMessage(message: ErrorMessage): void {
-    console.error("Server error:", message.data);
+    if (process.env.NODE_ENV === "development") {
+      console.error("Server error:", message.data);
+    }
     this.gameStore.setError(message.data.message);
     
     // Handle specific error codes
@@ -264,8 +281,10 @@ export class ConnectionManager {
     }
   }
   
-  private handleConnectionStatus(message: any): void {
-    console.log("Connection status:", message.data);
+  private handleConnectionStatus(message: { data: { status: ConnectionStatus; player_id?: string } }): void {
+    if (process.env.NODE_ENV === "development") {
+      console.log("Connection status:", message.data);
+    }
     this.connectionStore.setStatus(message.data.status);
     
     if (message.data.player_id) {

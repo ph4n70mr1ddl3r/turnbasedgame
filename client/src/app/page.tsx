@@ -25,7 +25,7 @@ export default function Home() {
   // Handle bet action
   const handleBetAction = (action: string, amount?: number) => {
     const success = sendBetAction(action as "check" | "call" | "raise" | "fold", amount);
-    if (!success) {
+    if (!success && process.env.NODE_ENV === "development") {
       console.error("Failed to send bet action");
     }
   };
