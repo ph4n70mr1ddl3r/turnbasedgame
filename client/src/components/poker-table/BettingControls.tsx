@@ -5,7 +5,7 @@ import { useState } from "react";
 interface BettingControlsProps {
   isMyTurn: boolean;
   availableActions: string[];
-  onBetAction: (action: string, amount?: number) => void;
+  onBetAction: (_action: string, _amount?: number) => void;
   minBet: number;
   maxBet: number;
 }

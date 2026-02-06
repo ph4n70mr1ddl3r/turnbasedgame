@@ -23,7 +23,7 @@ export class ConnectionManager {
   private socket: WebSocket | null = null;
   private options: Required<ConnectionOptions>;
   private reconnectHandler: ReconnectHandler | null = null;
-  private heartbeatIntervalId: NodeJS.Timeout | null = null;
+  private heartbeatIntervalId: ReturnType<typeof setInterval> | null = null;
   private connectionStore = useConnectionStore.getState();
   private gameStore = useGameStore.getState();
   
@@ -33,15 +33,18 @@ export class ConnectionManager {
     if (this.options.autoReconnect) {
       this.reconnectHandler = new ReconnectHandler(
         () => this.connect(),
-        (state) => this.connectionStore.setStatus(state as any),
+        (state) => {
+          const validStates: Array<"connected" | "disconnected" | "reconnecting"> = [
+            "connected",
+            "disconnected",
+            "reconnecting",
+          ];
+          if (validStates.includes(state as "connected" | "disconnected" | "reconnecting")) {
+            this.connectionStore.setStatus(state);
+          }
+        },
         this.options.reconnectOptions
       );
-    }
-    
-    // Auto-connect if session exists
-    const session = SessionManager.getSession();
-    if (session) {
-      setTimeout(() => this.connect(), 100);
     }
   }
   
@@ -274,6 +277,12 @@ export class ConnectionManager {
   }
   
   private startHeartbeat(): void {
+    // Send initial heartbeat immediately
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      const heartbeat = MessageParser.createHeartbeat();
+      this.sendMessage(heartbeat);
+    }
+    
     // Clear existing interval
     if (this.heartbeatIntervalId) {
       clearInterval(this.heartbeatIntervalId);
@@ -286,14 +295,6 @@ export class ConnectionManager {
         this.sendMessage(heartbeat);
       }
     }, this.options.heartbeatInterval);
-    
-    // Send initial heartbeat
-    setTimeout(() => {
-      if (this.socket?.readyState === WebSocket.OPEN) {
-        const heartbeat = MessageParser.createHeartbeat();
-        this.sendMessage(heartbeat);
-      }
-    }, 1000);
   }
   
   // Static singleton instance (optional)

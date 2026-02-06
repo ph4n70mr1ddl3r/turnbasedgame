@@ -17,13 +17,17 @@ export default function Home() {
     sendBetAction,
     lastError,
     clearError,
+    playerId,
   } = useWebSocket({
     autoConnect: true,
   });
   
   // Handle bet action
   const handleBetAction = (action: string, amount?: number) => {
-    sendBetAction(action as any, amount);
+    const success = sendBetAction(action as "check" | "call" | "raise" | "fold", amount);
+    if (!success) {
+      console.error("Failed to send bet action");
+    }
   };
   
   return (
@@ -134,9 +138,9 @@ export default function Home() {
           
           <div className="bg-green-800 p-4 rounded">
             <h3 className="font-bold mb-2">Your Hand</h3>
-            {gameState?.players.find(p => p.player_id === "p1")?.hole_cards?.length ? (
+            {gameState?.players.find(p => p.player_id === playerId)?.hole_cards?.length ? (
               <div className="flex space-x-2">
-                {gameState.players.find(p => p.player_id === "p1")?.hole_cards.map((card, idx) => (
+                {gameState.players.find(p => p.player_id === playerId)?.hole_cards.map((card, idx) => (
                   <div key={idx} className="bg-white text-black w-12 h-16 rounded flex items-center justify-center font-bold">
                     {card}
                   </div>
@@ -158,7 +162,7 @@ export default function Home() {
               </div>
               <div className="flex justify-between">
                 <span>Player ID:</span>
-                <span className="font-mono">{"p1"}</span>
+                <span className="font-mono">{playerId || "-"}</span>
               </div>
               <div className="flex justify-between">
                 <span>Session:</span>

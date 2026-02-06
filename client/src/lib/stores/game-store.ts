@@ -32,18 +32,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
   lastError: null,
   
   // Actions
-  setGameState: (gameState) => {
+  setGameState: (_gameState: GameState) => {
     const playerId = localStorage.getItem("poker_player_id");
-    const isMyTurn = gameState.current_player === playerId;
-    set({ gameState, isMyTurn });
+    const isMyTurn = _gameState.current_player === playerId;
+    set({ gameState: _gameState, isMyTurn });
   },
   
-  updatePlayer: (playerId, updates) =>
+  updatePlayer: (_playerId: string, _updates: Partial<PlayerState>) =>
     set((state) => {
       if (!state.gameState) return state;
       
       const updatedPlayers = state.gameState.players.map((player) =>
-        player.player_id === playerId ? { ...player, ...updates } : player
+        player.player_id === _playerId ? { ...player, ..._updates } : player
       );
       
       return {
@@ -51,9 +51,45 @@ export const useGameStore = create<GameStore>((set, get) => ({
       };
     }),
   
-  setAvailableActions: (actions) => set({ availableActions: actions }),
+  setAvailableActions: (_actions: string[]) => set({ availableActions: _actions }),
   
-  setError: (error) => set({ lastError: error }),
+  setError: (_error: string | null) => set({ lastError: _error }),
+  
+  clearError: () => set({ lastError: null }),
+  
+  reset: () =>
+    set({
+      gameState: null,
+      isMyTurn: false,
+      availableActions: [],
+      lastError: null,
+    }),
+  
+  // Derived selectors
+  getMyPlayer: () => {
+    const state = get();
+    const playerId = localStorage.getItem("poker_player_id");
+    if (!state.gameState || !playerId) return null;
+    
+    return state.gameState.players.find((p) => p.player_id === playerId) || null;
+  },
+  
+  updatePlayer: (_playerId, _updates) =>
+    set((state) => {
+      if (!state.gameState) return state;
+      
+      const updatedPlayers = state.gameState.players.map((player) =>
+        player.player_id === _playerId ? { ...player, ..._updates } : player
+      );
+      
+      return {
+        gameState: { ...state.gameState, players: updatedPlayers },
+      };
+    }),
+  
+  setAvailableActions: (_actions) => set({ availableActions: _actions }),
+  
+  setError: (_error) => set({ lastError: _error }),
   
   clearError: () => set({ lastError: null }),
   
@@ -82,11 +118,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     return state.gameState.players.find((p) => p.player_id !== playerId) || null;
   },
   
-  getPlayer: (playerId) => {
+  getPlayer: (_playerId: string) => {
     const state = get();
     if (!state.gameState) return null;
     
-    return state.gameState.players.find((p) => p.player_id === playerId) || null;
+    return state.gameState.players.find((p) => p.player_id === _playerId) || null;
   },
 }));
 

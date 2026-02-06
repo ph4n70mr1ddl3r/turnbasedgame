@@ -32,21 +32,21 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
   playerId: typeof window !== 'undefined' ? localStorage.getItem("poker_player_id") || null : null,
   
   // Actions
-  setStatus: (status) => set({ status }),
+  setStatus: (_status: ConnectionStatus) => set({ status: _status }),
   
-  setConnected: (isConnected) =>
-    set({ isConnected, status: isConnected ? "connected" : "disconnected" }),
+  setConnected: (_isConnected: boolean) =>
+    set({ isConnected: _isConnected, status: _isConnected ? "connected" : "disconnected" }),
   
   updateHeartbeat: () => set({ lastHeartbeat: Date.now() }),
   
-  setLatency: (latency) => set({ latency }),
+  setLatency: (_latency: number) => set({ latency: _latency }),
   
-  setSession: (token, playerId) => {
+  setSession: (_token: string, _playerId: string) => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem("poker_session_token", token);
-      localStorage.setItem("poker_player_id", playerId);
+      localStorage.setItem("poker_session_token", _token);
+      localStorage.setItem("poker_player_id", _playerId);
     }
-    set({ sessionToken: token, playerId });
+    set({ sessionToken: _token, playerId: _playerId });
   },
   
   clearSession: () => {

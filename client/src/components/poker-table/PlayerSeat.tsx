@@ -6,7 +6,7 @@ interface PlayerSeatProps {
   position: "top" | "bottom";
 }
 
-export function PlayerSeat({ player, isCurrentPlayer, position }: PlayerSeatProps) {
+export function PlayerSeat({ player, isCurrentPlayer }: PlayerSeatProps) {
   if (!player) {
     return (
       <div className="bg-green-950/70 p-4 rounded-lg border-2 border-dashed border-green-700">

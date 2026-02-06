@@ -1,14 +1,10 @@
 import {
   WebSocketMessage,
-  isGameStateUpdate,
-  isBetAction,
-  isConnectionStatus,
-  isErrorMessage,
-  isHeartbeat,
   GameStateUpdateMessage,
   ErrorMessage,
   ConnectionStatusMessage,
   HeartbeatMessage,
+  SessionInitMessage,
   isValidCard,
   isValidPlayerId,
 } from "@/types/game-types";
@@ -197,7 +193,7 @@ export class MessageParser {
   }
   
   // Create a session init message
-  static createSessionInit(reconnectToken?: string): any {
+  static createSessionInit(reconnectToken?: string): SessionInitMessage {
     return {
       type: "session_init",
       data: {

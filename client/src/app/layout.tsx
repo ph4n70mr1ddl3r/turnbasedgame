@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import dynamic from "next/dynamic";
+import React from "react";
 
 const ConnectionStatus = dynamic(
   () => import("@/components/ui/ConnectionStatus").then(mod => mod.ConnectionStatus)

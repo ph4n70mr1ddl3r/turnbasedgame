@@ -17,15 +17,17 @@ const DEFAULT_OPTIONS: Required<ReconnectOptions> = {
   jitter: true,                  // Add jitter
 };
 
+export type ReconnectState = "connected" | "stopped" | "failed" | `attempt_${number}` | `waiting_${string}`;
+
 export class ReconnectHandler {
   private attempts = 0;
   private currentDelay: number;
-  private timeoutId: NodeJS.Timeout | null = null;
+  private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private isActive = false;
   
   constructor(
-    private connectFn: () => Promise<boolean>,
-    private onStateChange?: (state: string) => void,
+    private _connectFn: () => Promise<boolean>,
+    private _onStateChange?: (_state: ReconnectState) => void,
     private options: ReconnectOptions = {}
   ) {
     const opts = { ...DEFAULT_OPTIONS, ...options };
@@ -40,7 +42,7 @@ export class ReconnectHandler {
     this.isActive = true;
     this.attempts = 0;
     this.currentDelay = this.options.initialDelay!;
-    this.onStateChange?.("reconnecting");
+    this._onStateChange?.("reconnecting");
     
     this.attemptReconnect();
   }
@@ -52,7 +54,7 @@ export class ReconnectHandler {
       clearTimeout(this.timeoutId);
       this.timeoutId = null;
     }
-    this.onStateChange?.("stopped");
+    this._onStateChange?.("stopped");
   }
   
   // Reset attempts (call after successful connection)
@@ -64,7 +66,7 @@ export class ReconnectHandler {
       clearTimeout(this.timeoutId);
       this.timeoutId = null;
     }
-    this.onStateChange?.("connected");
+    this._onStateChange?.("connected");
   }
   
   // Manual reconnection attempt
@@ -89,16 +91,16 @@ export class ReconnectHandler {
     
     // Check max attempts
     if (this.options.maxAttempts! > 0 && this.attempts >= this.options.maxAttempts!) {
-      this.onStateChange?.("failed");
+      this._onStateChange?.("failed");
       this.isActive = false;
       return false;
     }
     
     this.attempts++;
-    this.onStateChange?.(`attempt_${this.attempts}`);
+    this._onStateChange?.(`attempt_${this.attempts}`);
     
     try {
-      const success = await this.connectFn();
+      const success = await this._connectFn();
       
       if (success) {
         this.reset();
@@ -140,7 +142,7 @@ export class ReconnectHandler {
       this.attemptReconnect();
     }, delay);
     
-    this.onStateChange?.(`waiting_${Math.round(delay / 1000)}s`);
+    this._onStateChange?.(`waiting_${Math.round(delay / 1000)}s`);
   }
   
   // Static helper to determine if reconnection should be attempted
