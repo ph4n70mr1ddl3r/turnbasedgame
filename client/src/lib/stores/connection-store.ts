@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { ConnectionStatus } from "@/types/game-types";
 import { SESSION_TOKEN_KEY, PLAYER_ID_KEY } from "@/lib/constants/storage";
+import { logError } from "@/lib/utils/logger";
 
 interface ConnectionStore {
   // Connection state
@@ -44,24 +45,36 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
   
   setSession: (token: string, playerId: string) => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem(SESSION_TOKEN_KEY, token);
-      localStorage.setItem(PLAYER_ID_KEY, playerId);
+      try {
+        localStorage.setItem(SESSION_TOKEN_KEY, token);
+        localStorage.setItem(PLAYER_ID_KEY, playerId);
+      } catch (error) {
+        logError("Error saving session to localStorage:", error);
+      }
     }
     set({ sessionToken: token, playerId });
   },
   
   clearSession: () => {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem(SESSION_TOKEN_KEY);
-      localStorage.removeItem(PLAYER_ID_KEY);
+      try {
+        localStorage.removeItem(SESSION_TOKEN_KEY);
+        localStorage.removeItem(PLAYER_ID_KEY);
+      } catch (error) {
+        logError("Error clearing session from localStorage:", error);
+      }
     }
     set({ sessionToken: null, playerId: null });
   },
   
   reset: () => {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem(SESSION_TOKEN_KEY);
-      localStorage.removeItem(PLAYER_ID_KEY);
+      try {
+        localStorage.removeItem(SESSION_TOKEN_KEY);
+        localStorage.removeItem(PLAYER_ID_KEY);
+      } catch (error) {
+        logError("Error clearing session from localStorage during reset:", error);
+      }
     }
     set({
       status: "disconnected",

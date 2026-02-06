@@ -10,11 +10,19 @@ export type GameStatus = "waiting" | "active" | "finished";
 export type BetAction = "check" | "call" | "raise" | "fold";
 export type ConnectionStatus = "connected" | "disconnected" | "reconnecting";
 
+export interface ConnectionStatusInfo {
+  isConnected: boolean;
+  status: ConnectionStatus;
+  latency: number | null;
+  sessionToken: string | null;
+  playerId: string | null;
+}
+
 // Player state
 export interface PlayerState {
   player_id: string;           // "p1" or "p2"
   chip_stack: number;          // Current chip count
-  hole_cards: [Card, Card];    // Player's private cards (empty array if not revealed)
+  hole_cards: Card[];          // Player's private cards (empty array if not revealed)
   position: PlayerPosition;    // Current position (button, blinds, etc.)
   current_bet: number;         // Amount bet in current betting round
   is_active: boolean;          // Whether player is still in the hand

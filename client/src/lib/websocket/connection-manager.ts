@@ -3,7 +3,7 @@ import { ReconnectHandler, ReconnectOptions } from "./reconnect-handler";
 import { SessionManager } from "./session-manager";
 import { useConnectionStore } from "@/lib/stores/connection-store";
 import { useGameStore } from "@/lib/stores/game-store";
-import { WebSocketMessage, GameStateUpdateMessage, ErrorMessage, BetAction, ConnectionStatus } from "@/types/game-types";
+import { WebSocketMessage, GameStateUpdateMessage, ErrorMessage, BetAction, ConnectionStatus, ConnectionStatusInfo } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
 
 export interface ConnectionOptions {
@@ -150,7 +150,7 @@ export class ConnectionManager {
     });
   }
 
-  getStatus() {
+  getStatus(): ConnectionStatusInfo {
     return {
       isConnected: this.connectionStore.isConnected,
       status: this.connectionStore.status,
@@ -162,11 +162,10 @@ export class ConnectionManager {
 
   private handleOpen(): void {
     this.connectionStore.setConnected(true);
-    this.connectionStore.setStatus("connected");
-    
+
     // Start heartbeat
     this.startHeartbeat();
-    
+
     // Send session init message
     const session = SessionManager.getSession();
     if (session) {
@@ -176,7 +175,7 @@ export class ConnectionManager {
       // New session
       this.sendMessage(MessageParser.createSessionInit());
     }
-    
+
     // Reset reconnection handler
     this.reconnectHandler?.reset();
   }
