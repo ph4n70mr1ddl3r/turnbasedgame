@@ -29,7 +29,7 @@ export class ConnectionManager {
   
   constructor(options: ConnectionOptions = {}) {
     this.options = { ...DEFAULT_OPTIONS, ...options };
-    
+
     if (this.options.autoReconnect) {
       this.reconnectHandler = new ReconnectHandler(
         () => this.connect(),
@@ -46,9 +46,9 @@ export class ConnectionManager {
       );
     }
   }
-  
-  // Connect to WebSocket server
+
   async connect(): Promise<boolean> {
+
     // Close existing connection
     this.disconnect();
     
@@ -56,7 +56,7 @@ export class ConnectionManager {
       try {
         this.socket = new WebSocket(this.options.url);
         
-        this.socket.onopen = (event) => this.handleOpen(event);
+        this.socket.onopen = () => this.handleOpen();
         this.socket.onmessage = (event) => this.handleMessage(event);
         this.socket.onerror = (event) => this.handleError(event);
         this.socket.onclose = (event) => this.handleClose(event);
@@ -77,8 +77,7 @@ export class ConnectionManager {
       }
     });
   }
-  
-  // Disconnect from server
+
   disconnect(): void {
     // Stop reconnection attempts
     this.reconnectHandler?.stop();
@@ -105,8 +104,7 @@ export class ConnectionManager {
     
     this.connectionStore.setConnected(false);
   }
-  
-  // Send message to server
+
   sendMessage(message: WebSocketMessage): boolean {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
       if (process.env.NODE_ENV === "development") {
@@ -124,8 +122,7 @@ export class ConnectionManager {
       return false;
     }
   }
-  
-  // Send bet action
+
   sendBetAction(action: BetAction, amount?: number): boolean {
     const token = this.connectionStore.sessionToken;
     if (!token) {
@@ -141,8 +138,7 @@ export class ConnectionManager {
       token,
     });
   }
-  
-  // Get connection status
+
   getStatus() {
     return {
       isConnected: this.connectionStore.isConnected,
@@ -152,12 +148,8 @@ export class ConnectionManager {
       playerId: this.connectionStore.playerId,
     };
   }
-  
-  // Private event handlers
-  private handleOpen(event: Event): void {
-    if (process.env.NODE_ENV === "development") {
-      console.log("WebSocket connected:", event);
-    }
+
+  private handleOpen(): void {
     this.connectionStore.setConnected(true);
     this.connectionStore.setStatus("connected");
     
@@ -203,12 +195,10 @@ export class ConnectionManager {
         this.handleConnectionStatus(message);
         break;
       default:
-        if (process.env.NODE_ENV === "development") {
-          console.log("Unhandled message type:", message.type, message);
-        }
+        break;
     }
   }
-  
+
   private handleError(event: Event): void {
     if (process.env.NODE_ENV === "development") {
       console.error("WebSocket error:", event);
@@ -217,9 +207,6 @@ export class ConnectionManager {
   }
   
   private handleClose(event: CloseEvent): void {
-    if (process.env.NODE_ENV === "development") {
-      console.log("WebSocket closed:", event.code, event.reason);
-    }
     this.connectionStore.setConnected(false);
     
     // Clear heartbeat
@@ -282,9 +269,6 @@ export class ConnectionManager {
   }
   
   private handleConnectionStatus(message: { data: { status: ConnectionStatus; player_id?: string } }): void {
-    if (process.env.NODE_ENV === "development") {
-      console.log("Connection status:", message.data);
-    }
     this.connectionStore.setStatus(message.data.status);
     
     if (message.data.player_id) {

@@ -1,3 +1,4 @@
+ 
 // Auto-reconnection handler for WebSocket connections
 // Implements exponential backoff with jitter
 
@@ -25,34 +26,34 @@ export class ReconnectHandler {
   private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private isActive = false;
   private connectFn: () => Promise<boolean>;
-  private onStateChange?: (_state: ReconnectState) => void; // eslint-disable-line no-unused-vars
+
+  private onStateChange?: (state: ReconnectState) => void;
   private options: Required<ReconnectOptions>;
   
   constructor(
     connectFn: () => Promise<boolean>,
-    _onStateChange?: (_state: ReconnectState) => void, // eslint-disable-line no-unused-vars
+
+    onStateChange?: (state: ReconnectState) => void,
     options: ReconnectOptions = {}
   ) {
     this.connectFn = connectFn;
-    this.onStateChange = _onStateChange;
+    this.onStateChange = onStateChange;
     const opts = { ...DEFAULT_OPTIONS, ...options };
     this.options = opts;
     this.currentDelay = opts.initialDelay;
   }
-  
-  // Start reconnection attempts
+
   start(): void {
     if (this.isActive) return;
     
     this.isActive = true;
     this.attempts = 0;
-    this.currentDelay = this.options.initialDelay!;
+    this.currentDelay = this.options.initialDelay;
     this.onStateChange?.("disconnected");
     
     this.attemptReconnect();
   }
-  
-  // Stop reconnection attempts
+
   stop(): void {
     this.isActive = false;
     if (this.timeoutId) {
@@ -61,11 +62,10 @@ export class ReconnectHandler {
     }
     this.onStateChange?.("stopped");
   }
-  
-  // Reset attempts (call after successful connection)
+
   reset(): void {
     this.attempts = 0;
-    this.currentDelay = this.options.initialDelay!;
+    this.currentDelay = this.options.initialDelay;
     this.isActive = false;
     if (this.timeoutId) {
       clearTimeout(this.timeoutId);
@@ -73,14 +73,12 @@ export class ReconnectHandler {
     }
     this.onStateChange?.("connected");
   }
-  
-  // Manual reconnection attempt
+
   async reconnectNow(): Promise<boolean> {
     this.stop();
     return this.attemptReconnect();
   }
-  
-  // Get current reconnection status
+
   getStatus() {
     return {
       attempts: this.attempts,
@@ -93,9 +91,10 @@ export class ReconnectHandler {
   // Private method to attempt reconnection
   private async attemptReconnect(): Promise<boolean> {
     if (!this.isActive) return false;
-    
-    // Check max attempts
-    if (this.options.maxAttempts! > 0 && this.attempts >= this.options.maxAttempts!) {
+
+    const { maxAttempts } = this.options;
+
+    if (maxAttempts > 0 && this.attempts >= maxAttempts) {
       this.onStateChange?.("failed");
       this.isActive = false;
       return false;
@@ -126,15 +125,14 @@ export class ReconnectHandler {
   // Schedule next reconnection attempt with exponential backoff
   private scheduleNextAttempt(): void {
     if (!this.isActive) return;
-    
-    // Calculate next delay with exponential backoff
+
+    const { backoffFactor, maxDelay, jitter } = this.options;
+
     let delay = this.currentDelay;
-    
-    // Apply backoff factor
-    delay *= this.options.backoffFactor!;
-    
-    // Apply max delay cap
-    delay = Math.min(delay, this.options.maxDelay!);
+
+    delay *= backoffFactor;
+
+    delay = Math.min(delay, maxDelay);
     
     // Apply jitter (±20%)
     if (this.options.jitter) {
@@ -143,12 +141,16 @@ export class ReconnectHandler {
     }
     
     this.currentDelay = delay;
-    
-    // Schedule next attempt
+
+    if (jitter) {
+      const jitterValue = 0.8 + Math.random() * 0.4;
+      delay *= jitterValue;
+    }
+
     this.timeoutId = setTimeout(() => {
       this.attemptReconnect();
     }, delay);
-    
+
     this.onStateChange?.(`waiting_${Math.round(delay / 1000)}s`);
   }
   

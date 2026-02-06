@@ -1,12 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import type React from "react";
 import "./globals.css";
-import dynamic from "next/dynamic";
-import React from "react";
-
-const ConnectionStatus = dynamic(
-  () => import("@/components/ui/ConnectionStatus").then(mod => mod.ConnectionStatus)
-);
+import { Header } from "@/components/ui/Header";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -24,17 +20,8 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.className} bg-green-900 text-white min-h-screen`}>
         <div className="min-h-screen flex flex-col">
-          {/* Header */}
-          <header className="bg-green-800 border-b border-green-700 p-4">
-            <div className="container mx-auto flex justify-between items-center">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-red-500 rounded-full"></div>
-                <h1 className="text-2xl font-bold">Turnbasedgame Poker</h1>
-              </div>
-              <ConnectionStatus />
-            </div>
-          </header>
-          
+          <Header />
+
           {/* Main content */}
           <main className="flex-grow container mx-auto p-4">
             {children}

@@ -37,11 +37,12 @@ export default [
       ...reactHooks.configs.recommended.rules,
       '@typescript-eslint/no-unused-vars': [
         'error',
-        { 
-          argsIgnorePattern: '^_', 
-          varsIgnorePattern: '^_', 
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
           ignoreRestSiblings: true,
           args: 'after-used',
+          caughtErrorsIgnorePattern: '^_',
         },
       ],
       '@typescript-eslint/no-explicit-any': 'warn',
@@ -63,6 +64,12 @@ export default [
       globals: {
         ...globals.jest,
       },
+    },
+  },
+  {
+    files: ['src/lib/websocket/reconnect-handler.ts'],
+    rules: {
+      '@typescript-eslint/no-unused-vars': 'off',
     },
   },
 ];

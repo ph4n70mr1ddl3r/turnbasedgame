@@ -84,27 +84,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     };
   }, [initManager, options.autoConnect]);
   
-  // Subscribe to connection status changes
-  useEffect(() => {
-    const unsubscribe = useConnectionStore.subscribe((state) => {
-      if (process.env.NODE_ENV === "development") {
-        console.log("Connection status changed:", state.status);
-      }
-    });
-    
-    return unsubscribe;
-  }, []);
-  
-  // Subscribe to game state changes
-  useEffect(() => {
-    const unsubscribe = useGameStore.subscribe((state) => {
-      if (state.gameState && process.env.NODE_ENV === "development") {
-        console.log("Game state updated:", state.gameState);
-      }
-    });
-    
-    return unsubscribe;
-  }, []);
+
   
   return {
     // Connection methods

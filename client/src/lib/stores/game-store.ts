@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { GameState, PlayerState } from "@/types/game-types";
+import { PLAYER_ID_KEY } from "@/lib/constants/storage";
 
 interface GameStore {
   // Current game state
@@ -33,7 +34,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   
   // Actions
   setGameState: (_gameState: GameState) => {
-    const playerId = localStorage.getItem("poker_player_id");
+    const playerId = localStorage.getItem(PLAYER_ID_KEY);
     const isMyTurn = _gameState.current_player === playerId;
     set({ gameState: _gameState, isMyTurn });
   },
@@ -68,17 +69,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
   // Derived selectors
   getMyPlayer: () => {
     const state = get();
-    const playerId = localStorage.getItem("poker_player_id");
+    const playerId = localStorage.getItem(PLAYER_ID_KEY);
     if (!state.gameState || !playerId) return null;
-    
+
     return state.gameState.players.find((p) => p.player_id === playerId) || null;
   },
-  
+
   getOpponentPlayer: () => {
     const state = get();
-    const playerId = localStorage.getItem("poker_player_id");
+    const playerId = localStorage.getItem(PLAYER_ID_KEY);
     if (!state.gameState || !playerId) return null;
-    
+
     return state.gameState.players.find((p) => p.player_id !== playerId) || null;
   },
   

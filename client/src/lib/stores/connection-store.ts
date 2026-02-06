@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { ConnectionStatus } from "@/types/game-types";
+import { SESSION_TOKEN_KEY, PLAYER_ID_KEY } from "@/lib/constants/storage";
 
 interface ConnectionStore {
   // Connection state
@@ -28,8 +29,8 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
   isConnected: false,
   lastHeartbeat: null,
   latency: null,
-  sessionToken: typeof window !== 'undefined' ? localStorage.getItem("poker_session_token") || null : null,
-  playerId: typeof window !== 'undefined' ? localStorage.getItem("poker_player_id") || null : null,
+  sessionToken: typeof window !== 'undefined' ? localStorage.getItem(SESSION_TOKEN_KEY) || null : null,
+  playerId: typeof window !== 'undefined' ? localStorage.getItem(PLAYER_ID_KEY) || null : null,
   
   // Actions
   setStatus: (status: ConnectionStatus) => set({ status }),
@@ -43,24 +44,24 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
   
   setSession: (token: string, playerId: string) => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem("poker_session_token", token);
-      localStorage.setItem("poker_player_id", playerId);
+      localStorage.setItem(SESSION_TOKEN_KEY, token);
+      localStorage.setItem(PLAYER_ID_KEY, playerId);
     }
     set({ sessionToken: token, playerId });
   },
   
   clearSession: () => {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem("poker_session_token");
-      localStorage.removeItem("poker_player_id");
+      localStorage.removeItem(SESSION_TOKEN_KEY);
+      localStorage.removeItem(PLAYER_ID_KEY);
     }
     set({ sessionToken: null, playerId: null });
   },
   
   reset: () => {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem("poker_session_token");
-      localStorage.removeItem("poker_player_id");
+      localStorage.removeItem(SESSION_TOKEN_KEY);
+      localStorage.removeItem(PLAYER_ID_KEY);
     }
     set({
       status: "disconnected",
