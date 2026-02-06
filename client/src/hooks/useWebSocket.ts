@@ -124,7 +124,7 @@ export function useConnectionManager() {
   }, []);
   
   return {
-    getInstance: () => managerRef.current || ConnectionManager.getInstance(),
+    getInstance: (): ConnectionManager => managerRef.current || ConnectionManager.getInstance(),
     disconnect: () => managerRef.current?.disconnect(),
     connect: () => managerRef.current?.connect(),
   };

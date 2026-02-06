@@ -67,7 +67,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }),
   
   // Derived selectors
-  getMyPlayer: () => {
+  getMyPlayer: (): PlayerState | null => {
     const state = get();
     const playerId = typeof window !== 'undefined' ? localStorage.getItem(PLAYER_ID_KEY) : null;
     if (!state.gameState || !playerId) return null;

@@ -29,8 +29,6 @@ export class ConnectionManager {
   private options: Required<ConnectionOptions>;
   private reconnectHandler: ReconnectHandler | null = null;
   private heartbeatIntervalId: ReturnType<typeof setInterval> | null = null;
-  private connectionStore = useConnectionStore.getState();
-  private gameStore = useGameStore.getState();
   
   constructor(options: ConnectionOptions = {}) {
     this.options = { ...DEFAULT_OPTIONS, ...options };
@@ -44,7 +42,7 @@ export class ConnectionManager {
             "disconnected",
           ];
           if (validStates.includes(state as ConnectionStatus)) {
-            this.connectionStore.setStatus(state as ConnectionStatus);
+            useConnectionStore.getState().setStatus(state as ConnectionStatus);
           }
         },
         this.options.reconnectOptions
@@ -87,7 +85,7 @@ export class ConnectionManager {
         this.socket.onclose = (event) => this.handleClose(event);
       } catch (error) {
         logError("Error creating WebSocket:", error);
-        this.connectionStore.setConnected(false);
+        useConnectionStore.getState().setConnected(false);
         resolve(false);
       }
     });
@@ -116,8 +114,8 @@ export class ConnectionManager {
       
       this.socket = null;
     }
-    
-    this.connectionStore.setConnected(false);
+
+    useConnectionStore.getState().setConnected(false);
   }
 
   sendMessage(message: WebSocketMessage): boolean {
@@ -137,7 +135,7 @@ export class ConnectionManager {
   }
 
   sendBetAction(action: BetAction, amount?: number): boolean {
-    const token = this.connectionStore.sessionToken;
+    const token = useConnectionStore.getState().sessionToken;
     if (!token) {
       logError("Cannot send bet action: no session token");
       return false;
@@ -151,17 +149,18 @@ export class ConnectionManager {
   }
 
   getStatus(): ConnectionStatusInfo {
+    const connectionStore = useConnectionStore.getState();
     return {
-      isConnected: this.connectionStore.isConnected,
-      status: this.connectionStore.status,
-      latency: this.connectionStore.latency,
-      sessionToken: this.connectionStore.sessionToken,
-      playerId: this.connectionStore.playerId,
+      isConnected: connectionStore.isConnected,
+      status: connectionStore.status,
+      latency: connectionStore.latency,
+      sessionToken: connectionStore.sessionToken,
+      playerId: connectionStore.playerId,
     };
   }
 
   private handleOpen(): void {
-    this.connectionStore.setConnected(true);
+    useConnectionStore.getState().setConnected(true);
 
     // Start heartbeat
     this.startHeartbeat();
@@ -181,18 +180,18 @@ export class ConnectionManager {
   }
   
   private handleMessage(event: MessageEvent): void {
-    this.connectionStore.updateHeartbeat();
-    
+    useConnectionStore.getState().updateHeartbeat();
+
     const message = MessageParser.parseMessage(event.data);
     if (!message) return;
-    
+
     // Update latency for heartbeat messages
     if (message.type === "heartbeat") {
       const latency = Date.now() - message.data.timestamp;
-      this.connectionStore.setLatency(latency);
+      useConnectionStore.getState().setLatency(latency);
       return;
     }
-    
+
     // Handle different message types
     switch (message.type) {
       case "game_state_update":
@@ -211,18 +210,18 @@ export class ConnectionManager {
 
   private handleError(event: Event): void {
     logError("WebSocket error:", event);
-    this.gameStore.setError("Connection error");
+    useGameStore.getState().setError("Connection error");
   }
   
   private handleClose(event: CloseEvent): void {
-    this.connectionStore.setConnected(false);
-    
+    useConnectionStore.getState().setConnected(false);
+
     // Clear heartbeat
     if (this.heartbeatIntervalId) {
       clearInterval(this.heartbeatIntervalId);
       this.heartbeatIntervalId = null;
     }
-    
+
     // Handle reconnection
     if (this.options.autoReconnect && this.reconnectHandler) {
       if (ReconnectHandler.shouldReconnect(event)) {
@@ -241,30 +240,30 @@ export class ConnectionManager {
   }
   
   private handleGameStateUpdate(message: GameStateUpdateMessage): void {
-    this.gameStore.setGameState(message.data);
-    
+    useGameStore.getState().setGameState(message.data);
+
     // Extract session info from first game state
-    if (!this.connectionStore.sessionToken && message.data.players.length > 0) {
+    if (!useConnectionStore.getState().sessionToken && message.data.players.length > 0) {
       // In real implementation, server would send session token separately
       // For now, we'll assume player_id indicates our session
-      const myPlayer = this.gameStore.getMyPlayer();
+      const myPlayer = useGameStore.getState().getMyPlayer();
       if (myPlayer) {
         // Generate a token (in production, server would provide this)
         const token = SessionManager.generateToken();
-        this.connectionStore.setSession(token, myPlayer.player_id);
+        useConnectionStore.getState().setSession(token, myPlayer.player_id);
       }
     }
   }
   
   private handleErrorMessage(message: ErrorMessage): void {
     logError("Server error:", message.data);
-    this.gameStore.setError(message.data.message);
+    useGameStore.getState().setError(message.data.message);
 
     // Handle specific error codes
     switch (message.data.code) {
       case "invalid_token":
         SessionManager.clearSession();
-        this.connectionStore.clearSession();
+        useConnectionStore.getState().clearSession();
         break;
       case "game_not_active":
         // Maybe show game lobby
@@ -273,11 +272,11 @@ export class ConnectionManager {
   }
   
   private handleConnectionStatus(message: { data: { status: ConnectionStatus; player_id?: string } }): void {
-    this.connectionStore.setStatus(message.data.status);
-    
+    useConnectionStore.getState().setStatus(message.data.status);
+
     if (message.data.player_id) {
       // Update player connection status in game store
-      this.gameStore.updatePlayer(message.data.player_id, {
+      useGameStore.getState().updatePlayer(message.data.player_id, {
         // In real implementation, would have a connection status field
       });
     }

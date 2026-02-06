@@ -42,7 +42,7 @@ export class MessageParser {
         case "chat_message":
           // Client shouldn't receive these from server
           logError(`Unexpected message type from server: ${parsed.type}`);
-          return parsed;
+          return null;
         default:
           logError(`Unknown message type: ${parsed.type}`, parsed);
           return null;

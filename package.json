@@ -16,7 +16,7 @@
     "test:all": "npm run test:server && npm run test:component && npm run test:e2e",
     "test:ci": "npm run test:server && npm run test:component -- --ci --maxWorkers=2 && npm run test:e2e -- --reporter=html",
     "test:install": "cd client && npm run test:install",
-    "lint": "cd client && npx eslint . --ext .ts,.tsx --fix || true",
+    "lint": "cd client && npx eslint . --ext .ts,.tsx,.mjs --fix || true",
     "typecheck": "cd client && npx tsc --noEmit",
     "install:all": "cd client && npm install && cd ../server && cmake -B build",
     "clean": "rm -rf client/.next client/out server/build server/coverage"
