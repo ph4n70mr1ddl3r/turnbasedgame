@@ -96,5 +96,3 @@ export const gameStateSelector = (state: GameStore) => state.gameState;
 export const isMyTurnSelector = (state: GameStore) => state.isMyTurn;
 export const availableActionsSelector = (state: GameStore) => state.availableActions;
 export const lastErrorSelector = (state: GameStore) => state.lastError;
-export const myPlayerSelector = (state: GameStore) => state.getMyPlayer();
-export const opponentPlayerSelector = (state: GameStore) => state.getOpponentPlayer();

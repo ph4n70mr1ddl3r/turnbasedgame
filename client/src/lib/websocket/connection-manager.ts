@@ -61,18 +61,30 @@ export class ConnectionManager {
       try {
         this.socket = new WebSocket(this.options.url);
         
-        this.socket.onopen = () => this.handleOpen();
-        this.socket.onmessage = (event) => this.handleMessage(event);
-        this.socket.onerror = (event) => this.handleError(event);
-        this.socket.onclose = (event) => this.handleClose(event);
+        let timeoutId: ReturnType<typeof setTimeout> | null = null;
         
-        // Set timeout for connection attempt
-        setTimeout(() => {
+        const handleTimeout = () => {
           if (this.socket?.readyState !== WebSocket.OPEN) {
             this.handleConnectionTimeout();
             resolve(false);
           }
-        }, CONNECTION_TIMEOUT_MS);
+        };
+        
+        timeoutId = setTimeout(handleTimeout, CONNECTION_TIMEOUT_MS);
+        
+        const handleOpen = () => {
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
+          this.handleOpen();
+          resolve(true);
+        };
+        
+        this.socket.onopen = handleOpen;
+        this.socket.onmessage = (event) => this.handleMessage(event);
+        this.socket.onerror = (event) => this.handleError(event);
+        this.socket.onclose = (event) => this.handleClose(event);
       } catch (error) {
         logError("Error creating WebSocket:", error);
         this.connectionStore.setConnected(false);

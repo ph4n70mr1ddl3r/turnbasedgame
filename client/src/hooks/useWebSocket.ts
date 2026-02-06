@@ -82,9 +82,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       }
     };
   }, [initManager, options.autoConnect]);
-  
 
-  
   return {
     // Connection methods
     connect,
@@ -117,11 +115,11 @@ export function useConnectionManager() {
   const managerRef = useRef<ConnectionManager | null>(null);
   
   useEffect(() => {
-    managerRef.current = ConnectionManager.getInstance();
+    const instance = ConnectionManager.getInstance();
+    managerRef.current = instance;
     
     return () => {
       // Don't destroy instance on unmount - let it persist
-      // ConnectionManager.destroyInstance();
     };
   }, []);
   
