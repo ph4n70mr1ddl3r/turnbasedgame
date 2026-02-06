@@ -12,17 +12,17 @@ interface GameStore {
   lastError: string | null;
   
   // Actions
-  setGameState: (_gameState: GameState) => void; // eslint-disable-line no-unused-vars
-  updatePlayer: (_playerId: string, _updates: Partial<PlayerState>) => void; // eslint-disable-line no-unused-vars
-  setAvailableActions: (_actions: string[]) => void; // eslint-disable-line no-unused-vars
-  setError: (_error: string | null) => void; // eslint-disable-line no-unused-vars
+  setGameState: (_gameState: GameState) => void;  
+  updatePlayer: (_playerId: string, _updates: Partial<PlayerState>) => void;  
+  setAvailableActions: (_actions: string[]) => void;  
+  setError: (_error: string | null) => void;  
   clearError: () => void;
   reset: () => void;
   
   // Derived selectors (computed)
   getMyPlayer: () => PlayerState | null;
   getOpponentPlayer: () => PlayerState | null;
-  getPlayer: (_playerId: string) => PlayerState | null; // eslint-disable-line no-unused-vars
+  getPlayer: (_playerId: string) => PlayerState | null;  
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({

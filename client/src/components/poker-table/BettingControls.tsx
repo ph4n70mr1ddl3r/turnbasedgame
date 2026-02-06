@@ -5,7 +5,7 @@ import { useState } from "react";
 interface BettingControlsProps {
   isMyTurn: boolean;
   availableActions: string[];
-  onBetAction: (_action: string, _amount?: number) => void; // eslint-disable-line no-unused-vars
+  onBetAction: (_action: string, _amount?: number) => void;  
   minBet: number;
   maxBet: number;
 }

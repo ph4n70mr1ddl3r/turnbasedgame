@@ -14,11 +14,11 @@ interface ConnectionStore {
   playerId: string | null;
   
   // Actions
-  setStatus: (_status: ConnectionStatus) => void; // eslint-disable-line no-unused-vars
-  setConnected: (_connected: boolean) => void; // eslint-disable-line no-unused-vars
+  setStatus: (_status: ConnectionStatus) => void;  
+  setConnected: (_connected: boolean) => void;  
   updateHeartbeat: () => void;
-  setLatency: (_latency: number) => void; // eslint-disable-line no-unused-vars
-  setSession: (_token: string, _playerId: string) => void; // eslint-disable-line no-unused-vars
+  setLatency: (_latency: number) => void;  
+  setSession: (_token: string, _playerId: string) => void;  
   clearSession: () => void;
   reset: () => void;
 }

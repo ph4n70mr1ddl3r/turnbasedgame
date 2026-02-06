@@ -1,15 +1,12 @@
-import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import type React from "react";
 import "./globals.css";
 import { Header } from "@/components/ui/Header";
+import { metadata } from "./metadata";
+
+export { metadata };
 
 const inter = Inter({ subsets: ["latin"] });
-
-export const metadata: Metadata = {
-  title: "Turnbasedgame Poker",
-  description: "Real-time two-player Texas Hold'em poker",
-};
 
 export default function RootLayout({
   children,

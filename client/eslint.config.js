@@ -35,6 +35,7 @@ export default [
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
@@ -70,6 +71,12 @@ export default [
     files: ['src/lib/websocket/reconnect-handler.ts'],
     rules: {
       '@typescript-eslint/no-unused-vars': 'off',
+    },
+  },
+  {
+    files: ['src/app/layout.tsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
     },
   },
 ];
