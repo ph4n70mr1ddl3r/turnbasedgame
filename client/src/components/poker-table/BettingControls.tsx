@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { BetAction } from "@/types/game-types";
 
 interface BettingControlsProps {
   isMyTurn: boolean;
-  availableActions: string[];
-  onBetAction: (_action: string, _amount?: number) => void;  
+  availableActions: BetAction[];
+  onBetAction: (_action: BetAction, _amount?: number) => void;
   minBet: number;
   maxBet: number;
 }
@@ -23,7 +24,7 @@ export function BettingControls({
   // Handle raise action
   const handleRaise = () => {
     if (raiseAmount >= minBet && raiseAmount <= maxBet && onBetAction) {
-      onBetAction("raise", raiseAmount);
+      onBetAction("raise" as BetAction, raiseAmount);
       setShowRaiseInput(false);
     }
   };
@@ -47,25 +48,25 @@ export function BettingControls({
       <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
         {/* Action buttons */}
         <div className="flex flex-wrap gap-3">
-          {availableActions.includes("check") && (
+          {availableActions.includes("check" as BetAction) && (
             <button
-              onClick={() => onBetAction("check")}
+              onClick={() => onBetAction("check" as BetAction)}
               className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-white transition-colors"
             >
               Check
             </button>
           )}
-          
-          {availableActions.includes("call") && (
+
+          {availableActions.includes("call" as BetAction) && (
             <button
-              onClick={() => onBetAction("call")}
+              onClick={() => onBetAction("call" as BetAction)}
               className="px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-bold text-white transition-colors"
             >
               Call
             </button>
           )}
           
-          {availableActions.includes("raise") && (
+          {availableActions.includes("raise" as BetAction) && (
             <>
               {!showRaiseInput ? (
                 <button
@@ -101,9 +102,9 @@ export function BettingControls({
             </>
           )}
           
-          {availableActions.includes("fold") && (
+          {availableActions.includes("fold" as BetAction) && (
             <button
-              onClick={() => onBetAction("fold")}
+              onClick={() => onBetAction("fold" as BetAction)}
               className="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-bold text-white transition-colors"
             >
               Fold

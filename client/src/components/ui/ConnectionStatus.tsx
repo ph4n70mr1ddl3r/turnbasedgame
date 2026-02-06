@@ -12,16 +12,12 @@ export function ConnectionStatus() {
     connected: "bg-green-500",
     disconnected: "bg-red-500",
     reconnecting: "bg-yellow-500",
-    waiting: "bg-yellow-300",
-    failed: "bg-red-700",
   };
-  
+
   const statusText = {
     connected: "Connected",
     disconnected: "Disconnected",
     reconnecting: "Reconnecting...",
-    waiting: "Waiting",
-    failed: "Connection Failed",
   };
   
   const currentColor = statusColors[connectionStatus] || "bg-gray-500";

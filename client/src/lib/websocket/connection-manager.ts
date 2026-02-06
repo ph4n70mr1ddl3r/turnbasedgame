@@ -1,5 +1,5 @@
 import { MessageParser } from "./message-parser";
-import { ReconnectHandler, ReconnectOptions } from "./reconnect-handler";
+import { ReconnectHandler, ReconnectOptions, ReconnectState } from "./reconnect-handler";
 import { SessionManager } from "./session-manager";
 import { useConnectionStore } from "@/lib/stores/connection-store";
 import { useGameStore } from "@/lib/stores/game-store";
@@ -36,15 +36,18 @@ export class ConnectionManager {
     if (this.options.autoReconnect) {
       this.reconnectHandler = new ReconnectHandler(
         () => this.connect(),
-        (state) => {
-          const validStates: Array<ConnectionStatus> = [
-            "connected",
-            "disconnected",
-            "reconnecting",
-          ];
-          if (validStates.includes(state as ConnectionStatus)) {
-            useConnectionStore.getState().setStatus(state as ConnectionStatus);
+        (state: ReconnectState) => {
+          let connectionStatus: ConnectionStatus;
+
+          if (state === "connected") {
+            connectionStatus = "connected";
+          } else if (state === "disconnected" || state === "stopped" || state === "failed") {
+            connectionStatus = "disconnected";
+          } else {
+            connectionStatus = "reconnecting";
           }
+
+          useConnectionStore.getState().setStatus(connectionStatus);
         },
         this.options.reconnectOptions
       );
@@ -269,10 +272,6 @@ export class ConnectionManager {
   
   private handleConnectionStatus(message: { data: { status: ConnectionStatus; player_id?: string } }): void {
     useConnectionStore.getState().setStatus(message.data.status);
-
-    if (message.data.player_id) {
-      useGameStore.getState().updatePlayer(message.data.player_id, {});
-    }
   }
   
   private startHeartbeat(): void {

@@ -1,28 +1,28 @@
 import { create } from "zustand";
-import { GameState, PlayerState } from "@/types/game-types";
+import { GameState, PlayerState, BetAction } from "@/types/game-types";
 import { PLAYER_ID_KEY } from "@/lib/constants/storage";
 
 interface GameStore {
   // Current game state
   gameState: GameState | null;
-  
+
   // UI state
   isMyTurn: boolean;
-  availableActions: string[];
+  availableActions: BetAction[];
   lastError: string | null;
-  
+
   // Actions
-  setGameState: (_gameState: GameState) => void;  
-  updatePlayer: (_playerId: string, _updates: Partial<PlayerState>) => void;  
-  setAvailableActions: (_actions: string[]) => void;  
-  setError: (_error: string | null) => void;  
+  setGameState: (_gameState: GameState) => void;
+  updatePlayer: (_playerId: string, _updates: Partial<PlayerState>) => void;
+  setAvailableActions: (_actions: BetAction[]) => void;
+  setError: (_error: string | null) => void;
   clearError: () => void;
   reset: () => void;
-  
+
   // Derived selectors (computed)
   getMyPlayer: () => PlayerState | null;
   getOpponentPlayer: () => PlayerState | null;
-  getPlayer: (_playerId: string) => PlayerState | null;  
+  getPlayer: (_playerId: string) => PlayerState | null;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -52,7 +52,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       };
     }),
   
-  setAvailableActions: (_actions: string[]) => set({ availableActions: _actions }),
+  setAvailableActions: (_actions: BetAction[]) => set({ availableActions: _actions }),
   
   setError: (_error: string | null) => set({ lastError: _error }),
   
@@ -75,7 +75,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     return state.gameState.players.find((p) => p.player_id === playerId) || null;
   },
 
-  getOpponentPlayer: () => {
+  getOpponentPlayer: (): PlayerState | null => {
     const state = get();
     const playerId = typeof window !== 'undefined' ? localStorage.getItem(PLAYER_ID_KEY) : null;
     if (!state.gameState || !playerId) return null;

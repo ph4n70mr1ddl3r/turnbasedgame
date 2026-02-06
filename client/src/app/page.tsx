@@ -7,6 +7,7 @@ import { PlayerSeat } from "@/components/poker-table/PlayerSeat";
 import { CommunityCards } from "@/components/poker-table/CommunityCards";
 import { PotDisplay } from "@/components/poker-table/PotDisplay";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
+import { BetAction } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
 
 export default function Home() {
@@ -24,8 +25,8 @@ export default function Home() {
   });
   
   // Handle bet action
-  const handleBetAction = (action: string, amount?: number) => {
-    const success = sendBetAction(action as "check" | "call" | "raise" | "fold", amount);
+  const handleBetAction = (action: BetAction, amount?: number) => {
+    const success = sendBetAction(action, amount);
     if (!success) {
       logError("Failed to send bet action");
     }

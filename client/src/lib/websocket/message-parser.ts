@@ -59,11 +59,6 @@ export class MessageParser {
   private static validateGameStateUpdate(
     msg: unknown
   ): GameStateUpdateMessage | null {
-    if (!msg || typeof msg !== "object") {
-      logError("Invalid game_state_update: missing data", msg);
-      return null;
-    }
-
     const message = msg as Record<string, unknown>;
 
     if (!message.data || typeof message.data !== "object") {
@@ -135,11 +130,6 @@ export class MessageParser {
   
   // Validate error message
   private static validateErrorMessage(msg: unknown): ErrorMessage | null {
-    if (!msg || typeof msg !== "object") {
-      logError("Invalid error message: missing data", msg);
-      return null;
-    }
-
     const message = msg as Record<string, unknown>;
 
     if (!message.data || typeof message.data !== "object") {
@@ -166,11 +156,6 @@ export class MessageParser {
   private static validateConnectionStatus(
     msg: unknown
   ): ConnectionStatusMessage | null {
-    if (!msg || typeof msg !== "object") {
-      logError("Invalid connection_status: missing data", msg);
-      return null;
-    }
-
     const message = msg as Record<string, unknown>;
 
     if (!message.data || typeof message.data !== "object") {
@@ -195,11 +180,6 @@ export class MessageParser {
   
   // Validate heartbeat message
   private static validateHeartbeat(msg: unknown): HeartbeatMessage | null {
-    if (!msg || typeof msg !== "object") {
-      logError("Invalid heartbeat: missing data", msg);
-      return null;
-    }
-
     const message = msg as Record<string, unknown>;
 
     if (!message.data || typeof message.data !== "object") {
