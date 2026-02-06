@@ -1,4 +1,6 @@
- 
+
+import { logError } from "@/lib/utils/logger";
+
 // Auto-reconnection handler for WebSocket connections
 // Implements exponential backoff with jitter
 
@@ -114,9 +116,7 @@ export class ReconnectHandler {
         return false;
       }
     } catch (error) {
-      if (process.env.NODE_ENV === "development") {
-        console.error("Reconnection attempt failed:", error);
-      }
+      logError("Reconnection attempt failed:", error);
       this.scheduleNextAttempt();
       return false;
     }
@@ -133,19 +133,14 @@ export class ReconnectHandler {
     delay *= backoffFactor;
 
     delay = Math.min(delay, maxDelay);
-    
-    // Apply jitter (±20%)
-    if (this.options.jitter) {
-      const jitter = 0.8 + Math.random() * 0.4; // 0.8 to 1.2
-      delay *= jitter;
-    }
-    
-    this.currentDelay = delay;
 
+    // Apply jitter (±20%)
     if (jitter) {
       const jitterValue = 0.8 + Math.random() * 0.4;
       delay *= jitterValue;
     }
+
+    this.currentDelay = delay;
 
     this.timeoutId = setTimeout(() => {
       this.attemptReconnect();

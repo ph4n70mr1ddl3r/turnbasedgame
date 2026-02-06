@@ -7,6 +7,7 @@ import { PlayerSeat } from "@/components/poker-table/PlayerSeat";
 import { CommunityCards } from "@/components/poker-table/CommunityCards";
 import { PotDisplay } from "@/components/poker-table/PotDisplay";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
+import { logError } from "@/lib/utils/logger";
 
 export default function Home() {
   const {
@@ -25,8 +26,8 @@ export default function Home() {
   // Handle bet action
   const handleBetAction = (action: string, amount?: number) => {
     const success = sendBetAction(action as "check" | "call" | "raise" | "fold", amount);
-    if (!success && process.env.NODE_ENV === "development") {
-      console.error("Failed to send bet action");
+    if (!success) {
+      logError("Failed to send bet action");
     }
   };
   
@@ -81,8 +82,8 @@ export default function Home() {
             {/* Player 1 seat (top) */}
             <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
               <PlayerSeat
-                player={gameState?.players[0]}
-                isCurrentPlayer={gameState?.current_player === gameState?.players[0]?.player_id}
+                player={gameState?.players?.[0]}
+                isCurrentPlayer={gameState?.current_player === gameState?.players?.[0]?.player_id}
                 position="top"
               />
             </div>
@@ -95,8 +96,8 @@ export default function Home() {
             {/* Player 2 seat (bottom) */}
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
               <PlayerSeat
-                player={gameState?.players[1]}
-                isCurrentPlayer={gameState?.current_player === gameState?.players[1]?.player_id}
+                player={gameState?.players?.[1]}
+                isCurrentPlayer={gameState?.current_player === gameState?.players?.[1]?.player_id}
                 position="bottom"
               />
             </div>
@@ -138,9 +139,9 @@ export default function Home() {
           
           <div className="bg-green-800 p-4 rounded">
             <h3 className="font-bold mb-2">Your Hand</h3>
-            {gameState?.players.find(p => p.player_id === playerId)?.hole_cards?.length ? (
+            {gameState?.players?.find(p => p.player_id === playerId)?.hole_cards?.length ? (
               <div className="flex space-x-2">
-                {gameState.players.find(p => p.player_id === playerId)?.hole_cards.map((card, idx) => (
+                {gameState?.players?.find(p => p.player_id === playerId)?.hole_cards.map((card, idx) => (
                   <div key={idx} className="bg-white text-black w-12 h-16 rounded flex items-center justify-center font-bold">
                     {card}
                   </div>

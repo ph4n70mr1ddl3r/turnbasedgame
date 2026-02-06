@@ -1,4 +1,5 @@
 import { SESSION_TOKEN_KEY, PLAYER_ID_KEY, SESSION_EXPIRY_KEY } from "@/lib/constants/storage";
+import { logError } from "@/lib/utils/logger";
 
 // Session expiry (30 minutes as per architecture)
 const SESSION_DURATION_MS = 30 * 60 * 1000;
@@ -31,9 +32,7 @@ export class SessionManager {
       
       return { token, playerId, expiry };
     } catch (error) {
-      if (process.env.NODE_ENV === "development") {
-        console.error("Error reading session from localStorage:", error);
-      }
+      logError("Error reading session from localStorage:", error);
       return null;
     }
   }
@@ -47,11 +46,9 @@ export class SessionManager {
       localStorage.setItem(PLAYER_ID_KEY, playerId);
       localStorage.setItem(SESSION_EXPIRY_KEY, expiry.toString());
     } catch (error) {
-      if (process.env.NODE_ENV === "development") {
-        console.error("Error saving session to localStorage:", error);
-      }
+      logError("Error saving session to localStorage:", error);
     }
-    
+
     return session;
   }
 
@@ -64,9 +61,7 @@ export class SessionManager {
       localStorage.setItem(SESSION_EXPIRY_KEY, newExpiry.toString());
       return true;
     } catch (error) {
-      if (process.env.NODE_ENV === "development") {
-        console.error("Error updating session expiry:", error);
-      }
+      logError("Error updating session expiry:", error);
       return false;
     }
   }
@@ -77,9 +72,7 @@ export class SessionManager {
       localStorage.removeItem(PLAYER_ID_KEY);
       localStorage.removeItem(SESSION_EXPIRY_KEY);
     } catch (error) {
-      if (process.env.NODE_ENV === "development") {
-        console.error("Error clearing session from localStorage:", error);
-      }
+      logError("Error clearing session from localStorage:", error);
     }
   }
 

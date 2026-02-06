@@ -8,6 +8,7 @@ import {
   isValidCard,
   isValidPlayerId,
 } from "@/types/game-types";
+import { logError, logWarn } from "@/lib/utils/logger";
 
 export class MessageParser {
   // Parse raw WebSocket message
@@ -17,16 +18,12 @@ export class MessageParser {
       
       // Basic validation
       if (!parsed || typeof parsed !== "object") {
-        if (process.env.NODE_ENV === "development") {
-          console.error("Invalid message: not an object", parsed);
-        }
+        logError("Invalid message: not an object", parsed);
         return null;
       }
-      
+
       if (typeof parsed.type !== "string") {
-        if (process.env.NODE_ENV === "development") {
-          console.error("Invalid message: missing type field", parsed);
-        }
+        logError("Invalid message: missing type field", parsed);
         return null;
       }
       
@@ -44,20 +41,14 @@ export class MessageParser {
         case "session_init":
         case "chat_message":
           // Client shouldn't receive these from server
-          if (process.env.NODE_ENV === "development") {
-            console.warn(`Unexpected message type from server: ${parsed.type}`);
-          }
+          logWarn(`Unexpected message type from server: ${parsed.type}`);
           return parsed;
         default:
-          if (process.env.NODE_ENV === "development") {
-            console.error(`Unknown message type: ${parsed.type}`, parsed);
-          }
+          logError(`Unknown message type: ${parsed.type}`, parsed);
           return null;
       }
     } catch (error) {
-      if (process.env.NODE_ENV === "development") {
-        console.error("Error parsing WebSocket message:", error, data);
-      }
+      logError("Error parsing WebSocket message:", error);
       return null;
     }
   }

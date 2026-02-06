@@ -3,6 +3,7 @@ import { ConnectionManager } from "@/lib/websocket/connection-manager";
 import { useConnectionStore } from "@/lib/stores/connection-store";
 import { useGameStore } from "@/lib/stores/game-store";
 import { BetAction } from "@/types/game-types";
+import { logError } from "@/lib/utils/logger";
 
 export interface UseWebSocketOptions {
   autoConnect?: boolean;
@@ -44,12 +45,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   // Send bet action
   const sendBetAction = useCallback((action: BetAction, amount?: number) => {
     if (!managerRef.current) {
-      if (process.env.NODE_ENV === "development") {
-        console.error("Connection manager not initialized");
-      }
+      logError("Connection manager not initialized");
       return false;
     }
-    
+
     return managerRef.current.sendBetAction(action, amount);
   }, []);
   
