@@ -1,4 +1,3 @@
-
 import { logError } from "@/lib/utils/logger";
 
 // Auto-reconnection handler for WebSocket connections

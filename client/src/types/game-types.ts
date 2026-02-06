@@ -1,6 +1,9 @@
 // Game type definitions - must match docs/shared-types.md and C++ structures
 // All JSON fields use snake_case
 
+export const MAX_PLAYERS = 2;
+export const MAX_COMMUNITY_CARDS = 5;
+
 // Card representation: <rank><suit> e.g., "Ah", "Kd", "7c"
 export type Card = string; // Must match regex /^[2-9TJQKA][cdhs]$/
 

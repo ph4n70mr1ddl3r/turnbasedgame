@@ -12,6 +12,10 @@ export interface SessionData {
 
 export class SessionManager {
   static getSession(): SessionData | null {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
     try {
       const token = localStorage.getItem(SESSION_TOKEN_KEY);
       const playerId = localStorage.getItem(PLAYER_ID_KEY);
@@ -40,7 +44,11 @@ export class SessionManager {
   static createSession(token: string, playerId: string): SessionData {
     const expiry = Date.now() + SESSION_DURATION_MS;
     const session: SessionData = { token, playerId, expiry };
-    
+
+    if (typeof window === 'undefined') {
+      return session;
+    }
+
     try {
       localStorage.setItem(SESSION_TOKEN_KEY, token);
       localStorage.setItem(PLAYER_ID_KEY, playerId);
@@ -53,6 +61,10 @@ export class SessionManager {
   }
 
   static updateSessionExpiry(): boolean {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+
     try {
       const session = this.getSession();
       if (!session) return false;
@@ -67,6 +79,10 @@ export class SessionManager {
   }
 
   static clearSession(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
     try {
       localStorage.removeItem(SESSION_TOKEN_KEY);
       localStorage.removeItem(PLAYER_ID_KEY);

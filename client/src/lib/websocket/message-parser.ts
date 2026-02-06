@@ -7,6 +7,8 @@ import {
   SessionInitMessage,
   isValidCard,
   isValidPlayerId,
+  MAX_PLAYERS,
+  MAX_COMMUNITY_CARDS,
 } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
 
@@ -72,13 +74,13 @@ export class MessageParser {
     const data = message.data as Record<string, unknown>;
 
     // Basic validation
-    if (!Array.isArray(data.players) || data.players.length !== 2) {
+    if (!Array.isArray(data.players) || data.players.length !== MAX_PLAYERS) {
       logError("Invalid game_state_update: players array invalid", data);
       return null;
     }
 
-    if (!Array.isArray(data.community_cards)) {
-      logError("Invalid game_state_update: community_cards not array", data);
+    if (!Array.isArray(data.community_cards) || data.community_cards.length > MAX_COMMUNITY_CARDS) {
+      logError("Invalid game_state_update: community_cards not array or too many cards", data);
       return null;
     }
 

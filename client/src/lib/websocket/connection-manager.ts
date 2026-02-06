@@ -40,6 +40,7 @@ export class ConnectionManager {
           const validStates: Array<ConnectionStatus> = [
             "connected",
             "disconnected",
+            "reconnecting",
           ];
           if (validStates.includes(state as ConnectionStatus)) {
             useConnectionStore.getState().setStatus(state as ConnectionStatus);
@@ -242,13 +243,9 @@ export class ConnectionManager {
   private handleGameStateUpdate(message: GameStateUpdateMessage): void {
     useGameStore.getState().setGameState(message.data);
 
-    // Extract session info from first game state
     if (!useConnectionStore.getState().sessionToken && message.data.players.length > 0) {
-      // In real implementation, server would send session token separately
-      // For now, we'll assume player_id indicates our session
       const myPlayer = useGameStore.getState().getMyPlayer();
       if (myPlayer) {
-        // Generate a token (in production, server would provide this)
         const token = SessionManager.generateToken();
         useConnectionStore.getState().setSession(token, myPlayer.player_id);
       }
@@ -275,10 +272,7 @@ export class ConnectionManager {
     useConnectionStore.getState().setStatus(message.data.status);
 
     if (message.data.player_id) {
-      // Update player connection status in game store
-      useGameStore.getState().updatePlayer(message.data.player_id, {
-        // In real implementation, would have a connection status field
-      });
+      useGameStore.getState().updatePlayer(message.data.player_id, {});
     }
   }
   
