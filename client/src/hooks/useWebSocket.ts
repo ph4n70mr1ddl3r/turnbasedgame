@@ -12,23 +12,24 @@ export interface UseWebSocketOptions {
 
 export function useWebSocket(options: UseWebSocketOptions = {}) {
   const managerRef = useRef<ConnectionManager | null>(null);
+  const optionsRef = useRef(options);
   const connectionStore = useConnectionStore();
   const gameStore = useGameStore();
-  
+
   // Initialize connection manager
   const initManager = useCallback(() => {
     if (managerRef.current) {
       managerRef.current.disconnect();
     }
-    
+
     managerRef.current = new ConnectionManager({
-      url: options.url,
+      url: optionsRef.current.url,
       autoReconnect: true,
     });
-    
+
     return managerRef.current;
-  }, [options.url]);
-  
+  }, []);
+
   // Connect to server
   const connect = useCallback(async () => {
     const manager = managerRef.current || initManager();
@@ -69,11 +70,13 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   
   // Auto-connect on mount if enabled
   useEffect(() => {
+    optionsRef.current = options;
+
     if (options.autoConnect !== false) {
       const manager = initManager();
       manager.connect();
     }
-    
+
     // Cleanup on unmount
     return () => {
       if (managerRef.current) {
@@ -81,7 +84,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         managerRef.current = null;
       }
     };
-  }, [initManager, options.autoConnect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [options.autoConnect, initManager]);
 
   return {
     // Connection methods
@@ -113,19 +117,23 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 // Hook for accessing the connection manager instance directly
 export function useConnectionManager() {
   const managerRef = useRef<ConnectionManager | null>(null);
-  
+
   useEffect(() => {
     const instance = ConnectionManager.getInstance();
     managerRef.current = instance;
-    
+
     return () => {
       // Don't destroy instance on unmount - let it persist
     };
   }, []);
-  
+
   return {
-    getInstance: (): ConnectionManager => managerRef.current || ConnectionManager.getInstance(),
-    disconnect: () => managerRef.current?.disconnect(),
-    connect: () => managerRef.current?.connect(),
+    getInstance: (): ConnectionManager => managerRef.current ?? ConnectionManager.getInstance(),
+    disconnect: (): void => {
+      managerRef.current?.disconnect();
+    },
+    connect: (): Promise<boolean> | undefined => {
+      return managerRef.current?.connect();
+    },
   };
 }

@@ -22,7 +22,7 @@ export function BettingControls({
   
   // Handle raise action
   const handleRaise = () => {
-    if (raiseAmount >= minBet && raiseAmount <= maxBet) {
+    if (raiseAmount >= minBet && raiseAmount <= maxBet && onBetAction) {
       onBetAction("raise", raiseAmount);
       setShowRaiseInput(false);
     }

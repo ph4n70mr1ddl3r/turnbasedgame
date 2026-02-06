@@ -72,9 +72,8 @@ export class ConnectionManager {
         timeoutId = setTimeout(handleTimeout, CONNECTION_TIMEOUT_MS);
         
         const handleOpen = () => {
-          if (timeoutId) {
+          if (timeoutId !== null) {
             clearTimeout(timeoutId);
-            timeoutId = null;
           }
           this.handleOpen();
           resolve(true);

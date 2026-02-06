@@ -80,7 +80,12 @@ export class ReconnectHandler {
     return this.attemptReconnect();
   }
 
-  getStatus() {
+  getStatus(): {
+    attempts: number;
+    currentDelay: number;
+    isActive: boolean;
+    maxAttempts: number;
+  } {
     return {
       attempts: this.attempts,
       currentDelay: this.currentDelay,

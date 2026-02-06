@@ -105,12 +105,12 @@ export class SessionManager {
   }
 
   static generateToken(): string {
-    try {
-      if (typeof globalThis.crypto?.randomUUID === 'function') {
+    if (typeof globalThis.crypto?.randomUUID === 'function') {
+      try {
         return globalThis.crypto.randomUUID();
+      } catch (error) {
+        logError("Failed to generate UUID using crypto API:", error);
       }
-    } catch (_error) {
-      // Fallback to manual generation if crypto API fails
     }
 
     return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
