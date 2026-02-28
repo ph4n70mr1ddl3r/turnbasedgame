@@ -88,7 +88,6 @@ export default function Home() {
               <PlayerSeat
                 player={player1}
                 isCurrentPlayer={gameState?.current_player === player1?.player_id}
-                position="top"
               />
             </div>
 
@@ -100,7 +99,6 @@ export default function Home() {
               <PlayerSeat
                 player={player2}
                 isCurrentPlayer={gameState?.current_player === player2?.player_id}
-                position="bottom"
               />
             </div>
           </PokerTable>

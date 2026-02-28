@@ -40,6 +40,7 @@ export class ConnectionManager {
   private options: Required<ConnectionOptions>;
   private reconnectHandler: ReconnectHandler | null = null;
   private heartbeatIntervalId: ReturnType<typeof setInterval> | null = null;
+  private connectionResolved = false;
   
   constructor(options: ConnectionOptions = {}) {
     this.options = { ...DEFAULT_OPTIONS, ...options };
@@ -67,8 +68,8 @@ export class ConnectionManager {
 
   async connect(): Promise<boolean> {
 
-    // Close existing connection
     this.disconnect();
+    this.connectionResolved = false;
     
     return new Promise((resolve) => {
       try {
@@ -77,7 +78,8 @@ export class ConnectionManager {
         let timeoutId: ReturnType<typeof setTimeout> | null = null;
         
         const handleTimeout = () => {
-          if (this.socket?.readyState !== WebSocket.OPEN) {
+          if (!this.connectionResolved && this.socket?.readyState !== WebSocket.OPEN) {
+            this.connectionResolved = true;
             this.handleConnectionTimeout();
             resolve(false);
           }
@@ -86,6 +88,10 @@ export class ConnectionManager {
         timeoutId = setTimeout(handleTimeout, WS_CONNECTION_TIMEOUT_MS);
         
         const handleOpen = () => {
+          if (this.connectionResolved) {
+            return;
+          }
+          this.connectionResolved = true;
           if (timeoutId !== null) {
             clearTimeout(timeoutId);
           }
@@ -100,6 +106,7 @@ export class ConnectionManager {
       } catch (error) {
         logError("Error creating WebSocket:", error);
         useConnectionStore.getState().setConnected(false);
+        this.connectionResolved = true;
         resolve(false);
       }
     });

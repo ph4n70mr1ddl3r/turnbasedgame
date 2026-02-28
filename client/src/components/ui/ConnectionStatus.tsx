@@ -1,13 +1,17 @@
 "use client";
 
-import { useWebSocket } from "@/hooks/useWebSocket";
+import {
+  useConnectionStore,
+  connectionStatusSelector,
+  isConnectedSelector,
+  latencySelector,
+} from "@/lib/stores/connection-store";
 
 export function ConnectionStatus() {
-  const { isConnected, connectionStatus, latency } = useWebSocket({
-    autoConnect: true,
-  });
-  
-  // Status color mapping
+  const isConnected = useConnectionStore(isConnectedSelector);
+  const connectionStatus = useConnectionStore(connectionStatusSelector);
+  const latency = useConnectionStore(latencySelector);
+
   const statusColors = {
     connected: "bg-green-500",
     disconnected: "bg-red-500",
@@ -31,7 +35,6 @@ export function ConnectionStatus() {
       aria-live="polite"
       aria-atomic="true"
     >
-      {/* Connection status indicator */}
       <div className="flex items-center space-x-2">
         <div 
           className={`w-3 h-3 rounded-full ${currentColor} animate-pulse`}
@@ -41,14 +44,12 @@ export function ConnectionStatus() {
         <span className="font-medium" data-testid="connection-status">{currentText}</span>
       </div>
       
-      {/* Latency indicator */}
       {latency && (
         <div className="text-sm bg-green-900 px-2 py-1 rounded">
           {latency < 100 ? "✓" : "⚠"} {latency}ms
         </div>
       )}
       
-      {/* Reconnect button for disconnected state */}
       {!isConnected && connectionStatus === "disconnected" && (
         <button
           onClick={() => window.location.reload()}

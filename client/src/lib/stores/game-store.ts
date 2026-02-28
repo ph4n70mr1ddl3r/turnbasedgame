@@ -2,16 +2,28 @@ import { create } from "zustand";
 import { GameState, PlayerState, BetAction } from "@/types/game-types";
 import { PLAYER_ID_KEY } from "@/lib/constants/storage";
 
-interface GameStore {
-  // Current game state
-  gameState: GameState | null;
+let cachedPlayerId: string | null = null;
 
-  // UI state
+function getPlayerId(): string | null {
+  if (cachedPlayerId !== null) {
+    return cachedPlayerId;
+  }
+  if (typeof window !== "undefined") {
+    cachedPlayerId = localStorage.getItem(PLAYER_ID_KEY);
+  }
+  return cachedPlayerId;
+}
+
+export function setCachedPlayerId(id: string | null): void {
+  cachedPlayerId = id;
+}
+
+interface GameStore {
+  gameState: GameState | null;
   isMyTurn: boolean;
   availableActions: BetAction[];
   lastError: string | null;
 
-  // Actions
   setGameState: (_gameState: GameState) => void;
   updatePlayer: (_playerId: string, _updates: Partial<PlayerState>) => void;
   setAvailableActions: (_actions: BetAction[]) => void;
@@ -19,22 +31,19 @@ interface GameStore {
   clearError: () => void;
   reset: () => void;
 
-  // Derived selectors (computed)
   getMyPlayer: () => PlayerState | null;
   getOpponentPlayer: () => PlayerState | null;
   getPlayer: (_playerId: string) => PlayerState | null;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
-  // Initial state
   gameState: null,
   isMyTurn: false,
   availableActions: [],
   lastError: null,
   
-  // Actions
   setGameState: (_gameState: GameState) => {
-    const playerId = typeof window !== 'undefined' ? localStorage.getItem(PLAYER_ID_KEY) : null;
+    const playerId = getPlayerId();
     const isMyTurn = _gameState.current_player === playerId;
     set({ gameState: _gameState, isMyTurn });
   },
@@ -58,18 +67,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
   
   clearError: () => set({ lastError: null }),
   
-  reset: () =>
-    set({
+  reset: () => {
+    cachedPlayerId = null;
+    return set({
       gameState: null,
       isMyTurn: false,
       availableActions: [],
       lastError: null,
-    }),
+    });
+  },
   
-  // Derived selectors
   getMyPlayer: (): PlayerState | null => {
     const state = get();
-    const playerId = typeof window !== 'undefined' ? localStorage.getItem(PLAYER_ID_KEY) : null;
+    const playerId = getPlayerId();
     if (!state.gameState || !playerId) return null;
 
     return state.gameState.players.find((p) => p.player_id === playerId) || null;
@@ -77,7 +87,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   getOpponentPlayer: (): PlayerState | null => {
     const state = get();
-    const playerId = typeof window !== 'undefined' ? localStorage.getItem(PLAYER_ID_KEY) : null;
+    const playerId = getPlayerId();
     if (!state.gameState || !playerId) return null;
 
     return state.gameState.players.find((p) => p.player_id !== playerId) || null;
@@ -91,7 +101,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 }));
 
-// Selectors
 export const gameStateSelector = (state: GameStore) => state.gameState;
 export const isMyTurnSelector = (state: GameStore) => state.isMyTurn;
 export const availableActionsSelector = (state: GameStore) => state.availableActions;

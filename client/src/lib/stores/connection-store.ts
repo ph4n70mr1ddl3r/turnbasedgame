@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { ConnectionStatus } from "@/types/game-types";
 import { SessionManager } from "@/lib/websocket/session-manager";
+import { setCachedPlayerId } from "@/lib/stores/game-store";
 
 interface ConnectionStore {
   status: ConnectionStatus;
@@ -51,16 +52,19 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
 
   setSession: (token: string, playerId: string) => {
     SessionManager.createSession(token, playerId);
+    setCachedPlayerId(playerId);
     set({ sessionToken: token, playerId });
   },
 
   clearSession: () => {
     SessionManager.clearSession();
+    setCachedPlayerId(null);
     set({ sessionToken: null, playerId: null });
   },
 
   reset: () => {
     SessionManager.clearSession();
+    setCachedPlayerId(null);
     set({
       status: "disconnected",
       isConnected: false,

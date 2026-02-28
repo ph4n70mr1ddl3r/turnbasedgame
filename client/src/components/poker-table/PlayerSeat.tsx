@@ -3,7 +3,6 @@ import { PlayerState } from "@/types/game-types";
 interface PlayerSeatProps {
   player?: PlayerState;
   isCurrentPlayer: boolean;
-  position: "top" | "bottom";
 }
 
 export function PlayerSeat({ player, isCurrentPlayer }: PlayerSeatProps) {

@@ -11,10 +11,6 @@ interface BettingControlsProps {
   maxBet: number;
 }
 
-function isValidAction(action: string): action is BetAction {
-  return isValidBetAction(action);
-}
-
 export function BettingControls({
   isMyTurn,
   availableActions,
@@ -29,7 +25,7 @@ export function BettingControls({
     setRaiseAmount(minBet);
   }, [minBet]);
 
-  const validatedActions = availableActions.filter(isValidAction);
+  const validatedActions = availableActions.filter(isValidBetAction);
 
   const handleRaise = () => {
     const clampedAmount = Math.max(minBet, Math.min(maxBet, raiseAmount));
@@ -41,7 +37,7 @@ export function BettingControls({
   };
 
   const handleAction = (action: string) => {
-    if (isValidAction(action)) {
+    if (isValidBetAction(action)) {
       onBetAction(action);
     }
   };
