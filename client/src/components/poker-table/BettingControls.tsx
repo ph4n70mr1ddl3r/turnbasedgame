@@ -29,11 +29,9 @@ export function BettingControls({
 
   const handleRaise = (): void => {
     const clampedAmount = Math.max(minBet, Math.min(maxBet, raiseAmount));
-    if (clampedAmount >= minBet && clampedAmount <= maxBet) {
-      onBetAction("raise", clampedAmount);
-      setShowRaiseInput(false);
-      setRaiseAmount(minBet);
-    }
+    onBetAction("raise", clampedAmount);
+    setShowRaiseInput(false);
+    setRaiseAmount(minBet);
   };
 
   const handleAction = (action: string): void => {

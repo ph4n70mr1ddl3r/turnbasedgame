@@ -1,11 +1,5 @@
 import { create } from "zustand";
 import { GameState, PlayerState, BetAction } from "@/types/game-types";
-import { PLAYER_ID_KEY } from "@/lib/constants/storage";
-
-function getPlayerIdFromStorage(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(PLAYER_ID_KEY);
-}
 
 interface GameStore {
   gameState: GameState | null;
@@ -33,7 +27,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   isMyTurn: false,
   availableActions: [],
   lastError: null,
-  cachedPlayerId: getPlayerIdFromStorage(),
+  cachedPlayerId: null,
 
   setCachedPlayerId: (id: string | null): void => {
     set({ cachedPlayerId: id });

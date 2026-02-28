@@ -91,3 +91,7 @@ export const playerIdSelector = (state: ConnectionStore): string | null =>
   state.playerId;
 export const latencySelector = (state: ConnectionStore): number | null =>
   state.latency;
+
+if (typeof window !== "undefined") {
+  useConnectionStore.getState().initializeFromSession();
+}

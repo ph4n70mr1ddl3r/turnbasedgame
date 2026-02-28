@@ -295,10 +295,10 @@ export class ConnectionManager {
   private handleConnectionStatus(message: ConnectionStatusMessage): void {
     useConnectionStore.getState().setStatus(message.data.status);
     if (message.data.player_id) {
-      useConnectionStore.getState().setSession(
-        useConnectionStore.getState().sessionToken || '',
-        message.data.player_id
-      );
+      const currentToken = useConnectionStore.getState().sessionToken;
+      if (currentToken) {
+        useConnectionStore.getState().setSession(currentToken, message.data.player_id);
+      }
     }
   }
   
