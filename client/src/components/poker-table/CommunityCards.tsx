@@ -1,18 +1,13 @@
+import React from "react";
 import { Card } from "@/types/game-types";
 
 interface CommunityCardsProps {
   cards: Card[];
 }
 
-export function CommunityCards({ cards }: CommunityCardsProps) {
-  const cardPositions = [
-    "Flop 1",
-    "Flop 2", 
-    "Flop 3",
-    "Turn",
-    "River"
-  ];
-  
+const CARD_POSITIONS = ["Flop 1", "Flop 2", "Flop 3", "Turn", "River"] as const;
+
+export function CommunityCards({ cards }: CommunityCardsProps): React.ReactElement {
   return (
     <div className="bg-green-950/70 p-6 rounded-xl border-2 border-green-800">
       <h3 className="text-center text-green-300 font-bold mb-4">Community Cards</h3>
@@ -22,26 +17,24 @@ export function CommunityCards({ cards }: CommunityCardsProps) {
           <div className="text-green-500 italic">No cards yet</div>
         ) : (
           <>
-            {/* Display actual cards */}
             {cards.map((card, index) => (
-              <div key={index} className="flex flex-col items-center">
+              <div key={card} className="flex flex-col items-center">
                 <div className="w-14 h-20 bg-white text-black rounded-lg flex items-center justify-center font-bold text-xl shadow-lg mb-2">
                   {card}
                 </div>
                 <div className="text-xs text-green-300">
-                  {cardPositions[index] || `Card ${index + 1}`}
+                  {CARD_POSITIONS[index] ?? `Card ${index + 1}`}
                 </div>
               </div>
             ))}
             
-            {/* Placeholder for remaining cards */}
             {Array.from({ length: 5 - cards.length }).map((_, index) => (
               <div key={`placeholder-${index}`} className="flex flex-col items-center">
                 <div className="w-14 h-20 bg-green-900 border-2 border-dashed border-green-700 rounded-lg flex items-center justify-center mb-2">
                   <span className="text-green-600 text-xs">?</span>
                 </div>
                 <div className="text-xs text-green-700">
-                  {cardPositions[cards.length + index] || "Coming"}
+                  {CARD_POSITIONS[cards.length + index] ?? "Coming"}
                 </div>
               </div>
             ))}

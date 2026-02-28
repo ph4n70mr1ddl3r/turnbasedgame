@@ -1,3 +1,4 @@
+import React from "react";
 import { PlayerState } from "@/types/game-types";
 import { DEFAULT_TURN_TIME_MS } from "@/lib/constants/game";
 
@@ -6,7 +7,7 @@ interface PlayerSeatProps {
   isCurrentPlayer: boolean;
 }
 
-export function PlayerSeat({ player, isCurrentPlayer }: PlayerSeatProps) {
+export function PlayerSeat({ player, isCurrentPlayer }: PlayerSeatProps): React.ReactElement {
   if (!player) {
     return (
       <div className="bg-green-950/70 p-4 rounded-lg border-2 border-dashed border-green-700">

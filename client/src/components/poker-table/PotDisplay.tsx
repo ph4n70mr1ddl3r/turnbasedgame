@@ -1,10 +1,10 @@
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 
 interface PotDisplayProps {
   pot: number;
 }
 
-export function PotDisplay({ pot }: PotDisplayProps) {
+export function PotDisplay({ pot }: PotDisplayProps): React.ReactElement {
   const chipCount = useMemo(
     () => Math.min(Math.floor(pot / 100), 5),
     [pot],

@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 interface ErrorDisplayProps {
   error: string;
   onClose: () => void;
@@ -11,7 +13,7 @@ function handleReload(): void {
   }
 }
 
-export function ErrorDisplay({ error, onClose }: ErrorDisplayProps) {
+export function ErrorDisplay({ error, onClose }: ErrorDisplayProps): React.ReactElement | null {
   return (
     <div className="fixed top-4 right-4 w-96 bg-red-900 border-l-4 border-red-500 rounded-lg shadow-xl z-50 animate-slide-in">
       <div className="p-4">

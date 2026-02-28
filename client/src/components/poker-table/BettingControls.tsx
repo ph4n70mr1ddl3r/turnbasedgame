@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { BetAction, isValidBetAction } from "@/types/game-types";
 
 interface BettingControlsProps {
@@ -17,7 +17,7 @@ export function BettingControls({
   onBetAction,
   minBet,
   maxBet,
-}: BettingControlsProps) {
+}: BettingControlsProps): React.ReactElement {
   const [raiseAmount, setRaiseAmount] = useState(minBet);
   const [showRaiseInput, setShowRaiseInput] = useState(false);
 
