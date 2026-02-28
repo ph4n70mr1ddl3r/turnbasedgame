@@ -1,10 +1,10 @@
-import { ReactNode } from "react";
+import React, { ReactNode } from "react";
 
 interface PokerTableProps {
   children: ReactNode;
 }
 
-export function PokerTable({ children }: PokerTableProps) {
+export function PokerTable({ children }: PokerTableProps): React.ReactElement {
   return (
     <div className="relative w-full h-96 bg-green-800 rounded-3xl border-8 border-yellow-900 shadow-2xl overflow-hidden">
       {/* Table felt */}

@@ -44,7 +44,7 @@ export function ConnectionStatus() {
         <span className="font-medium" data-testid="connection-status">{currentText}</span>
       </div>
       
-      {latency && (
+      {latency !== null && (
         <div className="text-sm bg-green-900 px-2 py-1 rounded">
           {latency < 100 ? "✓" : "⚠"} {latency}ms
         </div>

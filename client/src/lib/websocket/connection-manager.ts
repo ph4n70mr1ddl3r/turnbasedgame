@@ -260,6 +260,7 @@ export class ConnectionManager {
 
   private handleError(event: Event): void {
     logError("WebSocket error:", event);
+    this.isConnecting = false;
     useGameStore.getState().setError("Connection error");
   }
   

@@ -81,8 +81,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
         player.player_id === playerId ? { ...player, ...updates } : player
       );
 
+      const newGameState = { ...state.gameState, players: updatedPlayers };
+      const isMyTurn = newGameState.current_player === state.cachedPlayerId;
+      const availableActions = deriveAvailableActions(newGameState, state.cachedPlayerId);
+
       return {
-        gameState: { ...state.gameState, players: updatedPlayers },
+        gameState: newGameState,
+        isMyTurn,
+        availableActions,
       };
     });
   },

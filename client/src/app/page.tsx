@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { PokerTable } from "@/components/poker-table/PokerTable";
 import { BettingControls } from "@/components/poker-table/BettingControls";
@@ -16,15 +17,7 @@ function formatTimeRemaining(ms: number | undefined): string {
   return `${Math.ceil(ms / 1000)}s`;
 }
 
-export default function Home() {
-  return (
-    <ErrorBoundary>
-      <GameContent />
-    </ErrorBoundary>
-  );
-}
-
-function GameContent() {
+function GameContent(): React.ReactElement {
   const {
     isConnected,
     gameState,
@@ -188,5 +181,13 @@ function GameContent() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Home(): React.ReactElement {
+  return (
+    <ErrorBoundary>
+      <GameContent />
+    </ErrorBoundary>
   );
 }
