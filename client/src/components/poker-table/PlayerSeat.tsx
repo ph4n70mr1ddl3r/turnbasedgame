@@ -56,9 +56,9 @@ export function PlayerSeat({ player, isCurrentPlayer }: PlayerSeatProps) {
         <div className="text-sm text-green-300 mb-1">Cards</div>
         <div className="flex space-x-2">
           {hole_cards && hole_cards.length > 0 ? (
-            hole_cards.map((card, idx) => (
+            hole_cards.map((card) => (
               <div
-                key={`${player_id}-card-${idx}`}
+                key={card}
                 className="w-10 h-14 bg-white text-black rounded flex items-center justify-center font-bold shadow-md"
               >
                 {card}

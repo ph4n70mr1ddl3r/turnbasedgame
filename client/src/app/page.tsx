@@ -11,6 +11,11 @@ import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { BetAction, PlayerState } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
 
+function formatTimeRemaining(ms: number | undefined): string {
+  if (!ms || ms <= 0) return "-";
+  return `${Math.ceil(ms / 1000)}s`;
+}
+
 export default function Home() {
   return (
     <ErrorBoundary>
@@ -45,10 +50,6 @@ function GameContent() {
   const player2 = players[1];
   const myPlayer = players.find((p: PlayerState) => p.player_id === playerId);
 
-  const formatTimeRemaining = (ms: number | undefined): string => {
-    if (!ms || ms <= 0) return "-";
-    return `${Math.ceil(ms / 1000)}s`;
-  };
   return (
     <div className="flex flex-col items-center justify-center p-4">
       {lastError && (

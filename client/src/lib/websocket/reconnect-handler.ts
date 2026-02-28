@@ -76,7 +76,13 @@ export class ReconnectHandler {
   }
 
   async reconnectNow(): Promise<boolean> {
-    this.stop();
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+    this.isActive = true;
+    this.attempts = 0;
+    this.currentDelay = this.options.initialDelay;
     return this.attemptReconnect();
   }
 

@@ -7,6 +7,7 @@ import {
   latencySelector,
   sessionTokenSelector,
   playerIdSelector,
+  initializeConnectionStore,
 } from "@/lib/stores/connection-store";
 import {
   useGameStore,
@@ -61,13 +62,19 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   const isMyTurn = useGameStore(isMyTurnSelector);
   const availableActions = useGameStore(availableActionsSelector);
   const lastError = useGameStore(lastErrorSelector);
-  const getMyPlayerStore = useGameStore((s) => s.getMyPlayer);
-  const getOpponentPlayerStore = useGameStore((s) => s.getOpponentPlayer);
-  const clearErrorStore = useGameStore((s) => s.clearError);
 
-  const getMyPlayer = useCallback(() => getMyPlayerStore(), [getMyPlayerStore]);
-  const getOpponentPlayer = useCallback(() => getOpponentPlayerStore(), [getOpponentPlayerStore]);
-  const clearError = useCallback(() => clearErrorStore(), [clearErrorStore]);
+  const getMyPlayer = useCallback(
+    () => useGameStore.getState().getMyPlayer(),
+    [],
+  );
+  const getOpponentPlayer = useCallback(
+    () => useGameStore.getState().getOpponentPlayer(),
+    [],
+  );
+  const clearError = useCallback(
+    () => useGameStore.getState().clearError(),
+    [],
+  );
 
   const connect = useCallback(async () => {
     if (managerRef.current) {
@@ -106,6 +113,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   }, []);
 
   useEffect(() => {
+    initializeConnectionStore();
+
     if (options.autoConnect !== false && !managerRef.current) {
       managerRef.current = new ConnectionManager({
         url: options.url,

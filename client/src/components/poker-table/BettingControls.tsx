@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { BetAction, isValidBetAction } from "@/types/game-types";
 
 interface BettingControlsProps {
@@ -47,8 +47,12 @@ export function BettingControls({
     }
   };
 
-  const quickRaiseAmounts = [minBet, minBet * 2, minBet * 3, maxBet].filter(
-    (amount, idx, arr) => amount > 0 && arr.indexOf(amount) === idx
+  const quickRaiseAmounts = useMemo(
+    () =>
+      [minBet, minBet * 2, minBet * 3, maxBet].filter(
+        (amount, idx, arr) => amount > 0 && arr.indexOf(amount) === idx,
+      ),
+    [minBet, maxBet],
   );
   
   if (!isMyTurn) {
