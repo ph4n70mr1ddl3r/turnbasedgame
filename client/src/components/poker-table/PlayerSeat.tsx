@@ -1,4 +1,5 @@
 import { PlayerState } from "@/types/game-types";
+import { DEFAULT_TURN_TIME_MS } from "@/lib/constants/game";
 
 interface PlayerSeatProps {
   player?: PlayerState;
@@ -87,7 +88,7 @@ export function PlayerSeat({ player, isCurrentPlayer }: PlayerSeatProps) {
           <div className="w-full bg-green-900 h-2 rounded-full overflow-hidden">
             <div
               className="bg-yellow-500 h-full transition-all duration-1000"
-              style={{ width: `${(time_remaining / 30000) * 100}%` }}
+              style={{ width: `${(time_remaining / DEFAULT_TURN_TIME_MS) * 100}%` }}
             />
           </div>
           <div className="text-xs text-right mt-1">

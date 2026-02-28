@@ -38,10 +38,7 @@ global.WebSocket = class WebSocket {
     }, 10);
   }
 
-  send(data: string) {
-    // Mock send implementation
-    console.log('WebSocket mock send:', data);
-  }
+  send(_data: string) {}
 
   close() {
     this.readyState = WebSocket.CLOSED;

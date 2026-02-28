@@ -125,30 +125,42 @@ export type WebSocketMessage =
   | SessionInitMessage
   | ChatMessage;
 
-// Type guards
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
 export function isGameStateUpdate(msg: unknown): msg is GameStateUpdateMessage {
-  const message = msg as Record<string, unknown>;
-  return message.type === "game_state_update";
+  if (!isObject(msg)) return false;
+  return msg.type === "game_state_update" && isObject(msg.data);
 }
 
 export function isBetAction(msg: unknown): msg is BetActionMessage {
-  const message = msg as Record<string, unknown>;
-  return message.type === "bet_action";
+  if (!isObject(msg)) return false;
+  if (msg.type !== "bet_action") return false;
+  if (!isObject(msg.data)) return false;
+  if (typeof msg.token !== "string") return false;
+  return typeof msg.data.action === "string" && isValidBetAction(msg.data.action);
 }
 
 export function isConnectionStatus(msg: unknown): msg is ConnectionStatusMessage {
-  const message = msg as Record<string, unknown>;
-  return message.type === "connection_status";
+  if (!isObject(msg)) return false;
+  if (msg.type !== "connection_status") return false;
+  if (!isObject(msg.data)) return false;
+  return ["connected", "disconnected", "reconnecting"].includes(msg.data.status as string);
 }
 
 export function isErrorMessage(msg: unknown): msg is ErrorMessage {
-  const message = msg as Record<string, unknown>;
-  return message.type === "error";
+  if (!isObject(msg)) return false;
+  if (msg.type !== "error") return false;
+  if (!isObject(msg.data)) return false;
+  return typeof msg.data.code === "string" && typeof msg.data.message === "string";
 }
 
 export function isHeartbeat(msg: unknown): msg is HeartbeatMessage {
-  const message = msg as Record<string, unknown>;
-  return message.type === "heartbeat";
+  if (!isObject(msg)) return false;
+  if (msg.type !== "heartbeat") return false;
+  if (!isObject(msg.data)) return false;
+  return typeof msg.data.timestamp === "number";
 }
 
 // Validation functions

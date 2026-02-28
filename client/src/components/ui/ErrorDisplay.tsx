@@ -5,6 +5,12 @@ interface ErrorDisplayProps {
   onClose: () => void;
 }
 
+function handleReload(): void {
+  if (typeof window !== "undefined") {
+    window.location.reload();
+  }
+}
+
 export function ErrorDisplay({ error, onClose }: ErrorDisplayProps) {
   return (
     <div className="fixed top-4 right-4 w-96 bg-red-900 border-l-4 border-red-500 rounded-lg shadow-xl z-50 animate-slide-in">
@@ -33,7 +39,7 @@ export function ErrorDisplay({ error, onClose }: ErrorDisplayProps) {
         
         <div className="mt-4 flex justify-end space-x-3">
           <button
-            onClick={() => window.location.reload()}
+            onClick={handleReload}
             className="px-3 py-1 bg-red-700 hover:bg-red-600 rounded text-sm"
           >
             Reload Page

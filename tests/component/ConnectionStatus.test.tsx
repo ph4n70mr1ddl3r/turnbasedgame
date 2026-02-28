@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, test, expect, jest, beforeEach } from '@jest/globals';
 import { ConnectionStatus } from '@/components/ui/ConnectionStatus';
+import { ConnectionStatus as ConnectionStatusType } from '@/types/game-types';
 
 jest.mock('@/lib/stores/connection-store', () => ({
   useConnectionStore: jest.fn(),
@@ -15,14 +16,29 @@ import { useConnectionStore } from '@/lib/stores/connection-store';
 
 const mockUseConnectionStore = useConnectionStore as jest.MockedFunction<typeof useConnectionStore>;
 
+interface MockConnectionState {
+  isConnected: boolean;
+  status: ConnectionStatusType;
+  latency: number | null;
+  sessionToken: string | null;
+  playerId: string | null;
+  setStatus: jest.Mock;
+  setConnected: jest.Mock;
+  updateHeartbeat: jest.Mock;
+  setLatency: jest.Mock;
+  setSession: jest.Mock;
+  clearSession: jest.Mock;
+  reset: jest.Mock;
+}
+
 describe('Story 1.2: Connection Status Display Component', () => {
   const createMockStore = (state: {
     isConnected: boolean;
-    status: 'connected' | 'disconnected' | 'reconnecting';
+    status: ConnectionStatusType;
     latency: number | null;
   }) => {
-    mockUseConnectionStore.mockImplementation((selector: any) => {
-      const fullState = {
+    mockUseConnectionStore.mockImplementation((selector: (s: MockConnectionState) => unknown) => {
+      const fullState: MockConnectionState = {
         ...state,
         sessionToken: null,
         playerId: null,

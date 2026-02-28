@@ -7,10 +7,19 @@ import { PlayerSeat } from "@/components/poker-table/PlayerSeat";
 import { CommunityCards } from "@/components/poker-table/CommunityCards";
 import { PotDisplay } from "@/components/poker-table/PotDisplay";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { BetAction, PlayerState } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
 
 export default function Home() {
+  return (
+    <ErrorBoundary>
+      <GameContent />
+    </ErrorBoundary>
+  );
+}
+
+function GameContent() {
   const {
     isConnected,
     gameState,
@@ -40,7 +49,6 @@ export default function Home() {
     if (!ms || ms <= 0) return "-";
     return `${Math.ceil(ms / 1000)}s`;
   };
-  
   return (
     <div className="flex flex-col items-center justify-center p-4">
       {lastError && (
@@ -55,7 +63,11 @@ export default function Home() {
               <span className="font-medium">Connecting to game server...</span>
             </div>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  window.location.reload();
+                }
+              }}
               className="px-4 py-2 bg-yellow-700 hover:bg-yellow-600 rounded"
             >
               Retry

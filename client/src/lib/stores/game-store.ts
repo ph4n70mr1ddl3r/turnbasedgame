@@ -24,16 +24,16 @@ interface GameStore {
   availableActions: BetAction[];
   lastError: string | null;
 
-  setGameState: (_gameState: GameState) => void;
-  updatePlayer: (_playerId: string, _updates: Partial<PlayerState>) => void;
-  setAvailableActions: (_actions: BetAction[]) => void;
-  setError: (_error: string | null) => void;
+  setGameState: (gameState: GameState) => void;
+  updatePlayer: (playerId: string, updates: Partial<PlayerState>) => void;
+  setAvailableActions: (actions: BetAction[]) => void;
+  setError: (error: string | null) => void;
   clearError: () => void;
   reset: () => void;
 
   getMyPlayer: () => PlayerState | null;
   getOpponentPlayer: () => PlayerState | null;
-  getPlayer: (_playerId: string) => PlayerState | null;
+  getPlayer: (playerId: string) => PlayerState | null;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -42,18 +42,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
   availableActions: [],
   lastError: null,
   
-  setGameState: (_gameState: GameState) => {
+  setGameState: (gameState: GameState) => {
     const playerId = getPlayerId();
-    const isMyTurn = _gameState.current_player === playerId;
-    set({ gameState: _gameState, isMyTurn });
+    const isMyTurn = gameState.current_player === playerId;
+    set({ gameState, isMyTurn });
   },
   
-  updatePlayer: (_playerId: string, _updates: Partial<PlayerState>) =>
+  updatePlayer: (playerId: string, updates: Partial<PlayerState>) =>
     set((state) => {
       if (!state.gameState) return state;
       
       const updatedPlayers = state.gameState.players.map((player) =>
-        player.player_id === _playerId ? { ...player, ..._updates } : player
+        player.player_id === playerId ? { ...player, ...updates } : player
       );
       
       return {
@@ -61,9 +61,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       };
     }),
   
-  setAvailableActions: (_actions: BetAction[]) => set({ availableActions: _actions }),
+  setAvailableActions: (actions: BetAction[]) => set({ availableActions: actions }),
   
-  setError: (_error: string | null) => set({ lastError: _error }),
+  setError: (error: string | null) => set({ lastError: error }),
   
   clearError: () => set({ lastError: null }),
   
@@ -93,11 +93,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     return state.gameState.players.find((p) => p.player_id !== playerId) || null;
   },
   
-  getPlayer: (_playerId: string) => {
+  getPlayer: (playerId: string) => {
     const state = get();
     if (!state.gameState) return null;
     
-    return state.gameState.players.find((p) => p.player_id === _playerId) || null;
+    return state.gameState.players.find((p) => p.player_id === playerId) || null;
   },
 }));
 
