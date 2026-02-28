@@ -12,24 +12,37 @@ import {
 } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
 
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function isNumber(value: unknown): value is number {
+  return typeof value === "number";
+}
+
+function isArray(value: unknown): value is unknown[] {
+  return Array.isArray(value);
+}
+
 export class MessageParser {
-  // Parse raw WebSocket message
   static parseMessage(data: string): WebSocketMessage | null {
     try {
       const parsed = JSON.parse(data);
-      
-      // Basic validation
-      if (!parsed || typeof parsed !== "object") {
+
+      if (!isObject(parsed)) {
         logError("Invalid message: not an object", parsed);
         return null;
       }
 
-      if (typeof parsed.type !== "string") {
+      if (!isString(parsed.type)) {
         logError("Invalid message: missing type field", parsed);
         return null;
       }
-      
-      // Type-specific validation
+
       switch (parsed.type) {
         case "game_state_update":
           return this.validateGameStateUpdate(parsed);
@@ -42,7 +55,6 @@ export class MessageParser {
         case "bet_action":
         case "session_init":
         case "chat_message":
-          // Client shouldn't receive these from server
           logError(`Unexpected message type from server: ${parsed.type}`);
           return null;
         default:
@@ -54,163 +66,146 @@ export class MessageParser {
       return null;
     }
   }
-  
-  // Validate game state update message
-  private static validateGameStateUpdate(
-    msg: unknown
-  ): GameStateUpdateMessage | null {
-    const message = msg as Record<string, unknown>;
 
-    if (!message.data || typeof message.data !== "object") {
+  private static validateGameStateUpdate(
+    msg: Record<string, unknown>
+  ): GameStateUpdateMessage | null {
+    if (!isObject(msg.data)) {
       logError("Invalid game_state_update: missing data", msg);
       return null;
     }
 
-    const data = message.data as Record<string, unknown>;
+    const data = msg.data;
 
-    // Basic validation
-    if (!Array.isArray(data.players) || data.players.length !== MAX_PLAYERS) {
+    if (!isArray(data.players) || data.players.length !== MAX_PLAYERS) {
       logError("Invalid game_state_update: players array invalid", data);
       return null;
     }
 
-    if (!Array.isArray(data.community_cards) || data.community_cards.length > MAX_COMMUNITY_CARDS) {
+    if (!isArray(data.community_cards) || data.community_cards.length > MAX_COMMUNITY_CARDS) {
       logError("Invalid game_state_update: community_cards not array or too many cards", data);
       return null;
     }
 
-    if (typeof data.pot !== "number" || data.pot < 0) {
+    if (!isNumber(data.pot) || data.pot < 0) {
       logError("Invalid game_state_update: invalid pot", data);
       return null;
     }
 
-    // Validate player data
     for (const player of data.players) {
-      if (!player || typeof player !== "object") {
+      if (!isObject(player)) {
         logError("Invalid game_state_update: invalid player", player);
         return null;
       }
 
-      const playerObj = player as Record<string, unknown>;
-
-      if (!isValidPlayerId(playerObj.player_id as string)) {
+      const playerId = player.player_id;
+      if (!isString(playerId) || !isValidPlayerId(playerId)) {
         logError("Invalid game_state_update: invalid player_id", player);
         return null;
       }
 
-      if (typeof playerObj.chip_stack !== "number" || playerObj.chip_stack < 0) {
+      const chipStack = player.chip_stack;
+      if (!isNumber(chipStack) || chipStack < 0) {
         logError("Invalid game_state_update: invalid chip_stack", player);
         return null;
       }
 
-      if (!Array.isArray(playerObj.hole_cards)) {
+      if (!isArray(player.hole_cards)) {
         logError("Invalid game_state_update: hole_cards not array", player);
         return null;
       }
 
-      // Validate cards if present
-      for (const card of playerObj.hole_cards) {
-        if (card && !isValidCard(card)) {
+      for (const card of player.hole_cards) {
+        if (card !== null && card !== undefined && !isValidCard(card as string)) {
           logError("Invalid game_state_update: invalid card", card);
           return null;
         }
       }
     }
 
-    // Validate community cards
     for (const card of data.community_cards) {
-      if (!isValidCard(card)) {
+      if (!isValidCard(card as string)) {
         logError("Invalid game_state_update: invalid community card", card);
         return null;
       }
     }
 
-    return msg as GameStateUpdateMessage;
+    return msg as unknown as GameStateUpdateMessage;
   }
-  
-  // Validate error message
-  private static validateErrorMessage(msg: unknown): ErrorMessage | null {
-    const message = msg as Record<string, unknown>;
 
-    if (!message.data || typeof message.data !== "object") {
+  private static validateErrorMessage(msg: Record<string, unknown>): ErrorMessage | null {
+    if (!isObject(msg.data)) {
       logError("Invalid error message: missing data", msg);
       return null;
     }
 
-    const data = message.data as Record<string, unknown>;
+    const data = msg.data;
 
-    if (typeof data.code !== "string") {
+    if (!isString(data.code)) {
       logError("Invalid error message: missing code", data);
       return null;
     }
 
-    if (typeof data.message !== "string") {
+    if (!isString(data.message)) {
       logError("Invalid error message: missing message", data);
       return null;
     }
 
-    return msg as ErrorMessage;
+    return msg as unknown as ErrorMessage;
   }
-  
-  // Validate connection status message
-  private static validateConnectionStatus(
-    msg: unknown
-  ): ConnectionStatusMessage | null {
-    const message = msg as Record<string, unknown>;
 
-    if (!message.data || typeof message.data !== "object") {
+  private static validateConnectionStatus(
+    msg: Record<string, unknown>
+  ): ConnectionStatusMessage | null {
+    if (!isObject(msg.data)) {
       logError("Invalid connection_status: missing data", msg);
       return null;
     }
 
-    const data = message.data as Record<string, unknown>;
+    const data = msg.data;
 
-    if (!["connected", "disconnected", "reconnecting"].includes(data.status as string)) {
+    if (!isString(data.status) || !["connected", "disconnected", "reconnecting"].includes(data.status)) {
       logError("Invalid connection_status: invalid status", data);
       return null;
     }
 
-    if (data.player_id && !isValidPlayerId(data.player_id as string)) {
-      logError("Invalid connection_status: invalid player_id", data);
-      return null;
+    if (data.player_id !== undefined) {
+      if (!isString(data.player_id) || !isValidPlayerId(data.player_id)) {
+        logError("Invalid connection_status: invalid player_id", data);
+        return null;
+      }
     }
 
-    return msg as ConnectionStatusMessage;
+    return msg as unknown as ConnectionStatusMessage;
   }
-  
-  // Validate heartbeat message
-  private static validateHeartbeat(msg: unknown): HeartbeatMessage | null {
-    const message = msg as Record<string, unknown>;
 
-    if (!message.data || typeof message.data !== "object") {
+  private static validateHeartbeat(msg: Record<string, unknown>): HeartbeatMessage | null {
+    if (!isObject(msg.data)) {
       logError("Invalid heartbeat: missing data", msg);
       return null;
     }
 
-    const data = message.data as Record<string, unknown>;
+    const data = msg.data;
 
-    if (typeof data.timestamp !== "number") {
+    if (!isNumber(data.timestamp)) {
       logError("Invalid heartbeat: invalid timestamp", data);
       return null;
     }
 
-    return msg as HeartbeatMessage;
+    return msg as unknown as HeartbeatMessage;
   }
-  
-  // Stringify message for sending
+
   static stringifyMessage(message: WebSocketMessage): string {
     return JSON.stringify(message);
   }
-  
-  // Create a heartbeat message
+
   static createHeartbeat(): HeartbeatMessage {
     return {
       type: "heartbeat",
       data: { timestamp: Date.now() },
     };
   }
-  
-  // Create a session init message
+
   static createSessionInit(reconnectToken?: string): SessionInitMessage {
     return {
       type: "session_init",

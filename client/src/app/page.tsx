@@ -69,6 +69,7 @@ function GameContent() {
                   window.location.reload();
                 }
               }}
+              aria-label="Retry connection to game server"
               className="px-4 py-2 bg-yellow-700 hover:bg-yellow-600 rounded"
             >
               Retry

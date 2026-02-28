@@ -1,6 +1,37 @@
 import { create } from "zustand";
 import { GameState, PlayerState, BetAction } from "@/types/game-types";
 
+function deriveAvailableActions(
+  gameState: GameState | null,
+  cachedPlayerId: string | null
+): BetAction[] {
+  if (!gameState || !cachedPlayerId) return [];
+  if (gameState.current_player !== cachedPlayerId) return [];
+  if (gameState.game_status !== "active") return [];
+
+  const myPlayer = gameState.players.find((p) => p.player_id === cachedPlayerId);
+  if (!myPlayer || myPlayer.is_folded || myPlayer.is_all_in) return [];
+
+  const actions: BetAction[] = [];
+  const highestBet = Math.max(...gameState.players.map((p) => p.current_bet));
+  const myBet = myPlayer.current_bet;
+  const toCall = highestBet - myBet;
+
+  if (toCall === 0) {
+    actions.push("check");
+  } else {
+    actions.push("call");
+  }
+
+  if (myPlayer.chip_stack > toCall) {
+    actions.push("raise");
+  }
+
+  actions.push("fold");
+
+  return actions;
+}
+
 interface GameStore {
   gameState: GameState | null;
   isMyTurn: boolean;
@@ -30,13 +61,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
   cachedPlayerId: null,
 
   setCachedPlayerId: (id: string | null): void => {
-    set({ cachedPlayerId: id });
+    const { gameState } = get();
+    const availableActions = deriveAvailableActions(gameState, id);
+    set({ cachedPlayerId: id, availableActions });
   },
 
   setGameState: (gameState: GameState): void => {
     const { cachedPlayerId } = get();
     const isMyTurn = gameState.current_player === cachedPlayerId;
-    set({ gameState, isMyTurn });
+    const availableActions = deriveAvailableActions(gameState, cachedPlayerId);
+    set({ gameState, isMyTurn, availableActions });
   },
 
   updatePlayer: (playerId: string, updates: Partial<PlayerState>): void => {

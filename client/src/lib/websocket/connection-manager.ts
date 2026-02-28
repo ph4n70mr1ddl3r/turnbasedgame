@@ -41,6 +41,7 @@ export class ConnectionManager {
   private reconnectHandler: ReconnectHandler | null = null;
   private heartbeatIntervalId: ReturnType<typeof setInterval> | null = null;
   private connectionResolved = false;
+  private isConnecting = false;
   
   constructor(options: ConnectionOptions = {}) {
     this.options = { ...DEFAULT_OPTIONS, ...options };
@@ -67,38 +68,44 @@ export class ConnectionManager {
   }
 
   async connect(): Promise<boolean> {
+    if (this.isConnecting) {
+      return false;
+    }
 
-    this.disconnect();
+    this.isConnecting = true;
+    this.cleanupSocket();
     this.connectionResolved = false;
-    
+
     return new Promise((resolve) => {
       try {
         this.socket = new WebSocket(this.options.url);
-        
+
         let timeoutId: ReturnType<typeof setTimeout> | null = null;
-        
+
         const handleTimeout = () => {
           if (!this.connectionResolved && this.socket?.readyState !== WebSocket.OPEN) {
             this.connectionResolved = true;
+            this.isConnecting = false;
             this.handleConnectionTimeout();
             resolve(false);
           }
         };
-        
+
         timeoutId = setTimeout(handleTimeout, WS_CONNECTION_TIMEOUT_MS);
-        
+
         const handleOpen = () => {
           if (this.connectionResolved) {
             return;
           }
           this.connectionResolved = true;
+          this.isConnecting = false;
           if (timeoutId !== null) {
             clearTimeout(timeoutId);
           }
           this.handleOpen();
           resolve(true);
         };
-        
+
         this.socket.onopen = handleOpen;
         this.socket.onmessage = (event) => this.handleMessage(event);
         this.socket.onerror = (event) => this.handleError(event);
@@ -107,36 +114,39 @@ export class ConnectionManager {
         logError("Error creating WebSocket:", error);
         useConnectionStore.getState().setConnected(false);
         this.connectionResolved = true;
+        this.isConnecting = false;
         resolve(false);
       }
     });
   }
 
   disconnect(): void {
-    // Stop reconnection attempts
     this.reconnectHandler?.stop();
-    
-    // Clear heartbeat
-    if (this.heartbeatIntervalId) {
-      clearInterval(this.heartbeatIntervalId);
-      this.heartbeatIntervalId = null;
-    }
-    
-    // Close socket
+    this.cleanupHeartbeat();
+    this.cleanupSocket();
+    useConnectionStore.getState().setConnected(false);
+  }
+
+  private cleanupSocket(): void {
     if (this.socket) {
       this.socket.onopen = null;
       this.socket.onmessage = null;
       this.socket.onerror = null;
       this.socket.onclose = null;
-      
+
       if (this.socket.readyState === WebSocket.OPEN) {
         this.socket.close(1000, "Client disconnect");
       }
-      
+
       this.socket = null;
     }
+  }
 
-    useConnectionStore.getState().setConnected(false);
+  private cleanupHeartbeat(): void {
+    if (this.heartbeatIntervalId) {
+      clearInterval(this.heartbeatIntervalId);
+      this.heartbeatIntervalId = null;
+    }
   }
 
   sendMessage(message: WebSocketMessage): boolean {
@@ -236,14 +246,9 @@ export class ConnectionManager {
   
   private handleClose(event: CloseEvent): void {
     useConnectionStore.getState().setConnected(false);
+    this.isConnecting = false;
+    this.cleanupHeartbeat();
 
-    // Clear heartbeat
-    if (this.heartbeatIntervalId) {
-      clearInterval(this.heartbeatIntervalId);
-      this.heartbeatIntervalId = null;
-    }
-
-    // Handle reconnection
     if (this.options.autoReconnect && this.reconnectHandler) {
       if (ReconnectHandler.shouldReconnect(event)) {
         this.reconnectHandler.start();

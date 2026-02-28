@@ -73,6 +73,7 @@ export function BettingControls({
           {validatedActions.includes("check") && (
             <button
               onClick={() => handleAction("check")}
+              aria-label="Check your hand"
               className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-white transition-colors"
             >
               Check
@@ -82,6 +83,7 @@ export function BettingControls({
           {validatedActions.includes("call") && (
             <button
               onClick={() => handleAction("call")}
+              aria-label="Call the current bet"
               className="px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-bold text-white transition-colors"
             >
               Call
@@ -93,6 +95,7 @@ export function BettingControls({
               {!showRaiseInput ? (
                 <button
                   onClick={() => setShowRaiseInput(true)}
+                  aria-label="Open raise amount input"
                   className="px-6 py-3 bg-yellow-600 hover:bg-yellow-700 rounded-lg font-bold text-white transition-colors"
                 >
                   Raise
@@ -105,10 +108,12 @@ export function BettingControls({
                     max={maxBet}
                     value={raiseAmount}
                     onChange={(e) => handleRaiseAmountChange(e.target.value)}
+                    aria-label="Raise amount"
                     className="w-32 px-3 py-2 bg-white text-black rounded"
                   />
                   <button
                     onClick={handleRaise}
+                    aria-label={`Raise by ${raiseAmount} chips`}
                     className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded font-bold"
                   >
                     Raise {raiseAmount}
@@ -118,6 +123,7 @@ export function BettingControls({
                       setShowRaiseInput(false);
                       setRaiseAmount(minBet);
                     }}
+                    aria-label="Cancel raise"
                     className="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded"
                   >
                     Cancel
@@ -130,6 +136,7 @@ export function BettingControls({
           {validatedActions.includes("fold") && (
             <button
               onClick={() => handleAction("fold")}
+              aria-label="Fold your hand"
               className="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-bold text-white transition-colors"
             >
               Fold
@@ -148,6 +155,7 @@ export function BettingControls({
                   onBetAction("raise", clamped);
                   setShowRaiseInput(false);
                 }}
+                aria-label={amount === maxBet ? "Go all-in" : `Raise to ${amount}`}
                 className="px-3 py-1 bg-green-700 hover:bg-green-600 rounded text-sm"
               >
                 {amount === maxBet ? "All-in" : amount}

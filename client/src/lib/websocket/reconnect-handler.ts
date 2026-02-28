@@ -47,6 +47,11 @@ export class ReconnectHandler {
   start(): void {
     if (this.isActive) return;
 
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+
     this.isActive = true;
     this.attempts = 0;
     this.currentDelay = this.options.initialDelay;
