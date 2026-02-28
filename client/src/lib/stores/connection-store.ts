@@ -1,81 +1,66 @@
 import { create } from "zustand";
 import { ConnectionStatus } from "@/types/game-types";
-import { SESSION_TOKEN_KEY, PLAYER_ID_KEY } from "@/lib/constants/storage";
-import { logError } from "@/lib/utils/logger";
+import { SessionManager } from "@/lib/websocket/session-manager";
 
 interface ConnectionStore {
-  // Connection state
   status: ConnectionStatus;
   isConnected: boolean;
   lastHeartbeat: number | null;
   latency: number | null;
-  
-  // Session
   sessionToken: string | null;
   playerId: string | null;
-  
-  // Actions
-  setStatus: (_status: ConnectionStatus) => void;  
-  setConnected: (_connected: boolean) => void;  
+
+  setStatus: (_status: ConnectionStatus) => void;
+  setConnected: (_connected: boolean) => void;
   updateHeartbeat: () => void;
-  setLatency: (_latency: number) => void;  
-  setSession: (_token: string, _playerId: string) => void;  
+  setLatency: (_latency: number) => void;
+  setSession: (_token: string, _playerId: string) => void;
   clearSession: () => void;
   reset: () => void;
 }
 
+function getInitialSession(): { token: string | null; playerId: string | null } {
+  if (typeof window === "undefined") {
+    return { token: null, playerId: null };
+  }
+  const session = SessionManager.getSession();
+  return {
+    token: session?.token ?? null,
+    playerId: session?.playerId ?? null,
+  };
+}
+
+const initialSession = getInitialSession();
+
 export const useConnectionStore = create<ConnectionStore>((set) => ({
-  // Initial state
   status: "disconnected",
   isConnected: false,
   lastHeartbeat: null,
   latency: null,
-  sessionToken: typeof window !== 'undefined' ? localStorage.getItem(SESSION_TOKEN_KEY) || null : null,
-  playerId: typeof window !== 'undefined' ? localStorage.getItem(PLAYER_ID_KEY) || null : null,
-  
-  // Actions
+  sessionToken: initialSession.token,
+  playerId: initialSession.playerId,
+
   setStatus: (status: ConnectionStatus) => set({ status }),
-  
+
   setConnected: (isConnected: boolean) =>
     set({ isConnected, status: isConnected ? "connected" : "disconnected" }),
-  
+
   updateHeartbeat: () => set({ lastHeartbeat: Date.now() }),
-  
+
   setLatency: (latency: number) => set({ latency }),
-  
+
   setSession: (token: string, playerId: string) => {
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem(SESSION_TOKEN_KEY, token);
-        localStorage.setItem(PLAYER_ID_KEY, playerId);
-      } catch (error) {
-        logError("Error saving session to localStorage:", error);
-      }
-    }
+    SessionManager.createSession(token, playerId);
     set({ sessionToken: token, playerId });
   },
-  
+
   clearSession: () => {
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.removeItem(SESSION_TOKEN_KEY);
-        localStorage.removeItem(PLAYER_ID_KEY);
-      } catch (error) {
-        logError("Error clearing session from localStorage:", error);
-      }
-    }
+    SessionManager.clearSession();
     set({ sessionToken: null, playerId: null });
   },
-  
+
   reset: () => {
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.removeItem(SESSION_TOKEN_KEY);
-        localStorage.removeItem(PLAYER_ID_KEY);
-      } catch (error) {
-        logError("Error clearing session from localStorage during reset:", error);
-      }
-    }
+    SessionManager.clearSession();
     set({
       status: "disconnected",
       isConnected: false,
@@ -87,7 +72,6 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
   },
 }));
 
-// Selectors
 export const connectionStatusSelector = (state: ConnectionStore) => state.status;
 export const isConnectedSelector = (state: ConnectionStore) => state.isConnected;
 export const sessionTokenSelector = (state: ConnectionStore) => state.sessionToken;

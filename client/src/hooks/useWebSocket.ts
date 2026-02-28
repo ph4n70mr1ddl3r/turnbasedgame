@@ -12,38 +12,22 @@ export interface UseWebSocketOptions {
 
 export function useWebSocket(options: UseWebSocketOptions = {}) {
   const managerRef = useRef<ConnectionManager | null>(null);
-  const optionsRef = useRef(options);
   const connectionStore = useConnectionStore();
   const gameStore = useGameStore();
 
-  // Initialize connection manager
-  const initManager = useCallback(() => {
+  const connect = useCallback(async () => {
     if (managerRef.current) {
-      managerRef.current.disconnect();
+      return managerRef.current.connect();
     }
-
-    managerRef.current = new ConnectionManager({
-      url: optionsRef.current.url,
-      autoReconnect: true,
-    });
-
-    return managerRef.current;
+    return false;
   }, []);
 
-  // Connect to server
-  const connect = useCallback(async () => {
-    const manager = managerRef.current || initManager();
-    return manager.connect();
-  }, [initManager]);
-  
-  // Disconnect from server
   const disconnect = useCallback(() => {
     if (managerRef.current) {
       managerRef.current.disconnect();
     }
   }, []);
-  
-  // Send bet action
+
   const sendBetAction = useCallback((action: BetAction, amount?: number) => {
     if (!managerRef.current) {
       logError("Connection manager not initialized");
@@ -52,88 +36,86 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
     return managerRef.current.sendBetAction(action, amount);
   }, []);
-  
-  // Get connection status
+
   const getStatus = useCallback(() => {
     if (!managerRef.current) {
       return {
         isConnected: false,
-        status: "disconnected",
+        status: "disconnected" as const,
         latency: null,
         sessionToken: null,
         playerId: null,
       };
     }
-    
+
     return managerRef.current.getStatus();
   }, []);
-  
-  // Auto-connect on mount if enabled
-  useEffect(() => {
-    optionsRef.current = options;
 
-    if (options.autoConnect !== false) {
-      const manager = initManager();
-      manager.connect();
+  useEffect(() => {
+    if (options.autoConnect !== false && !managerRef.current) {
+      managerRef.current = new ConnectionManager({
+        url: options.url,
+        autoReconnect: true,
+      });
+      managerRef.current.connect();
     }
 
-    // Cleanup on unmount
     return () => {
       if (managerRef.current) {
         managerRef.current.disconnect();
         managerRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options.autoConnect, initManager]);
+  }, [options.autoConnect, options.url]);
 
   return {
-    // Connection methods
     connect,
     disconnect,
     sendBetAction,
     getStatus,
-    
-    // State
+
     isConnected: connectionStore.isConnected,
     connectionStatus: connectionStore.status,
     latency: connectionStore.latency,
     sessionToken: connectionStore.sessionToken,
     playerId: connectionStore.playerId,
-    
-    // Game state
+
     gameState: gameStore.gameState,
     isMyTurn: gameStore.isMyTurn,
     availableActions: gameStore.availableActions,
     lastError: gameStore.lastError,
-    
-    // Helper methods
+
     getMyPlayer: gameStore.getMyPlayer,
     getOpponentPlayer: gameStore.getOpponentPlayer,
     clearError: gameStore.clearError,
   };
 }
 
-// Hook for accessing the connection manager instance directly
 export function useConnectionManager() {
   const managerRef = useRef<ConnectionManager | null>(null);
 
   useEffect(() => {
-    const instance = ConnectionManager.getInstance();
-    managerRef.current = instance;
-
     return () => {
-      // Don't destroy instance on unmount - let it persist
+      if (managerRef.current) {
+        managerRef.current.disconnect();
+        managerRef.current = null;
+      }
     };
   }, []);
 
+  const getManager = useCallback((options?: { url?: string }) => {
+    if (!managerRef.current) {
+      managerRef.current = new ConnectionManager({
+        url: options?.url,
+        autoReconnect: true,
+      });
+    }
+    return managerRef.current;
+  }, []);
+
   return {
-    getInstance: (): ConnectionManager => managerRef.current ?? ConnectionManager.getInstance(),
-    disconnect: (): void => {
-      managerRef.current?.disconnect();
-    },
-    connect: (): Promise<boolean> | undefined => {
-      return managerRef.current?.connect();
-    },
+    getManager,
+    disconnect: () => managerRef.current?.disconnect(),
+    connect: (options?: { url?: string }) => getManager(options).connect(),
   };
 }

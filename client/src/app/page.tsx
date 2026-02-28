@@ -7,7 +7,7 @@ import { PlayerSeat } from "@/components/poker-table/PlayerSeat";
 import { CommunityCards } from "@/components/poker-table/CommunityCards";
 import { PotDisplay } from "@/components/poker-table/PotDisplay";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
-import { BetAction } from "@/types/game-types";
+import { BetAction, PlayerState } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
 
 export default function Home() {
@@ -23,23 +23,30 @@ export default function Home() {
   } = useWebSocket({
     autoConnect: true,
   });
-  
-  // Handle bet action
+
   const handleBetAction = (action: BetAction, amount?: number) => {
     const success = sendBetAction(action, amount);
     if (!success) {
       logError("Failed to send bet action");
     }
   };
+
+  const players = gameState?.players ?? [];
+  const player1 = players[0];
+  const player2 = players[1];
+  const myPlayer = players.find((p: PlayerState) => p.player_id === playerId);
+
+  const formatTimeRemaining = (ms: number | undefined): string => {
+    if (!ms || ms <= 0) return "-";
+    return `${Math.ceil(ms / 1000)}s`;
+  };
   
   return (
     <div className="flex flex-col items-center justify-center p-4">
-      {/* Error display */}
       {lastError && (
         <ErrorDisplay error={lastError} onClose={clearError} />
       )}
-      
-      {/* Connection status banner */}
+
       {!isConnected && (
         <div className="w-full max-w-6xl bg-yellow-900 border border-yellow-700 rounded-lg p-4 mb-6">
           <div className="flex items-center justify-between">
@@ -56,93 +63,85 @@ export default function Home() {
           </div>
         </div>
       )}
-      
-      {/* Main game area */}
+
       <div className="w-full max-w-6xl">
-        {/* Game info header */}
         <div className="bg-green-800 rounded-t-lg p-4 flex justify-between items-center">
           <div>
             <h2 className="text-xl font-bold">
               {gameState ? `Game: ${gameState.round.toUpperCase()}` : "Waiting for game..."}
             </h2>
             <p className="text-green-300">
-              {gameState?.game_status === "active" 
-                ? "Hand in progress" 
+              {gameState?.game_status === "active"
+                ? "Hand in progress"
                 : gameState?.game_status === "waiting"
                 ? "Waiting for players"
                 : "Hand finished"}
             </p>
           </div>
-          
-          <PotDisplay pot={gameState?.pot || 0} />
+
+          <PotDisplay pot={gameState?.pot ?? 0} />
         </div>
-        
-        {/* Poker table */}
+
         <div className="relative bg-green-700 p-8 rounded-b-lg">
           <PokerTable>
-            {/* Player 1 seat (top) */}
             <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
               <PlayerSeat
-                player={gameState?.players?.[0]}
-                isCurrentPlayer={gameState?.current_player === gameState?.players?.[0]?.player_id}
+                player={player1}
+                isCurrentPlayer={gameState?.current_player === player1?.player_id}
                 position="top"
               />
             </div>
-            
-            {/* Community cards (center) */}
+
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-              <CommunityCards cards={gameState?.community_cards || []} />
+              <CommunityCards cards={gameState?.community_cards ?? []} />
             </div>
-            
-            {/* Player 2 seat (bottom) */}
+
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
               <PlayerSeat
-                player={gameState?.players?.[1]}
-                isCurrentPlayer={gameState?.current_player === gameState?.players?.[1]?.player_id}
+                player={player2}
+                isCurrentPlayer={gameState?.current_player === player2?.player_id}
                 position="bottom"
               />
             </div>
           </PokerTable>
         </div>
-        
-        {/* Betting controls */}
+
         <div className="mt-8">
           <BettingControls
             isMyTurn={isMyTurn}
             availableActions={availableActions}
             onBetAction={handleBetAction}
-            minBet={gameState?.min_bet || 0}
-            maxBet={gameState?.max_bet || 0}
+            minBet={gameState?.min_bet ?? 0}
+            maxBet={gameState?.max_bet ?? 0}
           />
         </div>
-        
-        {/* Game status panel */}
+
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-green-800 p-4 rounded">
             <h3 className="font-bold mb-2">Game Status</h3>
             <div className="space-y-1">
               <div className="flex justify-between">
                 <span>Round:</span>
-                <span className="font-mono">{gameState?.round || "-"}</span>
+                <span className="font-mono">{gameState?.round ?? "-"}</span>
               </div>
               <div className="flex justify-between">
                 <span>Current Player:</span>
-                <span className="font-mono">{gameState?.current_player || "-"}</span>
+                <span className="font-mono">{gameState?.current_player ?? "-"}</span>
               </div>
               <div className="flex justify-between">
                 <span>Time Remaining:</span>
                 <span className="font-mono">
-                  {gameState?.time_remaining ? `${Math.ceil(gameState.time_remaining / 1000)}s` : "-"}
+                  {formatTimeRemaining(gameState?.time_remaining)}
                 </span>
               </div>
             </div>
           </div>
-          
+
           <div className="bg-green-800 p-4 rounded">
             <h3 className="font-bold mb-2">Your Hand</h3>
-            {gameState?.players?.find(p => p.player_id === playerId)?.hole_cards?.length ? (
+            {myPlayer?.hole_cards?.length ? (
               <div className="flex space-x-2">
-                {gameState?.players?.find(p => p.player_id === playerId)?.hole_cards.map((card, idx) => (
+                {myPlayer.hole_cards.map((card, idx) => (
                   <div key={idx} className="bg-white text-black w-12 h-16 rounded flex items-center justify-center font-bold">
                     {card}
                   </div>
@@ -152,7 +151,7 @@ export default function Home() {
               <p className="text-green-300">Cards not revealed</p>
             )}
           </div>
-          
+
           <div className="bg-green-800 p-4 rounded">
             <h3 className="font-bold mb-2">Connection</h3>
             <div className="space-y-1">
@@ -164,7 +163,7 @@ export default function Home() {
               </div>
               <div className="flex justify-between">
                 <span>Player ID:</span>
-                <span className="font-mono">{playerId || "-"}</span>
+                <span className="font-mono">{playerId ?? "-"}</span>
               </div>
               <div className="flex justify-between">
                 <span>Session:</span>

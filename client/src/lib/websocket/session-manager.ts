@@ -1,13 +1,11 @@
 import { SESSION_TOKEN_KEY, PLAYER_ID_KEY, SESSION_EXPIRY_KEY } from "@/lib/constants/storage";
+import { SESSION_DURATION_MS } from "@/lib/constants/game";
 import { logError } from "@/lib/utils/logger";
-
-// Session expiry (30 minutes as per architecture)
-const SESSION_DURATION_MS = 30 * 60 * 1000;
 
 export interface SessionData {
   token: string;
   playerId: string;
-  expiry: number; // Unix timestamp in milliseconds
+  expiry: number;
 }
 
 export class SessionManager {

@@ -5,6 +5,15 @@ import { useConnectionStore } from "@/lib/stores/connection-store";
 import { useGameStore } from "@/lib/stores/game-store";
 import { WebSocketMessage, GameStateUpdateMessage, ErrorMessage, BetAction, ConnectionStatus, ConnectionStatusInfo } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
+import {
+  WS_CONNECTION_TIMEOUT_MS,
+  WS_HEARTBEAT_INTERVAL_MS,
+  WS_DEFAULT_URL,
+  RECONNECT_MAX_ATTEMPTS,
+  RECONNECT_INITIAL_DELAY_MS,
+  RECONNECT_MAX_DELAY_MS,
+  RECONNECT_BACKOFF_FACTOR,
+} from "@/lib/constants/game";
 
 export interface ConnectionOptions {
   url?: string;
@@ -13,15 +22,17 @@ export interface ConnectionOptions {
   heartbeatInterval?: number;
 }
 
-const DEFAULT_WS_URL = "ws://localhost:8080";
-const DEFAULT_HEARTBEAT_INTERVAL = 30000;
-const CONNECTION_TIMEOUT_MS = 10000;
-
 const DEFAULT_OPTIONS: Required<ConnectionOptions> = {
-  url: process.env.NEXT_PUBLIC_WS_URL || DEFAULT_WS_URL,
+  url: process.env.NEXT_PUBLIC_WS_URL || WS_DEFAULT_URL,
   autoReconnect: true,
-  reconnectOptions: {},
-  heartbeatInterval: DEFAULT_HEARTBEAT_INTERVAL,
+  reconnectOptions: {
+    maxAttempts: RECONNECT_MAX_ATTEMPTS,
+    initialDelay: RECONNECT_INITIAL_DELAY_MS,
+    maxDelay: RECONNECT_MAX_DELAY_MS,
+    backoffFactor: RECONNECT_BACKOFF_FACTOR,
+    jitter: true,
+  },
+  heartbeatInterval: WS_HEARTBEAT_INTERVAL_MS,
 };
 
 export class ConnectionManager {
@@ -72,7 +83,7 @@ export class ConnectionManager {
           }
         };
         
-        timeoutId = setTimeout(handleTimeout, CONNECTION_TIMEOUT_MS);
+        timeoutId = setTimeout(handleTimeout, WS_CONNECTION_TIMEOUT_MS);
         
         const handleOpen = () => {
           if (timeoutId !== null) {
@@ -275,40 +286,20 @@ export class ConnectionManager {
   }
   
   private startHeartbeat(): void {
-    // Send initial heartbeat immediately
     if (this.socket?.readyState === WebSocket.OPEN) {
       const heartbeat = MessageParser.createHeartbeat();
       this.sendMessage(heartbeat);
     }
-    
-    // Clear existing interval
+
     if (this.heartbeatIntervalId) {
       clearInterval(this.heartbeatIntervalId);
     }
-    
-    // Send heartbeat every interval
+
     this.heartbeatIntervalId = setInterval(() => {
       if (this.socket?.readyState === WebSocket.OPEN) {
         const heartbeat = MessageParser.createHeartbeat();
         this.sendMessage(heartbeat);
       }
     }, this.options.heartbeatInterval);
-  }
-  
-  // Static singleton instance (optional)
-  private static instance: ConnectionManager | null = null;
-  
-  static getInstance(options?: ConnectionOptions): ConnectionManager {
-    if (!ConnectionManager.instance) {
-      ConnectionManager.instance = new ConnectionManager(options);
-    }
-    return ConnectionManager.instance;
-  }
-  
-  static destroyInstance(): void {
-    if (ConnectionManager.instance) {
-      ConnectionManager.instance.disconnect();
-      ConnectionManager.instance = null;
-    }
   }
 }

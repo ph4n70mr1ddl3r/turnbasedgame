@@ -1,10 +1,8 @@
 export function logError(message: string, error?: unknown): void {
-  if (process.env.NODE_ENV === "development") {
-    if (error) {
-      console.error(message, error);
-    } else {
-      console.error(message);
-    }
+  if (error) {
+    console.error(message, error);
+  } else {
+    console.error(message);
   }
 }
 
