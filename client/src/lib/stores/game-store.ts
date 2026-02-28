@@ -158,3 +158,5 @@ export const isMyTurnSelector = (state: GameStore): boolean => state.isMyTurn;
 export const availableActionsSelector = (state: GameStore): BetAction[] =>
   state.availableActions;
 export const lastErrorSelector = (state: GameStore): string | null => state.lastError;
+export const cachedPlayerIdSelector = (state: GameStore): string | null =>
+  state.cachedPlayerId;

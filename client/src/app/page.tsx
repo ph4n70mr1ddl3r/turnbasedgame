@@ -122,7 +122,7 @@ function GameContent(): React.ReactElement {
         </div>
 
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-green-800 p-4 rounded">
+          <div className="bg-green-800 p-4 rounded" role="region" aria-label="Game status">
             <h3 className="font-bold mb-2">Game Status</h3>
             <div className="space-y-1">
               <div className="flex justify-between">
@@ -142,7 +142,7 @@ function GameContent(): React.ReactElement {
             </div>
           </div>
 
-          <div className="bg-green-800 p-4 rounded">
+          <div className="bg-green-800 p-4 rounded" role="region" aria-label="Your hand">
             <h3 className="font-bold mb-2">Your Hand</h3>
             {myPlayer?.hole_cards?.length ? (
               <div className="flex space-x-2">
@@ -157,7 +157,7 @@ function GameContent(): React.ReactElement {
             )}
           </div>
 
-          <div className="bg-green-800 p-4 rounded">
+          <div className="bg-green-800 p-4 rounded" role="region" aria-label="Connection status">
             <h3 className="font-bold mb-2">Connection</h3>
             <div className="space-y-1">
               <div className="flex justify-between">

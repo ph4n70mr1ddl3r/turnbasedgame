@@ -29,7 +29,11 @@ export function PlayerSeat({ player, isCurrentPlayer }: PlayerSeatProps): React.
   ].join(" ");
   
   return (
-    <div className={seatClasses}>
+    <div
+      className={seatClasses}
+      role="region"
+      aria-label={`${player_id === "p1" ? "Player 1" : "Player 2"} seat`}
+    >
       {/* Player header */}
       <div className="flex justify-between items-start mb-3">
         <div>

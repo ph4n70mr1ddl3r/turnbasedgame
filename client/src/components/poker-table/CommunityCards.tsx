@@ -9,7 +9,11 @@ const CARD_POSITIONS = ["Flop 1", "Flop 2", "Flop 3", "Turn", "River"] as const;
 
 export function CommunityCards({ cards }: CommunityCardsProps): React.ReactElement {
   return (
-    <div className="bg-green-950/70 p-6 rounded-xl border-2 border-green-800">
+    <div
+      className="bg-green-950/70 p-6 rounded-xl border-2 border-green-800"
+      role="region"
+      aria-label="Community cards"
+    >
       <h3 className="text-center text-green-300 font-bold mb-4">Community Cards</h3>
       
       <div className="flex justify-center space-x-4">

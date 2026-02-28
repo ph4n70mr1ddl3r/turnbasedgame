@@ -12,3 +12,6 @@ export const RECONNECT_BACKOFF_FACTOR = 1.5;
 export const DEFAULT_TURN_TIME_MS = 30000;
 export const DEFAULT_STARTING_CHIPS = 1500;
 export const DEFAULT_MIN_BET = 50;
+
+export const CHIP_VISUAL_DIVISOR = 100;
+export const MAX_CHIP_STACK_DISPLAY = 5;

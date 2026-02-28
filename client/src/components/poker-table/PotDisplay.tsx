@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { CHIP_VISUAL_DIVISOR, MAX_CHIP_STACK_DISPLAY } from "@/lib/constants/game";
 
 interface PotDisplayProps {
   pot: number;
@@ -6,11 +7,15 @@ interface PotDisplayProps {
 
 export function PotDisplay({ pot }: PotDisplayProps): React.ReactElement {
   const chipCount = useMemo(
-    () => Math.min(Math.floor(pot / 100), 5),
+    () => Math.min(Math.floor(pot / CHIP_VISUAL_DIVISOR), MAX_CHIP_STACK_DISPLAY),
     [pot],
   );
   return (
-    <div className="bg-yellow-900/80 border-2 border-yellow-700 rounded-lg p-4 min-w-48">
+    <div
+      className="bg-yellow-900/80 border-2 border-yellow-700 rounded-lg p-4 min-w-48"
+      role="region"
+      aria-label="Pot display"
+    >
       <div className="text-center">
         <div className="text-yellow-300 text-sm font-bold uppercase tracking-wider">
           Total Pot

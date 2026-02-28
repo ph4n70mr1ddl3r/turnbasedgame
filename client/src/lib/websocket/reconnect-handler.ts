@@ -91,6 +91,10 @@ export class ReconnectHandler {
     return this.attemptReconnect();
   }
 
+  isReconnecting(): boolean {
+    return this.isActive;
+  }
+
   getStatus(): {
     attempts: number;
     currentDelay: number;

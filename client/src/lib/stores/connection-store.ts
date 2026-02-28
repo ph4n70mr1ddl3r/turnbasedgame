@@ -91,6 +91,8 @@ export const playerIdSelector = (state: ConnectionStore): string | null =>
   state.playerId;
 export const latencySelector = (state: ConnectionStore): number | null =>
   state.latency;
+export const lastHeartbeatSelector = (state: ConnectionStore): number | null =>
+  state.lastHeartbeat;
 
 export function initializeConnectionStore(): void {
   if (typeof window !== "undefined") {
