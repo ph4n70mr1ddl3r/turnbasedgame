@@ -13,7 +13,8 @@ function deriveAvailableActions(
   if (!myPlayer || myPlayer.is_folded || myPlayer.is_all_in) return [];
 
   const actions: BetAction[] = [];
-  const highestBet = Math.max(...gameState.players.map((p) => p.current_bet));
+  const bets = gameState.players.map((p) => p.current_bet);
+  const highestBet = bets.length > 0 ? Math.max(...bets) : 0;
   const myBet = myPlayer.current_bet;
   const toCall = highestBet - myBet;
 

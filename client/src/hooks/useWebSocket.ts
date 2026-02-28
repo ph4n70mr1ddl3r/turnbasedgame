@@ -51,6 +51,8 @@ export interface UseWebSocketReturn {
 
 export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
   const managerRef = useRef<ConnectionManager | null>(null);
+  const autoConnect = options.autoConnect;
+  const url = options.url;
 
   const isConnected = useConnectionStore(isConnectedSelector);
   const connectionStatus = useConnectionStore(connectionStatusSelector);
@@ -115,9 +117,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   useEffect(() => {
     initializeConnectionStore();
 
-    if (options.autoConnect !== false && !managerRef.current) {
+    if (autoConnect !== false && !managerRef.current) {
       managerRef.current = new ConnectionManager({
-        url: options.url,
+        url: url,
         autoReconnect: true,
       });
       managerRef.current.connect();
@@ -129,7 +131,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
         managerRef.current = null;
       }
     };
-  }, [options.autoConnect, options.url]);
+  }, [autoConnect, url]);
 
   return {
     connect,

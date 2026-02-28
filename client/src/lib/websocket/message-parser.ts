@@ -126,7 +126,7 @@ export class MessageParser {
       }
 
       for (const card of player.hole_cards) {
-        if (card === null || card === undefined) {
+        if (card === null || card === undefined || card === "") {
           continue;
         }
         if (!isString(card) || !isValidCard(card)) {

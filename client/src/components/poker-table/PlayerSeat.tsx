@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { PlayerState } from "@/types/game-types";
 import { DEFAULT_TURN_TIME_MS } from "@/lib/constants/game";
