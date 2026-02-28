@@ -46,8 +46,8 @@ function GameContent() {
   };
 
   const players = gameState?.players ?? [];
-  const player1 = players[0];
-  const player2 = players[1];
+  const player1 = players[0] ?? null;
+  const player2 = players[1] ?? null;
   const myPlayer = players.find((p: PlayerState) => p.player_id === playerId);
 
   return (

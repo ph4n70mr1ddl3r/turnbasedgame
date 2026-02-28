@@ -1,7 +1,8 @@
 import dynamic from "next/dynamic";
 
 const ConnectionStatus = dynamic(
-  () => import("@/components/ui/ConnectionStatus").then(mod => mod.ConnectionStatus)
+  () => import("@/components/ui/ConnectionStatus").then(mod => mod.ConnectionStatus),
+  { ssr: false },
 );
 
 export function Header() {

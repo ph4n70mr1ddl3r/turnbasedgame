@@ -83,7 +83,7 @@ export function PlayerSeat({ player, isCurrentPlayer }: PlayerSeatProps) {
       
       {/* Timer (if current player) */}
       {isCurrentPlayer && time_remaining > 0 && (
-        <div className="mt-2">
+        <div className="mt-2" aria-live="polite" aria-atomic="true">
           <div className="text-xs text-green-300 mb-1">Time remaining</div>
           <div className="w-full bg-green-900 h-2 rounded-full overflow-hidden">
             <div

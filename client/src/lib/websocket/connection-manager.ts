@@ -40,8 +40,10 @@ export class ConnectionManager {
   private options: Required<ConnectionOptions>;
   private reconnectHandler: ReconnectHandler | null = null;
   private heartbeatIntervalId: ReturnType<typeof setInterval> | null = null;
+  private connectionTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private connectionResolved = false;
   private isConnecting = false;
+  private wasIntentionallyDisconnected = false;
   
   constructor(options: ConnectionOptions = {}) {
     this.options = { ...DEFAULT_OPTIONS, ...options };
@@ -80,18 +82,17 @@ export class ConnectionManager {
       try {
         this.socket = new WebSocket(this.options.url);
 
-        let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
         const handleTimeout = () => {
           if (!this.connectionResolved && this.socket?.readyState !== WebSocket.OPEN) {
             this.connectionResolved = true;
             this.isConnecting = false;
+            this.connectionTimeoutId = null;
             this.handleConnectionTimeout();
             resolve(false);
           }
         };
 
-        timeoutId = setTimeout(handleTimeout, WS_CONNECTION_TIMEOUT_MS);
+        this.connectionTimeoutId = setTimeout(handleTimeout, WS_CONNECTION_TIMEOUT_MS);
 
         const handleOpen = () => {
           if (this.connectionResolved) {
@@ -99,8 +100,9 @@ export class ConnectionManager {
           }
           this.connectionResolved = true;
           this.isConnecting = false;
-          if (timeoutId !== null) {
-            clearTimeout(timeoutId);
+          if (this.connectionTimeoutId !== null) {
+            clearTimeout(this.connectionTimeoutId);
+            this.connectionTimeoutId = null;
           }
           this.handleOpen();
           resolve(true);
@@ -121,13 +123,23 @@ export class ConnectionManager {
   }
 
   disconnect(): void {
+    this.wasIntentionallyDisconnected = true;
     this.reconnectHandler?.stop();
     this.cleanupHeartbeat();
+    this.cleanupConnectionTimeout();
     this.cleanupSocket();
     useConnectionStore.getState().setConnected(false);
   }
 
+  private cleanupConnectionTimeout(): void {
+    if (this.connectionTimeoutId) {
+      clearTimeout(this.connectionTimeoutId);
+      this.connectionTimeoutId = null;
+    }
+  }
+
   private cleanupSocket(): void {
+    this.cleanupConnectionTimeout();
     if (this.socket) {
       this.socket.onopen = null;
       this.socket.onmessage = null;
@@ -172,6 +184,11 @@ export class ConnectionManager {
       return false;
     }
 
+    if (amount !== undefined && (!Number.isFinite(amount) || amount < 0)) {
+      logError("Cannot send bet action: invalid amount", amount);
+      return false;
+    }
+
     return this.sendMessage({
       type: "bet_action",
       data: { action, ...(amount !== undefined && { amount }) },
@@ -191,6 +208,7 @@ export class ConnectionManager {
   }
 
   private handleOpen(): void {
+    this.wasIntentionallyDisconnected = false;
     useConnectionStore.getState().setConnected(true);
 
     // Start heartbeat
@@ -220,6 +238,7 @@ export class ConnectionManager {
     if (message.type === "heartbeat") {
       const latency = Date.now() - message.data.timestamp;
       useConnectionStore.getState().setLatency(latency);
+      SessionManager.updateSessionExpiry();
       return;
     }
 
@@ -249,7 +268,7 @@ export class ConnectionManager {
     this.isConnecting = false;
     this.cleanupHeartbeat();
 
-    if (this.options.autoReconnect && this.reconnectHandler) {
+    if (!this.wasIntentionallyDisconnected && this.options.autoReconnect && this.reconnectHandler) {
       if (ReconnectHandler.shouldReconnect(event)) {
         this.reconnectHandler.start();
       }
@@ -267,6 +286,7 @@ export class ConnectionManager {
   
   private handleGameStateUpdate(message: GameStateUpdateMessage): void {
     useGameStore.getState().setGameState(message.data);
+    SessionManager.updateSessionExpiry();
 
     if (!useConnectionStore.getState().sessionToken && message.data.players.length > 0) {
       const myPlayer = useGameStore.getState().getMyPlayer();

@@ -25,7 +25,10 @@ export function BettingControls({
     setRaiseAmount(minBet);
   }, [minBet]);
 
-  const validatedActions = availableActions.filter(isValidBetAction);
+  const validatedActions = useMemo(
+    () => availableActions.filter(isValidBetAction),
+    [availableActions],
+  );
 
   const handleRaise = (): void => {
     const clampedAmount = Math.max(minBet, Math.min(maxBet, raiseAmount));

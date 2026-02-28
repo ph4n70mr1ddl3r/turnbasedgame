@@ -126,7 +126,10 @@ export class MessageParser {
       }
 
       for (const card of player.hole_cards) {
-        if (card !== null && card !== undefined && !isValidCard(card as string)) {
+        if (card === null || card === undefined) {
+          continue;
+        }
+        if (!isString(card) || !isValidCard(card)) {
           logError("Invalid game_state_update: invalid card", card);
           return null;
         }
