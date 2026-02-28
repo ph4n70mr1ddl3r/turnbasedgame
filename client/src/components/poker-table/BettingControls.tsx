@@ -48,10 +48,12 @@ export function BettingControls({
   };
 
   const quickRaiseAmounts = useMemo(
-    () =>
-      [minBet, minBet * 2, minBet * 3, maxBet].filter(
-        (amount, idx, arr) => amount > 0 && arr.indexOf(amount) === idx,
-      ),
+    () => {
+      const amounts = [minBet, minBet * 2, minBet * 3, maxBet]
+        .map((amount) => Math.min(amount, maxBet))
+        .filter((amount) => amount > 0 && amount >= minBet);
+      return [...new Set(amounts)];
+    },
     [minBet, maxBet],
   );
   

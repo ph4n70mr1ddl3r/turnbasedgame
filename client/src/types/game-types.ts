@@ -125,8 +125,32 @@ export type WebSocketMessage =
   | SessionInitMessage
   | ChatMessage;
 
-function isObject(value: unknown): value is Record<string, unknown> {
+export function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+export function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+export function isNumber(value: unknown): value is number {
+  return typeof value === "number";
+}
+
+export function isArray(value: unknown): value is unknown[] {
+  return Array.isArray(value);
+}
+
+export const VALID_BETTING_ROUNDS: readonly BettingRound[] = ["preflop", "flop", "turn", "river", "showdown"];
+export const VALID_GAME_STATUSES: readonly GameStatus[] = ["waiting", "active", "finished"];
+export const VALID_CONNECTION_STATUSES: readonly ConnectionStatus[] = ["connected", "disconnected", "reconnecting"];
+
+export function isValidBettingRound(value: string): value is BettingRound {
+  return VALID_BETTING_ROUNDS.includes(value as BettingRound);
+}
+
+export function isValidGameStatus(value: string): value is GameStatus {
+  return VALID_GAME_STATUSES.includes(value as GameStatus);
 }
 
 export function isGameStateUpdate(msg: unknown): msg is GameStateUpdateMessage {

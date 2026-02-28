@@ -7,26 +7,16 @@ import {
   SessionInitMessage,
   isValidCard,
   isValidPlayerId,
+  isValidBettingRound,
+  isValidGameStatus,
   MAX_PLAYERS,
   MAX_COMMUNITY_CARDS,
+  isObject,
+  isString,
+  isNumber,
+  isArray,
 } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function isString(value: unknown): value is string {
-  return typeof value === "string";
-}
-
-function isNumber(value: unknown): value is number {
-  return typeof value === "number";
-}
-
-function isArray(value: unknown): value is unknown[] {
-  return Array.isArray(value);
-}
 
 export class MessageParser {
   static parseMessage(data: string): WebSocketMessage | null {
@@ -89,6 +79,26 @@ export class MessageParser {
 
     if (!isNumber(data.pot) || data.pot < 0) {
       logError("Invalid game_state_update: invalid pot", data);
+      return null;
+    }
+
+    if (!isString(data.round) || !isValidBettingRound(data.round)) {
+      logError("Invalid game_state_update: invalid round", data);
+      return null;
+    }
+
+    if (!isString(data.game_status) || !isValidGameStatus(data.game_status)) {
+      logError("Invalid game_state_update: invalid game_status", data);
+      return null;
+    }
+
+    if (!isNumber(data.min_bet) || data.min_bet < 0) {
+      logError("Invalid game_state_update: invalid min_bet", data);
+      return null;
+    }
+
+    if (!isNumber(data.max_bet) || data.max_bet < 0) {
+      logError("Invalid game_state_update: invalid max_bet", data);
       return null;
     }
 
