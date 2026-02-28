@@ -61,7 +61,7 @@ test.describe('Story 1.2: Establish WebSocket Connection', () => {
     await expect(page.locator('[data-testid="connection-status"]')).toHaveText('Connected');
     
     // WHEN: Check localStorage for session token
-    const token = await page.evaluate(() => localStorage.getItem('session_token'));
+    const token = await page.evaluate(() => localStorage.getItem('poker_session_token'));
     
     // THEN: Session token exists and is valid UUIDv4 format
     expect(token).toBeTruthy();

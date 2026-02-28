@@ -93,7 +93,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     return state.gameState.players.find((p) => p.player_id !== playerId) || null;
   },
   
-  getPlayer: (playerId: string) => {
+  getPlayer: (playerId: string): PlayerState | null => {
     const state = get();
     if (!state.gameState) return null;
     

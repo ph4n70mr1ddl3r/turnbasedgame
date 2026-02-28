@@ -23,7 +23,32 @@ export interface UseWebSocketOptions {
   url?: string;
 }
 
-export function useWebSocket(options: UseWebSocketOptions = {}) {
+export interface UseWebSocketReturn {
+  connect: () => Promise<boolean>;
+  disconnect: () => void;
+  sendBetAction: (action: BetAction, amount?: number) => boolean;
+  getStatus: () => {
+    isConnected: boolean;
+    status: "connected" | "disconnected" | "reconnecting";
+    latency: number | null;
+    sessionToken: string | null;
+    playerId: string | null;
+  };
+  isConnected: boolean;
+  connectionStatus: "connected" | "disconnected" | "reconnecting";
+  latency: number | null;
+  sessionToken: string | null;
+  playerId: string | null;
+  gameState: ReturnType<typeof gameStateSelector>;
+  isMyTurn: boolean;
+  availableActions: BetAction[];
+  lastError: string | null;
+  getMyPlayer: () => ReturnType<typeof useGameStore.getState>["getMyPlayer"] extends () => infer R ? R : never;
+  getOpponentPlayer: () => ReturnType<typeof useGameStore.getState>["getOpponentPlayer"] extends () => infer R ? R : never;
+  clearError: () => void;
+}
+
+export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
   const managerRef = useRef<ConnectionManager | null>(null);
 
   const isConnected = useConnectionStore(isConnectedSelector);

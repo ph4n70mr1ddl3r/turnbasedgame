@@ -266,8 +266,12 @@ export class ConnectionManager {
     if (!useConnectionStore.getState().sessionToken && message.data.players.length > 0) {
       const myPlayer = useGameStore.getState().getMyPlayer();
       if (myPlayer) {
-        const token = SessionManager.generateToken();
-        useConnectionStore.getState().setSession(token, myPlayer.player_id);
+        try {
+          const token = SessionManager.generateToken();
+          useConnectionStore.getState().setSession(token, myPlayer.player_id);
+        } catch (error) {
+          logError("Failed to generate session token:", error);
+        }
       }
     }
   }
