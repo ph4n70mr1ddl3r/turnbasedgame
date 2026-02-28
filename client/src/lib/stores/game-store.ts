@@ -20,6 +20,7 @@ interface GameStore {
   setError: (error: string | null) => void;
   clearError: () => void;
   reset: () => void;
+  resetGameState: () => void;
   setCachedPlayerId: (id: string | null) => void;
 
   getMyPlayer: () => PlayerState | null;
@@ -77,6 +78,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
       availableActions: [],
       lastError: null,
       cachedPlayerId: null,
+    });
+  },
+
+  resetGameState: (): void => {
+    set({
+      gameState: null,
+      isMyTurn: false,
+      availableActions: [],
+      lastError: null,
     });
   },
 

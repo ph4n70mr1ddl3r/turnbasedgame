@@ -3,7 +3,7 @@ import { ReconnectHandler, ReconnectOptions, ReconnectState } from "./reconnect-
 import { SessionManager } from "./session-manager";
 import { useConnectionStore } from "@/lib/stores/connection-store";
 import { useGameStore } from "@/lib/stores/game-store";
-import { WebSocketMessage, GameStateUpdateMessage, ErrorMessage, BetAction, ConnectionStatus, ConnectionStatusInfo } from "@/types/game-types";
+import { WebSocketMessage, GameStateUpdateMessage, ErrorMessage, BetAction, ConnectionStatus, ConnectionStatusInfo, ConnectionStatusMessage } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
 import {
   WS_CONNECTION_TIMEOUT_MS,
@@ -292,8 +292,14 @@ export class ConnectionManager {
     }
   }
   
-  private handleConnectionStatus(message: { data: { status: ConnectionStatus; player_id?: string } }): void {
+  private handleConnectionStatus(message: ConnectionStatusMessage): void {
     useConnectionStore.getState().setStatus(message.data.status);
+    if (message.data.player_id) {
+      useConnectionStore.getState().setSession(
+        useConnectionStore.getState().sessionToken || '',
+        message.data.player_id
+      );
+    }
   }
   
   private startHeartbeat(): void {

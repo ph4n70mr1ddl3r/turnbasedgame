@@ -61,9 +61,13 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   const isMyTurn = useGameStore(isMyTurnSelector);
   const availableActions = useGameStore(availableActionsSelector);
   const lastError = useGameStore(lastErrorSelector);
-  const getMyPlayer = useGameStore((s) => s.getMyPlayer);
-  const getOpponentPlayer = useGameStore((s) => s.getOpponentPlayer);
-  const clearError = useGameStore((s) => s.clearError);
+  const getMyPlayerStore = useGameStore((s) => s.getMyPlayer);
+  const getOpponentPlayerStore = useGameStore((s) => s.getOpponentPlayer);
+  const clearErrorStore = useGameStore((s) => s.clearError);
+
+  const getMyPlayer = useCallback(() => getMyPlayerStore(), [getMyPlayerStore]);
+  const getOpponentPlayer = useCallback(() => getOpponentPlayerStore(), [getOpponentPlayerStore]);
+  const clearError = useCallback(() => clearErrorStore(), [clearErrorStore]);
 
   const connect = useCallback(async () => {
     if (managerRef.current) {
