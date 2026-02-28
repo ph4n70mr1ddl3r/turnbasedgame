@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { ConnectionStatus } from "@/types/game-types";
 import { SessionManager } from "@/lib/websocket/session-manager";
-import { setCachedPlayerId } from "@/lib/stores/game-store";
+import { useGameStore } from "@/lib/stores/game-store";
 
 interface ConnectionStore {
   status: ConnectionStatus;
@@ -18,53 +18,57 @@ interface ConnectionStore {
   setSession: (_token: string, _playerId: string) => void;
   clearSession: () => void;
   reset: () => void;
+  initializeFromSession: () => void;
 }
-
-function getInitialSession(): { token: string | null; playerId: string | null } {
-  if (typeof window === "undefined") {
-    return { token: null, playerId: null };
-  }
-  const session = SessionManager.getSession();
-  return {
-    token: session?.token ?? null,
-    playerId: session?.playerId ?? null,
-  };
-}
-
-const initialSession = getInitialSession();
 
 export const useConnectionStore = create<ConnectionStore>((set) => ({
   status: "disconnected",
   isConnected: false,
   lastHeartbeat: null,
   latency: null,
-  sessionToken: initialSession.token,
-  playerId: initialSession.playerId,
+  sessionToken: null,
+  playerId: null,
 
-  setStatus: (status: ConnectionStatus) => set({ status }),
+  initializeFromSession: (): void => {
+    if (typeof window === "undefined") return;
+    const session = SessionManager.getSession();
+    if (session) {
+      useGameStore.getState().setCachedPlayerId(session.playerId);
+      set({ sessionToken: session.token, playerId: session.playerId });
+    }
+  },
 
-  setConnected: (isConnected: boolean) =>
-    set({ isConnected, status: isConnected ? "connected" : "disconnected" }),
+  setStatus: (status: ConnectionStatus): void => {
+    set({ status });
+  },
 
-  updateHeartbeat: () => set({ lastHeartbeat: Date.now() }),
+  setConnected: (isConnected: boolean): void => {
+    set({ isConnected, status: isConnected ? "connected" : "disconnected" });
+  },
 
-  setLatency: (latency: number) => set({ latency }),
+  updateHeartbeat: (): void => {
+    set({ lastHeartbeat: Date.now() });
+  },
 
-  setSession: (token: string, playerId: string) => {
+  setLatency: (latency: number): void => {
+    set({ latency });
+  },
+
+  setSession: (token: string, playerId: string): void => {
     SessionManager.createSession(token, playerId);
-    setCachedPlayerId(playerId);
+    useGameStore.getState().setCachedPlayerId(playerId);
     set({ sessionToken: token, playerId });
   },
 
-  clearSession: () => {
+  clearSession: (): void => {
     SessionManager.clearSession();
-    setCachedPlayerId(null);
+    useGameStore.getState().setCachedPlayerId(null);
     set({ sessionToken: null, playerId: null });
   },
 
-  reset: () => {
+  reset: (): void => {
     SessionManager.clearSession();
-    setCachedPlayerId(null);
+    useGameStore.getState().setCachedPlayerId(null);
     set({
       status: "disconnected",
       isConnected: false,
@@ -76,8 +80,14 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
   },
 }));
 
-export const connectionStatusSelector = (state: ConnectionStore) => state.status;
-export const isConnectedSelector = (state: ConnectionStore) => state.isConnected;
-export const sessionTokenSelector = (state: ConnectionStore) => state.sessionToken;
-export const playerIdSelector = (state: ConnectionStore) => state.playerId;
-export const latencySelector = (state: ConnectionStore) => state.latency;
+export const connectionStatusSelector = (
+  state: ConnectionStore,
+): ConnectionStatus => state.status;
+export const isConnectedSelector = (state: ConnectionStore): boolean =>
+  state.isConnected;
+export const sessionTokenSelector = (state: ConnectionStore): string | null =>
+  state.sessionToken;
+export const playerIdSelector = (state: ConnectionStore): string | null =>
+  state.playerId;
+export const latencySelector = (state: ConnectionStore): number | null =>
+  state.latency;

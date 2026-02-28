@@ -46,12 +46,12 @@ export class ReconnectHandler {
 
   start(): void {
     if (this.isActive) return;
-    
+
     this.isActive = true;
     this.attempts = 0;
     this.currentDelay = this.options.initialDelay;
     this.onStateChange?.("disconnected");
-    
+
     this.attemptReconnect();
   }
 
@@ -126,7 +126,6 @@ export class ReconnectHandler {
     }
   }
   
-  // Schedule next reconnection attempt with exponential backoff
   private scheduleNextAttempt(): void {
     if (!this.isActive) return;
 
@@ -138,7 +137,6 @@ export class ReconnectHandler {
 
     delay = Math.min(delay, maxDelay);
 
-    // Apply jitter (±20%)
     if (jitter) {
       const jitterValue = 0.8 + Math.random() * 0.4;
       delay *= jitterValue;

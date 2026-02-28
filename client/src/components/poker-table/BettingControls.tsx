@@ -27,7 +27,7 @@ export function BettingControls({
 
   const validatedActions = availableActions.filter(isValidBetAction);
 
-  const handleRaise = () => {
+  const handleRaise = (): void => {
     const clampedAmount = Math.max(minBet, Math.min(maxBet, raiseAmount));
     if (clampedAmount >= minBet && clampedAmount <= maxBet) {
       onBetAction("raise", clampedAmount);
@@ -36,13 +36,13 @@ export function BettingControls({
     }
   };
 
-  const handleAction = (action: string) => {
+  const handleAction = (action: string): void => {
     if (isValidBetAction(action)) {
       onBetAction(action);
     }
   };
 
-  const handleRaiseAmountChange = (value: string) => {
+  const handleRaiseAmountChange = (value: string): void => {
     const numValue = parseInt(value, 10);
     if (!isNaN(numValue)) {
       setRaiseAmount(Math.max(0, numValue));

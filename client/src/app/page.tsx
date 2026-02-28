@@ -33,7 +33,7 @@ function GameContent() {
     autoConnect: true,
   });
 
-  const handleBetAction = (action: BetAction, amount?: number) => {
+  const handleBetAction = (action: BetAction, amount?: number): void => {
     const success = sendBetAction(action, amount);
     if (!success) {
       logError("Failed to send bet action");
