@@ -26,6 +26,7 @@ export class ReconnectHandler {
   private currentDelay: number;
   private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private isActive = false;
+  private isAttempting = false;
   private connectFn: () => Promise<boolean>;
 
   private onStateChange?: (state: ReconnectState) => void;
@@ -111,13 +112,15 @@ export class ReconnectHandler {
   
   // Private method to attempt reconnection
   private async attemptReconnect(): Promise<boolean> {
-    if (!this.isActive) return false;
+    if (!this.isActive || this.isAttempting) return false;
 
+    this.isAttempting = true;
     const { maxAttempts } = this.options;
 
     if (maxAttempts > 0 && this.attempts >= maxAttempts) {
       this.onStateChange?.("failed");
       this.isActive = false;
+      this.isAttempting = false;
       return false;
     }
     
@@ -129,13 +132,16 @@ export class ReconnectHandler {
       
       if (success) {
         this.reset();
+        this.isAttempting = false;
         return true;
       } else {
+        this.isAttempting = false;
         this.scheduleNextAttempt();
         return false;
       }
     } catch (error) {
       logError("Reconnection attempt failed:", error);
+      this.isAttempting = false;
       this.scheduleNextAttempt();
       return false;
     }

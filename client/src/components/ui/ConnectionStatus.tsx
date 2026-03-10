@@ -3,12 +3,10 @@
 import {
   useConnectionStore,
   connectionStatusSelector,
-  isConnectedSelector,
   latencySelector,
 } from "@/lib/stores/connection-store";
 
 export function ConnectionStatus() {
-  const isConnected = useConnectionStore(isConnectedSelector);
   const connectionStatus = useConnectionStore(connectionStatusSelector);
   const latency = useConnectionStore(latencySelector);
 
@@ -50,7 +48,7 @@ export function ConnectionStatus() {
         </div>
       )}
       
-      {!isConnected && connectionStatus === "disconnected" && (
+      {connectionStatus === "disconnected" && (
         <button
           onClick={() => window.location.reload()}
           className="text-sm bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded"

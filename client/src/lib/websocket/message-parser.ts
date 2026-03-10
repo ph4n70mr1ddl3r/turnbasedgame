@@ -5,6 +5,10 @@ import {
   ConnectionStatusMessage,
   HeartbeatMessage,
   SessionInitMessage,
+  PlayerState,
+  PlayerPosition,
+  BettingRound,
+  GameStatus,
   isValidCard,
   isValidPlayerId,
   isValidBettingRound,
@@ -102,6 +106,8 @@ export class MessageParser {
       return null;
     }
 
+    const validatedPlayers: PlayerState[] = [];
+
     for (const player of data.players) {
       if (!isObject(player)) {
         logError("Invalid game_state_update: invalid player", player);
@@ -115,7 +121,7 @@ export class MessageParser {
       }
 
       const chipStack = player.chip_stack;
-      if (!isNumber(chipStack) || chipStack < 0) {
+      if (!isNumber(chipStack) || chipStack < 0 || !Number.isFinite(chipStack)) {
         logError("Invalid game_state_update: invalid chip_stack", player);
         return null;
       }
@@ -134,16 +140,52 @@ export class MessageParser {
           return null;
         }
       }
+
+      const timeRemaining = player.time_remaining;
+      if (timeRemaining !== undefined && (!isNumber(timeRemaining) || !Number.isFinite(timeRemaining))) {
+        logError("Invalid game_state_update: invalid time_remaining", player);
+        return null;
+      }
+
+      validatedPlayers.push({
+        player_id: playerId,
+        chip_stack: chipStack,
+        hole_cards: player.hole_cards as string[],
+        position: player.position as PlayerPosition,
+        current_bet: player.current_bet as number,
+        is_active: player.is_active as boolean,
+        is_folded: player.is_folded as boolean,
+        is_all_in: player.is_all_in as boolean,
+        last_action: player.last_action as string | undefined,
+        time_remaining: (timeRemaining as number) ?? 0,
+      });
     }
 
+    const validatedCommunityCards: string[] = [];
     for (const card of data.community_cards) {
       if (!isValidCard(card as string)) {
         logError("Invalid game_state_update: invalid community card", card);
         return null;
       }
+      validatedCommunityCards.push(card as string);
     }
 
-    return msg as unknown as GameStateUpdateMessage;
+    return {
+      type: "game_state_update",
+      data: {
+        players: validatedPlayers,
+        community_cards: validatedCommunityCards,
+        pot: data.pot as number,
+        current_player: data.current_player as string | null,
+        time_remaining: (data.time_remaining as number) ?? 0,
+        round: data.round as BettingRound,
+        min_bet: data.min_bet as number,
+        max_bet: data.max_bet as number,
+        last_winner: data.last_winner as string | undefined,
+        winning_hand: data.winning_hand as string | undefined,
+        game_status: data.game_status as GameStatus,
+      },
+    };
   }
 
   private static validateErrorMessage(msg: Record<string, unknown>): ErrorMessage | null {
@@ -164,7 +206,14 @@ export class MessageParser {
       return null;
     }
 
-    return msg as unknown as ErrorMessage;
+    return {
+      type: "error",
+      data: {
+        code: data.code,
+        message: data.message,
+        details: isObject(data.details) ? data.details as Record<string, unknown> : undefined,
+      },
+    };
   }
 
   private static validateConnectionStatus(
@@ -189,7 +238,14 @@ export class MessageParser {
       }
     }
 
-    return msg as unknown as ConnectionStatusMessage;
+    return {
+      type: "connection_status",
+      data: {
+        status: data.status as "connected" | "disconnected" | "reconnecting",
+        player_id: data.player_id as string | undefined,
+        message: isString(data.message) ? data.message : undefined,
+      },
+    };
   }
 
   private static validateHeartbeat(msg: Record<string, unknown>): HeartbeatMessage | null {
@@ -205,7 +261,12 @@ export class MessageParser {
       return null;
     }
 
-    return msg as unknown as HeartbeatMessage;
+    return {
+      type: "heartbeat",
+      data: {
+        timestamp: data.timestamp,
+      },
+    };
   }
 
   static stringifyMessage(message: WebSocketMessage): string {

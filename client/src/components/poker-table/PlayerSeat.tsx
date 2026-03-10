@@ -63,9 +63,9 @@ export function PlayerSeat({ player, isCurrentPlayer }: PlayerSeatProps): React.
         <div className="text-sm text-green-300 mb-1">Cards</div>
         <div className="flex space-x-2">
           {hole_cards && hole_cards.length > 0 ? (
-            hole_cards.map((card) => (
+            hole_cards.map((card, index) => (
               <div
-                key={card}
+                key={`hole-card-${index}`}
                 className="w-10 h-14 bg-white text-black rounded flex items-center justify-center font-bold shadow-md"
               >
                 {card}
@@ -95,7 +95,7 @@ export function PlayerSeat({ player, isCurrentPlayer }: PlayerSeatProps): React.
           <div className="w-full bg-green-900 h-2 rounded-full overflow-hidden">
             <div
               className="bg-yellow-500 h-full transition-all duration-1000"
-              style={{ width: `${(time_remaining / DEFAULT_TURN_TIME_MS) * 100}%` }}
+              style={{ width: `${(time_remaining / Math.max(1, DEFAULT_TURN_TIME_MS)) * 100}%` }}
             />
           </div>
           <div className="text-xs text-right mt-1">

@@ -288,18 +288,6 @@ export class ConnectionManager {
   private handleGameStateUpdate(message: GameStateUpdateMessage): void {
     useGameStore.getState().setGameState(message.data);
     SessionManager.updateSessionExpiry();
-
-    if (!useConnectionStore.getState().sessionToken && message.data.players.length > 0) {
-      const myPlayer = useGameStore.getState().getMyPlayer();
-      if (myPlayer) {
-        try {
-          const token = SessionManager.generateToken();
-          useConnectionStore.getState().setSession(token, myPlayer.player_id);
-        } catch (error) {
-          logError("Failed to generate session token:", error);
-        }
-      }
-    }
   }
   
   private handleErrorMessage(message: ErrorMessage): void {
@@ -324,6 +312,13 @@ export class ConnectionManager {
       const currentToken = useConnectionStore.getState().sessionToken;
       if (currentToken) {
         useConnectionStore.getState().setSession(currentToken, message.data.player_id);
+      } else {
+        try {
+          const token = SessionManager.generateToken();
+          useConnectionStore.getState().setSession(token, message.data.player_id);
+        } catch (error) {
+          logError("Failed to generate session token:", error);
+        }
       }
     }
   }

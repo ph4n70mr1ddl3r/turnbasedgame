@@ -117,7 +117,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   useEffect(() => {
     initializeConnectionStore();
 
-    if (autoConnect !== false && !managerRef.current) {
+    if (autoConnect !== false) {
+      if (managerRef.current) {
+        managerRef.current.disconnect();
+        managerRef.current = null;
+      }
       managerRef.current = new ConnectionManager({
         url: url,
         autoReconnect: true,
@@ -131,6 +135,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
         managerRef.current = null;
       }
     };
+     
   }, [autoConnect, url]);
 
   return {

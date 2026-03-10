@@ -22,7 +22,7 @@ export function CommunityCards({ cards }: CommunityCardsProps): React.ReactEleme
         ) : (
           <>
             {cards.map((card, index) => (
-              <div key={card} className="flex flex-col items-center">
+              <div key={`card-${index}`} className="flex flex-col items-center">
                 <div className="w-14 h-20 bg-white text-black rounded-lg flex items-center justify-center font-bold text-xl shadow-lg mb-2">
                   {card}
                 </div>

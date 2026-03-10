@@ -37,7 +37,7 @@ export function PotDisplay({ pot }: PotDisplayProps): React.ReactElement {
                   className="w-8 h-8 bg-yellow-500 border-2 border-yellow-600 rounded-full"
                   style={{
                     transform: `translateY(${i * -2}px)`,
-                    zIndex: 5 - i,
+                    zIndex: MAX_CHIP_STACK_DISPLAY - i,
                   }}
                 />
               ))}

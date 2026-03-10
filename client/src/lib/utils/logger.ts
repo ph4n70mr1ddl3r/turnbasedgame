@@ -16,8 +16,9 @@ export function logError(message: string, error?: unknown): void {
   if (globalErrorHandler) {
     try {
       globalErrorHandler(message, error);
-    } catch {
-      // Silently fail to prevent error handler loops
+    } catch (handlerError) {
+      console.error("[ERROR] Error handler failed:", handlerError);
+      console.error(`[ERROR] Original: ${message}`, error ?? "");
     }
   }
 }

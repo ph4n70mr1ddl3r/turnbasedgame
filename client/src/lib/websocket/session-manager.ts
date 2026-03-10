@@ -8,6 +8,18 @@ export interface SessionData {
   expiry: number;
 }
 
+/**
+ * Session management for WebSocket connections.
+ *
+ * SECURITY NOTE: Session tokens are stored in localStorage for persistence across
+ * page reloads. This is a trade-off between UX and security:
+ * - localStorage is vulnerable to XSS attacks
+ * - For production, consider:
+ *   1. Server-set HttpOnly cookies (requires server changes)
+ *   2. Short session durations with automatic refresh
+ *   3. Token rotation on each reconnection
+ * - Ensure CSP headers are properly configured to mitigate XSS risks
+ */
 export class SessionManager {
   static getSession(): SessionData | null {
     if (typeof window === 'undefined') {
