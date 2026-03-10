@@ -19,7 +19,7 @@ const DEFAULT_OPTIONS: Required<ReconnectOptions> = {
   jitter: true,                  // Add jitter
 };
 
-export type ReconnectState = "connected" | "disconnected" | "stopped" | "failed" | `attempt_${number}` | `waiting_${string}`;
+export type ReconnectState = "connected" | "disconnected" | "stopped" | "failed" | `attempt_${number}` | `waiting_${number}s`;
 
 export class ReconnectHandler {
   private attempts = 0;
@@ -113,7 +113,6 @@ export class ReconnectHandler {
     };
   }
   
-  // Private method to attempt reconnection
   private async attemptReconnect(): Promise<boolean> {
     if (!this.isActive || this.isAttempting) return false;
 
@@ -126,13 +125,18 @@ export class ReconnectHandler {
       this.isAttempting = false;
       return false;
     }
-    
+
     this.attempts++;
     this.onStateChange?.(`attempt_${this.attempts}`);
-    
+
     try {
       const success = await this.connectFn();
-      
+
+      if (!this.isActive) {
+        this.isAttempting = false;
+        return false;
+      }
+
       if (success) {
         this.reset();
         return true;
@@ -142,7 +146,9 @@ export class ReconnectHandler {
       }
     } catch (error) {
       logError("Reconnection attempt failed:", error);
-      this.scheduleNextAttempt();
+      if (this.isActive) {
+        this.scheduleNextAttempt();
+      }
       return false;
     } finally {
       this.isAttempting = false;

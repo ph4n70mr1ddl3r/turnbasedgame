@@ -119,7 +119,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   useEffect(() => {
     let cancelled = false;
     let manager: ConnectionManager | null = null;
-    
+
     initializeConnectionStore();
 
     if (autoConnect !== false) {
@@ -127,21 +127,23 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
         managerRef.current.disconnect();
         managerRef.current = null;
       }
-      
+
       manager = new ConnectionManager({
         url: url,
         autoReconnect: true,
       });
-      
-      manager.connect().then((_connected) => {
-        if (cancelled && manager) {
-          manager.disconnect();
-        }
-      });
-      
-      if (!cancelled) {
-        managerRef.current = manager;
-      }
+
+      managerRef.current = manager;
+
+      manager.connect()
+        .then((_connected) => {
+          if (cancelled) {
+            manager?.disconnect();
+          }
+        })
+        .catch((err) => {
+          logError("Connection promise rejected:", err);
+        });
     }
 
     return () => {

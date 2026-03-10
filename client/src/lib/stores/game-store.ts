@@ -69,7 +69,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   setGameState: (gameState: GameState): void => {
     const { cachedPlayerId } = get();
-    const isMyTurn = gameState.current_player === cachedPlayerId;
+    const isMyTurn = cachedPlayerId !== null && gameState.current_player === cachedPlayerId;
     const availableActions = deriveAvailableActions(gameState, cachedPlayerId);
     set({ gameState, isMyTurn, availableActions });
   },

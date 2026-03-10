@@ -44,6 +44,9 @@ export class ConnectionManager {
   private connectionResolved = false;
   private isConnecting = false;
   private wasIntentionallyDisconnected = false;
+  private connectionGeneration = 0;
+  private pendingHeartbeatTimestamps: Map<number, number> = new Map();
+  private lastMessageTime = 0;
   
   constructor(options: ConnectionOptions = {}) {
     this.options = { ...DEFAULT_OPTIONS, ...options };
@@ -76,7 +79,14 @@ export class ConnectionManager {
   private validateWebSocketUrl(url: string): boolean {
     try {
       const parsed = new URL(url);
-      return ['ws:', 'wss:'].includes(parsed.protocol);
+      if (!['ws:', 'wss:'].includes(parsed.protocol)) {
+        return false;
+      }
+      if (process.env.NODE_ENV === 'production' && parsed.protocol !== 'wss:') {
+        logError('WebSocket must use wss:// in production');
+        return false;
+      }
+      return true;
     } catch {
       return false;
     }
@@ -88,6 +98,8 @@ export class ConnectionManager {
     }
 
     this.isConnecting = true;
+    this.connectionGeneration++;
+    const currentGeneration = this.connectionGeneration;
     this.cleanupSocket();
     this.connectionResolved = false;
 
@@ -108,6 +120,10 @@ export class ConnectionManager {
         this.connectionTimeoutId = setTimeout(handleTimeout, WS_CONNECTION_TIMEOUT_MS);
 
         const handleOpen = () => {
+          if (this.connectionGeneration !== currentGeneration) {
+            this.socket?.close();
+            return;
+          }
           if (this.connectionResolved) {
             return;
           }
@@ -242,20 +258,26 @@ export class ConnectionManager {
   }
   
   private handleMessage(event: MessageEvent): void {
+    this.lastMessageTime = Date.now();
     useConnectionStore.getState().updateHeartbeat();
 
     const message = MessageParser.parseMessage(event.data);
-    if (!message) return;
+    if (!message) {
+      useGameStore.getState().setError("Received invalid message from server");
+      return;
+    }
 
-    // Update latency for heartbeat messages
     if (message.type === "heartbeat") {
-      const latency = Date.now() - message.data.timestamp;
-      useConnectionStore.getState().setLatency(latency);
+      const clientTimestamp = this.pendingHeartbeatTimestamps.get(message.data.timestamp);
+      if (clientTimestamp !== undefined) {
+        const latency = Date.now() - clientTimestamp;
+        useConnectionStore.getState().setLatency(latency);
+        this.pendingHeartbeatTimestamps.delete(message.data.timestamp);
+      }
       SessionManager.updateSessionExpiry();
       return;
     }
 
-    // Handle different message types
     switch (message.type) {
       case "game_state_update":
         this.handleGameStateUpdate(message);
@@ -265,8 +287,6 @@ export class ConnectionManager {
         break;
       case "connection_status":
         this.handleConnectionStatus(message);
-        break;
-      default:
         break;
     }
   }
@@ -343,20 +363,32 @@ export class ConnectionManager {
   }
   
   private startHeartbeat(): void {
-    if (this.socket?.readyState === WebSocket.OPEN) {
-      const heartbeat = MessageParser.createHeartbeat();
-      this.sendMessage(heartbeat);
-    }
-
     if (this.heartbeatIntervalId) {
       clearInterval(this.heartbeatIntervalId);
     }
 
-    this.heartbeatIntervalId = setInterval(() => {
+    this.lastMessageTime = Date.now();
+
+    const sendHeartbeat = (): void => {
       if (this.socket?.readyState === WebSocket.OPEN) {
-        const heartbeat = MessageParser.createHeartbeat();
+        const clientTimestamp = Date.now();
+        const heartbeatId = clientTimestamp;
+        this.pendingHeartbeatTimestamps.set(heartbeatId, clientTimestamp);
+        const heartbeat = {
+          type: "heartbeat" as const,
+          data: { timestamp: heartbeatId },
+        };
         this.sendMessage(heartbeat);
+
+        if (Date.now() - this.lastMessageTime > this.options.heartbeatInterval * 2) {
+          logError("Connection stale - no message received recently");
+          this.handleConnectionTimeout();
+        }
       }
-    }, this.options.heartbeatInterval);
+    };
+
+    sendHeartbeat();
+
+    this.heartbeatIntervalId = setInterval(sendHeartbeat, this.options.heartbeatInterval);
   }
 }
