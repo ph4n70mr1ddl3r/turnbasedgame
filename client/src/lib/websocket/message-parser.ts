@@ -9,6 +9,7 @@ import {
   PlayerPosition,
   BettingRound,
   GameStatus,
+  Card,
   isValidCard,
   isValidPlayerId,
   isValidBettingRound,
@@ -184,7 +185,7 @@ export class MessageParser {
       validatedPlayers.push({
         player_id: playerId,
         chip_stack: chipStack,
-        hole_cards: player.hole_cards as string[],
+        hole_cards: player.hole_cards as Card[],
         position: player.position as PlayerPosition,
         current_bet: player.current_bet,
         is_active: player.is_active,
@@ -195,13 +196,13 @@ export class MessageParser {
       });
     }
 
-    const validatedCommunityCards: string[] = [];
+    const validatedCommunityCards: Card[] = [];
     for (const card of data.community_cards) {
       if (!isString(card) || !isValidCard(card)) {
         logError("Invalid game_state_update: invalid community card", card);
         return null;
       }
-      validatedCommunityCards.push(card);
+      validatedCommunityCards.push(card as Card);
     }
 
     if (data.current_player !== null && data.current_player !== undefined && !isString(data.current_player)) {

@@ -158,7 +158,9 @@ export class ConnectionManager {
         this.socket.onclose = (event) => this.handleClose(event);
       } catch (error) {
         logError("Error creating WebSocket:", error);
+        this.cleanupSocket();
         useConnectionStore.getState().setConnected(false);
+        useGameStore.getState().setError("Failed to create WebSocket connection");
         this.connectionResolved = true;
         this.isConnecting = false;
         this.pendingResolve = null;
@@ -169,10 +171,12 @@ export class ConnectionManager {
 
   disconnect(): void {
     this.wasIntentionallyDisconnected = true;
+    this.isConnecting = false;
     this.reconnectHandler?.stop();
     this.cleanupHeartbeat();
     this.cleanupConnectionTimeout();
     this.cleanupSocket();
+    this.pendingHeartbeatTimestamps.clear();
     useConnectionStore.getState().setConnected(false);
   }
 

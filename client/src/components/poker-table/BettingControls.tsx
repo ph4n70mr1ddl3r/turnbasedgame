@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { BetAction, isValidBetAction } from "@/types/game-types";
 import { MAX_QUICK_RAISE_OPTIONS } from "@/lib/constants/game";
 
@@ -19,12 +19,14 @@ export function BettingControls({
   minBet,
   maxBet,
 }: BettingControlsProps): React.ReactElement {
-  const [raiseAmount, setRaiseAmount] = useState(minBet);
+  const [raiseAmountInput, setRaiseAmountInput] = useState(String(minBet));
   const [showRaiseInput, setShowRaiseInput] = useState(false);
 
-  useEffect(() => {
-    setRaiseAmount(minBet);
-  }, [minBet]);
+  const effectiveRaiseAmount = useMemo(() => {
+    const parsed = parseInt(raiseAmountInput, 10);
+    if (isNaN(parsed)) return minBet;
+    return Math.max(minBet, Math.min(maxBet, parsed));
+  }, [raiseAmountInput, minBet, maxBet]);
 
   const validatedActions = useMemo(
     () => availableActions.filter(isValidBetAction),
@@ -32,10 +34,9 @@ export function BettingControls({
   );
 
   const handleRaise = (): void => {
-    const clampedAmount = Math.max(minBet, Math.min(maxBet, raiseAmount));
-    onBetAction("raise", clampedAmount);
+    onBetAction("raise", effectiveRaiseAmount);
     setShowRaiseInput(false);
-    setRaiseAmount(minBet);
+    setRaiseAmountInput(String(minBet));
   };
 
   const handleAction = (action: string): void => {
@@ -45,12 +46,8 @@ export function BettingControls({
   };
 
   const handleRaiseAmountChange = (value: string): void => {
-    const numValue = parseInt(value, 10);
-    if (value === "") {
-      setRaiseAmount(minBet);
-    } else if (!isNaN(numValue) && numValue >= 0) {
-      const clampedValue = Math.max(minBet, Math.min(maxBet, numValue));
-      setRaiseAmount(clampedValue);
+    if (value === "" || /^\d+$/.test(value)) {
+      setRaiseAmountInput(value);
     }
   };
 
@@ -116,14 +113,14 @@ export function BettingControls({
                     type="number"
                     min={minBet}
                     max={maxBet}
-                    value={raiseAmount}
+                    value={raiseAmountInput}
                     onChange={(e) => handleRaiseAmountChange(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         handleRaise();
                       } else if (e.key === 'Escape') {
                         setShowRaiseInput(false);
-                        setRaiseAmount(minBet);
+                        setRaiseAmountInput(String(minBet));
                       }
                     }}
                     aria-label="Raise amount"
@@ -131,15 +128,15 @@ export function BettingControls({
                   />
                   <button
                     onClick={handleRaise}
-                    aria-label={`Raise by ${raiseAmount} chips`}
+                    aria-label={`Raise by ${effectiveRaiseAmount} chips`}
                     className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded font-bold"
                   >
-                    Raise {raiseAmount}
+                    Raise {effectiveRaiseAmount}
                   </button>
                   <button
                     onClick={() => {
                       setShowRaiseInput(false);
-                      setRaiseAmount(minBet);
+                      setRaiseAmountInput(String(minBet));
                     }}
                     aria-label="Cancel raise"
                     className="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded"

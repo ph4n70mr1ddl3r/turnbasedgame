@@ -5,7 +5,9 @@ export const MAX_PLAYERS = 2;
 export const MAX_COMMUNITY_CARDS = 5;
 
 // Card representation: <rank><suit> e.g., "Ah", "Kd", "7c"
-export type Card = string; // Must match regex /^[2-9TJQKA][cdhs]$/
+export type CardRank = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'T' | 'J' | 'Q' | 'K' | 'A';
+export type CardSuit = 'c' | 'd' | 'h' | 's';
+export type Card = `${CardRank}${CardSuit}`;
 
 export type PlayerPosition = "button" | "small_blind" | "big_blind" | "none";
 export type BettingRound = "preflop" | "flop" | "turn" | "river" | "showdown";

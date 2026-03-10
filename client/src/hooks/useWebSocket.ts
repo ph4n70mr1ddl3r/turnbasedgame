@@ -141,13 +141,16 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       managerRef.current = manager;
 
       manager.connect()
-        .then((_connected) => {
+        .then((connected) => {
           if (cancelled) {
             manager?.disconnect();
+          } else if (!connected) {
+            useGameStore.getState().setError("Failed to connect to game server");
           }
         })
         .catch((err) => {
           logError("Connection promise rejected:", err);
+          useGameStore.getState().setError("Connection error occurred");
         });
     }
 

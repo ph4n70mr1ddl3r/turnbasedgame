@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { PokerTable } from "@/components/poker-table/PokerTable";
 import { BettingControls } from "@/components/poker-table/BettingControls";
@@ -42,10 +42,14 @@ function GameContent(): React.ReactElement {
     }
   };
 
-  const players = gameState?.players ?? [];
-  const player1 = players[0] ?? null;
-  const player2 = players[1] ?? null;
-  const myPlayer = playerId ? players.find((p: PlayerState) => p.player_id === playerId) : null;
+  const { player1, player2, myPlayer } = useMemo(() => {
+    const players = gameState?.players ?? [];
+    return {
+      player1: players[0] ?? null,
+      player2: players[1] ?? null,
+      myPlayer: playerId ? players.find((p: PlayerState) => p.player_id === playerId) : null,
+    };
+  }, [gameState?.players, playerId]);
 
   return (
     <div className="flex flex-col items-center justify-center p-4">
