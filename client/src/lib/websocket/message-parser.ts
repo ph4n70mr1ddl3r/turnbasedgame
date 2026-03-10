@@ -24,6 +24,10 @@ import { logError } from "@/lib/utils/logger";
 
 export class MessageParser {
   static parseMessage(data: string): WebSocketMessage | null {
+    if (!data || typeof data !== 'string') {
+      return null;
+    }
+    
     try {
       const parsed = JSON.parse(data);
 

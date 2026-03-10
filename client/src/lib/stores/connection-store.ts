@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { ConnectionStatus } from "@/types/game-types";
 import { SessionManager } from "@/lib/websocket/session-manager";
 import { useGameStore } from "@/lib/stores/game-store";
+import { logError } from "@/lib/utils/logger";
 
 interface ConnectionStore {
   status: ConnectionStatus;
@@ -60,7 +61,7 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
       useGameStore.getState().setCachedPlayerId(playerId);
       set({ sessionToken: token, playerId });
     } catch (error) {
-      console.error("Failed to persist session:", error);
+      logError("Failed to persist session:", error);
       set({ sessionToken: token, playerId });
     }
   },
@@ -69,7 +70,7 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
     try {
       SessionManager.clearSession();
     } catch (error) {
-      console.error("Failed to clear session:", error);
+      logError("Failed to clear session:", error);
     }
     useGameStore.getState().setCachedPlayerId(null);
     set({ sessionToken: null, playerId: null });
