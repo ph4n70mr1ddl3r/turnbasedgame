@@ -7,7 +7,7 @@ export function setErrorHandler(handler: ErrorHandler | null): void {
 }
 
 function isDev(): boolean {
-  return process.env.NODE_ENV === "development";
+  return typeof process !== "undefined" && process.env?.NODE_ENV === "development";
 }
 
 export function logError(message: string, error?: unknown): void {

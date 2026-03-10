@@ -51,6 +51,15 @@ export function BettingControls({
     }
   };
 
+  const handleRaiseAmountBlur = (): void => {
+    const parsed = parseInt(raiseAmountInput, 10);
+    if (isNaN(parsed) || parsed < minBet) {
+      setRaiseAmountInput(String(minBet));
+    } else if (parsed > maxBet) {
+      setRaiseAmountInput(String(maxBet));
+    }
+  };
+
   const quickRaiseAmounts = useMemo(
     () => {
       const amounts = [minBet, minBet * 2, minBet * 3, maxBet]
@@ -115,6 +124,7 @@ export function BettingControls({
                     max={maxBet}
                     value={raiseAmountInput}
                     onChange={(e) => handleRaiseAmountChange(e.target.value)}
+                    onBlur={handleRaiseAmountBlur}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         handleRaise();

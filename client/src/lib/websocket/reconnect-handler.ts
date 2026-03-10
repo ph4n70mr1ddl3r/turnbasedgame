@@ -182,24 +182,34 @@ export class ReconnectHandler {
   
   // Static helper to determine if reconnection should be attempted
   static shouldReconnect(error: CloseEvent | Error | unknown): boolean {
-    // Reconnect on network errors, but not on application errors
     if (error instanceof CloseEvent) {
-      // Don't reconnect on normal closure (1000) or going away (1001)
       const dontReconnectCodes = [1000, 1001];
-      return !dontReconnectCodes.includes(error.code);
+      const protocolErrorCodes = [1002, 1003, 1007, 1008, 1010, 1011];
+      if (dontReconnectCodes.includes(error.code)) {
+        return false;
+      }
+      if (protocolErrorCodes.includes(error.code)) {
+        return false;
+      }
+      return true;
     }
     
-    // Reconnect on network errors
     if (error instanceof Error) {
-      const networkErrors = [
-        "NetworkError",
-        "TypeError", // Often "Failed to fetch"
-        "WebSocket is not open",
+      const reconnectablePatterns = [
+        /network/i,
+        /fetch/i,
+        /websocket.*not.*open/i,
+        /connection.*refused/i,
+        /connection.*reset/i,
+        /timeout/i,
+        /ECONNREFUSED/,
+        /ECONNRESET/,
+        /ENOTFOUND/,
       ];
-      return networkErrors.some((msg) => error.message.includes(msg));
+      const errorMessage = error.message.toLowerCase();
+      return reconnectablePatterns.some(pattern => pattern.test(errorMessage));
     }
     
-    // Default to reconnecting
     return true;
   }
   

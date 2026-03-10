@@ -1,7 +1,9 @@
 export const WS_CONNECTION_TIMEOUT_MS = 10000;
 export const WS_HEARTBEAT_INTERVAL_MS = 30000;
 export const WS_HEARTBEAT_TIMEOUT_MS = 60000;
-export const WS_DEFAULT_URL = "ws://localhost:8080";
+export const WS_DEFAULT_URL = typeof window !== "undefined" && window.location.protocol === "https:" 
+  ? "wss://localhost:8080" 
+  : "ws://localhost:8080";
 
 export const SESSION_DURATION_MS = 30 * 60 * 1000;
 
