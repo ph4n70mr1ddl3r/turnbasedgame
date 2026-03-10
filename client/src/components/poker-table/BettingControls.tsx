@@ -113,6 +113,14 @@ export function BettingControls({
                     max={maxBet}
                     value={raiseAmount}
                     onChange={(e) => handleRaiseAmountChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleRaise();
+                      } else if (e.key === 'Escape') {
+                        setShowRaiseInput(false);
+                        setRaiseAmount(minBet);
+                      }
+                    }}
                     aria-label="Raise amount"
                     className="w-32 px-3 py-2 bg-white text-black rounded"
                   />

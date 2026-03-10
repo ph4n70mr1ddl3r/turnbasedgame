@@ -1,10 +1,21 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 
 interface ErrorDisplayProps {
   error: string;
   onClose: () => void;
+}
+
+function escapeHtml(text: string): string {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  };
+  return text.replace(/[&<>"']/g, (m) => map[m]);
 }
 
 function handleReload(): void {
@@ -14,8 +25,21 @@ function handleReload(): void {
 }
 
 export function ErrorDisplay({ error, onClose }: ErrorDisplayProps): React.ReactElement | null {
+  const errorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (error && errorRef.current) {
+      errorRef.current.focus();
+    }
+  }, [error]);
+
   return (
-    <div className="fixed top-4 right-4 w-96 bg-red-900 border-l-4 border-red-500 rounded-lg shadow-xl z-50 animate-slide-in">
+    <div 
+      ref={errorRef}
+      role="alert" 
+      tabIndex={-1}
+      className="fixed top-4 right-4 w-96 bg-red-900 border-l-4 border-red-500 rounded-lg shadow-xl z-50 animate-slide-in"
+    >
       <div className="p-4">
         <div className="flex items-start">
           <div className="flex-shrink-0">
@@ -26,12 +50,13 @@ export function ErrorDisplay({ error, onClose }: ErrorDisplayProps): React.React
           <div className="ml-3 flex-1">
             <h3 className="text-lg font-bold text-white">Error</h3>
             <div className="mt-1 text-red-200">
-              {error}
+              {escapeHtml(error)}
             </div>
           </div>
           <button
             onClick={onClose}
             className="ml-4 text-red-300 hover:text-white"
+            aria-label="Close error message"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

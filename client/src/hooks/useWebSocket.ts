@@ -49,6 +49,14 @@ export interface UseWebSocketReturn {
   clearError: () => void;
 }
 
+const DISCONNECTED_STATUS = {
+  isConnected: false,
+  status: "disconnected" as const,
+  latency: null,
+  sessionToken: null,
+  playerId: null,
+};
+
 export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
   const managerRef = useRef<ConnectionManager | null>(null);
   const autoConnect = options.autoConnect;
@@ -102,19 +110,15 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
   const getStatus = useCallback(() => {
     if (!managerRef.current) {
-      return {
-        isConnected: false,
-        status: "disconnected" as const,
-        latency: null,
-        sessionToken: null,
-        playerId: null,
-      };
+      return DISCONNECTED_STATUS;
     }
 
     return managerRef.current.getStatus();
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    
     initializeConnectionStore();
 
     if (autoConnect !== false) {
@@ -122,20 +126,28 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
         managerRef.current.disconnect();
         managerRef.current = null;
       }
-      managerRef.current = new ConnectionManager({
+      
+      const manager = new ConnectionManager({
         url: url,
         autoReconnect: true,
       });
-      managerRef.current.connect();
+      
+      manager.connect().then(() => {
+        if (cancelled) {
+          manager.disconnect();
+        }
+      });
+      
+      managerRef.current = manager;
     }
 
     return () => {
+      cancelled = true;
       if (managerRef.current) {
         managerRef.current.disconnect();
         managerRef.current = null;
       }
     };
-     
   }, [autoConnect, url]);
 
   return {

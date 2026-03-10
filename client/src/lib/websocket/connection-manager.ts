@@ -48,6 +48,10 @@ export class ConnectionManager {
   constructor(options: ConnectionOptions = {}) {
     this.options = { ...DEFAULT_OPTIONS, ...options };
 
+    if (!this.validateWebSocketUrl(this.options.url)) {
+      throw new Error(`Invalid WebSocket URL: ${this.options.url}`);
+    }
+
     if (this.options.autoReconnect) {
       this.reconnectHandler = new ReconnectHandler(
         () => this.connect(),
@@ -66,6 +70,15 @@ export class ConnectionManager {
         },
         this.options.reconnectOptions
       );
+    }
+  }
+
+  private validateWebSocketUrl(url: string): boolean {
+    try {
+      const parsed = new URL(url);
+      return ['ws:', 'wss:'].includes(parsed.protocol);
+    } catch {
+      return false;
     }
   }
 

@@ -147,27 +147,77 @@ export class MessageParser {
         return null;
       }
 
+      if (!isString(player.position)) {
+        logError("Invalid game_state_update: missing or invalid position", player);
+        return null;
+      }
+
+      if (!isNumber(player.current_bet) || player.current_bet < 0 || !Number.isFinite(player.current_bet)) {
+        logError("Invalid game_state_update: invalid current_bet", player);
+        return null;
+      }
+
+      if (typeof player.is_active !== 'boolean') {
+        logError("Invalid game_state_update: invalid is_active", player);
+        return null;
+      }
+
+      if (typeof player.is_folded !== 'boolean') {
+        logError("Invalid game_state_update: invalid is_folded", player);
+        return null;
+      }
+
+      if (typeof player.is_all_in !== 'boolean') {
+        logError("Invalid game_state_update: invalid is_all_in", player);
+        return null;
+      }
+
+      if (player.last_action !== undefined && !isString(player.last_action)) {
+        logError("Invalid game_state_update: invalid last_action", player);
+        return null;
+      }
+
       validatedPlayers.push({
         player_id: playerId,
         chip_stack: chipStack,
         hole_cards: player.hole_cards as string[],
         position: player.position as PlayerPosition,
-        current_bet: player.current_bet as number,
-        is_active: player.is_active as boolean,
-        is_folded: player.is_folded as boolean,
-        is_all_in: player.is_all_in as boolean,
-        last_action: player.last_action as string | undefined,
-        time_remaining: (timeRemaining as number) ?? 0,
+        current_bet: player.current_bet,
+        is_active: player.is_active,
+        is_folded: player.is_folded,
+        is_all_in: player.is_all_in,
+        last_action: player.last_action,
+        time_remaining: timeRemaining ?? 0,
       });
     }
 
     const validatedCommunityCards: string[] = [];
     for (const card of data.community_cards) {
-      if (!isValidCard(card as string)) {
+      if (!isString(card) || !isValidCard(card)) {
         logError("Invalid game_state_update: invalid community card", card);
         return null;
       }
-      validatedCommunityCards.push(card as string);
+      validatedCommunityCards.push(card);
+    }
+
+    if (data.current_player !== null && data.current_player !== undefined && !isString(data.current_player)) {
+      logError("Invalid game_state_update: invalid current_player", data);
+      return null;
+    }
+
+    if (data.time_remaining !== undefined && (!isNumber(data.time_remaining) || !Number.isFinite(data.time_remaining))) {
+      logError("Invalid game_state_update: invalid time_remaining", data);
+      return null;
+    }
+
+    if (data.last_winner !== undefined && data.last_winner !== null && !isString(data.last_winner)) {
+      logError("Invalid game_state_update: invalid last_winner", data);
+      return null;
+    }
+
+    if (data.winning_hand !== undefined && data.winning_hand !== null && !isString(data.winning_hand)) {
+      logError("Invalid game_state_update: invalid winning_hand", data);
+      return null;
     }
 
     return {
@@ -176,13 +226,13 @@ export class MessageParser {
         players: validatedPlayers,
         community_cards: validatedCommunityCards,
         pot: data.pot as number,
-        current_player: data.current_player as string | null,
-        time_remaining: (data.time_remaining as number) ?? 0,
+        current_player: data.current_player ?? null,
+        time_remaining: data.time_remaining ?? 0,
         round: data.round as BettingRound,
         min_bet: data.min_bet as number,
         max_bet: data.max_bet as number,
-        last_winner: data.last_winner as string | undefined,
-        winning_hand: data.winning_hand as string | undefined,
+        last_winner: data.last_winner ?? undefined,
+        winning_hand: data.winning_hand ?? undefined,
         game_status: data.game_status as GameStatus,
       },
     };

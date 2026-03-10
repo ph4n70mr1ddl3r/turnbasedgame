@@ -55,13 +55,22 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
   },
 
   setSession: (token: string, playerId: string): void => {
-    SessionManager.createSession(token, playerId);
-    useGameStore.getState().setCachedPlayerId(playerId);
-    set({ sessionToken: token, playerId });
+    try {
+      SessionManager.createSession(token, playerId);
+      useGameStore.getState().setCachedPlayerId(playerId);
+      set({ sessionToken: token, playerId });
+    } catch (error) {
+      console.error("Failed to persist session:", error);
+      set({ sessionToken: token, playerId });
+    }
   },
 
   clearSession: (): void => {
-    SessionManager.clearSession();
+    try {
+      SessionManager.clearSession();
+    } catch (error) {
+      console.error("Failed to clear session:", error);
+    }
     useGameStore.getState().setCachedPlayerId(null);
     set({ sessionToken: null, playerId: null });
   },
