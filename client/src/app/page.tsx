@@ -32,6 +32,10 @@ function GameContent(): React.ReactElement {
   });
 
   const handleBetAction = (action: BetAction, amount?: number): void => {
+    if (!isConnected) {
+      logError("Cannot send bet action: not connected");
+      return;
+    }
     const success = sendBetAction(action, amount);
     if (!success) {
       logError("Failed to send bet action");
@@ -41,7 +45,7 @@ function GameContent(): React.ReactElement {
   const players = gameState?.players ?? [];
   const player1 = players[0] ?? null;
   const player2 = players[1] ?? null;
-  const myPlayer = players.find((p: PlayerState) => p.player_id === playerId);
+  const myPlayer = playerId ? players.find((p: PlayerState) => p.player_id === playerId) : null;
 
   return (
     <div className="flex flex-col items-center justify-center p-4">

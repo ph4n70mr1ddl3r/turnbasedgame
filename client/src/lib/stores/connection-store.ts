@@ -77,7 +77,11 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
   },
 
   reset: (): void => {
-    SessionManager.clearSession();
+    try {
+      SessionManager.clearSession();
+    } catch (error) {
+      logError("Failed to clear session during reset:", error);
+    }
     useGameStore.getState().setCachedPlayerId(null);
     set({
       status: "disconnected",

@@ -8,6 +8,7 @@ import { logError } from "@/lib/utils/logger";
 import {
   WS_CONNECTION_TIMEOUT_MS,
   WS_HEARTBEAT_INTERVAL_MS,
+  WS_HEARTBEAT_TIMEOUT_MS,
   WS_DEFAULT_URL,
   RECONNECT_MAX_ATTEMPTS,
   RECONNECT_INITIAL_DELAY_MS,
@@ -47,7 +48,6 @@ export class ConnectionManager {
   private connectionGeneration = 0;
   private pendingHeartbeatTimestamps: Map<number, number> = new Map();
   private lastMessageTime = 0;
-  private readonly HEARTBEAT_TIMEOUT_MS = 60000;
   private pendingResolve: ((value: boolean) => void) | null = null;
   
   constructor(options: ConnectionOptions = {}) {
@@ -86,6 +86,10 @@ export class ConnectionManager {
       }
       if (process.env.NODE_ENV === 'production' && parsed.protocol !== 'wss:') {
         logError('WebSocket must use wss:// in production');
+        return false;
+      }
+      if (parsed.protocol === 'ws:' && parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1') {
+        logError('Non-secure WebSocket (ws://) only allowed on localhost');
         return false;
       }
       return true;
@@ -384,7 +388,7 @@ export class ConnectionManager {
     const cleanupStaleHeartbeats = (): void => {
       const now = Date.now();
       for (const [id, timestamp] of this.pendingHeartbeatTimestamps) {
-        if (now - timestamp > this.HEARTBEAT_TIMEOUT_MS) {
+        if (now - timestamp > WS_HEARTBEAT_TIMEOUT_MS) {
           this.pendingHeartbeatTimestamps.delete(id);
         }
       }

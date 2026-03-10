@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { BetAction, isValidBetAction } from "@/types/game-types";
+import { MAX_QUICK_RAISE_OPTIONS } from "@/lib/constants/game";
 
 interface BettingControlsProps {
   isMyTurn: boolean;
@@ -45,11 +46,11 @@ export function BettingControls({
 
   const handleRaiseAmountChange = (value: string): void => {
     const numValue = parseInt(value, 10);
-    if (!isNaN(numValue) && numValue >= 0) {
+    if (value === "") {
+      setRaiseAmount(minBet);
+    } else if (!isNaN(numValue) && numValue >= 0) {
       const clampedValue = Math.max(minBet, Math.min(maxBet, numValue));
       setRaiseAmount(clampedValue);
-    } else if (value === "") {
-      setRaiseAmount(minBet);
     }
   };
 
@@ -58,7 +59,8 @@ export function BettingControls({
       const amounts = [minBet, minBet * 2, minBet * 3, maxBet]
         .map((amount) => Math.min(amount, maxBet))
         .filter((amount) => amount > 0 && amount >= minBet);
-      return [...new Set(amounts)];
+      const uniqueAmounts = [...new Set(amounts)];
+      return uniqueAmounts.slice(0, MAX_QUICK_RAISE_OPTIONS);
     },
     [minBet, maxBet],
   );

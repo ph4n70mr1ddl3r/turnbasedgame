@@ -101,12 +101,17 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
   const sendBetAction = useCallback((action: BetAction, amount?: number) => {
     if (!managerRef.current) {
-      logError("Connection manager not initialized");
+      logError("sendBetAction called before connection initialized");
+      return false;
+    }
+
+    if (!isConnected) {
+      logError("sendBetAction called while disconnected");
       return false;
     }
 
     return managerRef.current.sendBetAction(action, amount);
-  }, []);
+  }, [isConnected]);
 
   const getStatus = useCallback(() => {
     if (!managerRef.current) {
