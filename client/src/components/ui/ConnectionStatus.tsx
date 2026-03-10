@@ -19,7 +19,7 @@ const STATUS_TEXT: Record<ConnectionStatusType, string> = {
   reconnecting: "Reconnecting...",
 };
 
-export function ConnectionStatus() {
+export function ConnectionStatus(): React.ReactElement {
   const connectionStatus = useConnectionStore(connectionStatusSelector);
   const latency = useConnectionStore(latencySelector);
 

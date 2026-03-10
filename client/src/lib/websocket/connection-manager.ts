@@ -47,6 +47,8 @@ export class ConnectionManager {
   private connectionGeneration = 0;
   private pendingHeartbeatTimestamps: Map<number, number> = new Map();
   private lastMessageTime = 0;
+  private readonly HEARTBEAT_TIMEOUT_MS = 60000;
+  private pendingResolve: ((value: boolean) => void) | null = null;
   
   constructor(options: ConnectionOptions = {}) {
     this.options = { ...DEFAULT_OPTIONS, ...options };
@@ -97,6 +99,11 @@ export class ConnectionManager {
       return false;
     }
 
+    if (this.pendingResolve) {
+      this.pendingResolve(false);
+      this.pendingResolve = null;
+    }
+
     this.isConnecting = true;
     this.connectionGeneration++;
     const currentGeneration = this.connectionGeneration;
@@ -104,14 +111,17 @@ export class ConnectionManager {
     this.connectionResolved = false;
 
     return new Promise((resolve) => {
+      this.pendingResolve = resolve;
+      
       try {
         this.socket = new WebSocket(this.options.url);
 
-        const handleTimeout = () => {
+        const handleTimeout = (): void => {
           if (!this.connectionResolved && this.socket?.readyState !== WebSocket.OPEN) {
             this.connectionResolved = true;
             this.isConnecting = false;
             this.connectionTimeoutId = null;
+            this.pendingResolve = null;
             this.handleConnectionTimeout();
             resolve(false);
           }
@@ -119,7 +129,7 @@ export class ConnectionManager {
 
         this.connectionTimeoutId = setTimeout(handleTimeout, WS_CONNECTION_TIMEOUT_MS);
 
-        const handleOpen = () => {
+        const handleOpen = (): void => {
           if (this.connectionGeneration !== currentGeneration) {
             this.socket?.close();
             return;
@@ -129,6 +139,7 @@ export class ConnectionManager {
           }
           this.connectionResolved = true;
           this.isConnecting = false;
+          this.pendingResolve = null;
           if (this.connectionTimeoutId !== null) {
             clearTimeout(this.connectionTimeoutId);
             this.connectionTimeoutId = null;
@@ -146,6 +157,7 @@ export class ConnectionManager {
         useConnectionStore.getState().setConnected(false);
         this.connectionResolved = true;
         this.isConnecting = false;
+        this.pendingResolve = null;
         resolve(false);
       }
     });
@@ -369,8 +381,19 @@ export class ConnectionManager {
 
     this.lastMessageTime = Date.now();
 
+    const cleanupStaleHeartbeats = (): void => {
+      const now = Date.now();
+      for (const [id, timestamp] of this.pendingHeartbeatTimestamps) {
+        if (now - timestamp > this.HEARTBEAT_TIMEOUT_MS) {
+          this.pendingHeartbeatTimestamps.delete(id);
+        }
+      }
+    };
+
     const sendHeartbeat = (): void => {
       if (this.socket?.readyState === WebSocket.OPEN) {
+        cleanupStaleHeartbeats();
+        
         const clientTimestamp = Date.now();
         const heartbeatId = clientTimestamp;
         this.pendingHeartbeatTimestamps.set(heartbeatId, clientTimestamp);

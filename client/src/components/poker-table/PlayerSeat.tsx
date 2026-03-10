@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { memo } from "react";
 import { PlayerState } from "@/types/game-types";
 import { DEFAULT_TURN_TIME_MS } from "@/lib/constants/game";
 
@@ -9,7 +9,7 @@ interface PlayerSeatProps {
   isCurrentPlayer: boolean;
 }
 
-export function PlayerSeat({ player, isCurrentPlayer }: PlayerSeatProps): React.ReactElement {
+function PlayerSeatInner({ player, isCurrentPlayer }: PlayerSeatProps): React.ReactElement {
   if (!player) {
     return (
       <div className="bg-green-950/70 p-4 rounded-lg border-2 border-dashed border-green-700">
@@ -115,3 +115,5 @@ export function PlayerSeat({ player, isCurrentPlayer }: PlayerSeatProps): React.
     </div>
   );
 }
+
+export const PlayerSeat = memo(PlayerSeatInner);

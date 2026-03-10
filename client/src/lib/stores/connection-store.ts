@@ -12,11 +12,11 @@ interface ConnectionStore {
   sessionToken: string | null;
   playerId: string | null;
 
-  setStatus: (_status: ConnectionStatus) => void;
-  setConnected: (_connected: boolean) => void;
+  setStatus: (status: ConnectionStatus) => void;
+  setConnected: (connected: boolean) => void;
   updateHeartbeat: () => void;
-  setLatency: (_latency: number) => void;
-  setSession: (_token: string, _playerId: string) => void;
+  setLatency: (latency: number) => void;
+  setSession: (token: string, playerId: string) => void;
   clearSession: () => void;
   reset: () => void;
   initializeFromSession: () => void;

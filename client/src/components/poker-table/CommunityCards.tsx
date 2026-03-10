@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import { Card } from "@/types/game-types";
 
 interface CommunityCardsProps {
@@ -7,7 +7,7 @@ interface CommunityCardsProps {
 
 const CARD_POSITIONS = ["Flop 1", "Flop 2", "Flop 3", "Turn", "River"] as const;
 
-export function CommunityCards({ cards }: CommunityCardsProps): React.ReactElement {
+function CommunityCardsInner({ cards }: CommunityCardsProps): React.ReactElement {
   return (
     <div
       className="bg-green-950/70 p-6 rounded-xl border-2 border-green-800"
@@ -58,3 +58,5 @@ export function CommunityCards({ cards }: CommunityCardsProps): React.ReactEleme
     </div>
   );
 }
+
+export const CommunityCards = memo(CommunityCardsInner);
