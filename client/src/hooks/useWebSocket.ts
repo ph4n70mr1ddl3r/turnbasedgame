@@ -118,6 +118,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
   useEffect(() => {
     let cancelled = false;
+    let manager: ConnectionManager | null = null;
     
     initializeConnectionStore();
 
@@ -127,18 +128,20 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
         managerRef.current = null;
       }
       
-      const manager = new ConnectionManager({
+      manager = new ConnectionManager({
         url: url,
         autoReconnect: true,
       });
       
-      manager.connect().then(() => {
-        if (cancelled) {
+      manager.connect().then((_connected) => {
+        if (cancelled && manager) {
           manager.disconnect();
         }
       });
       
-      managerRef.current = manager;
+      if (!cancelled) {
+        managerRef.current = manager;
+      }
     }
 
     return () => {

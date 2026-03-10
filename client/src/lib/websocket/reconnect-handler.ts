@@ -135,18 +135,17 @@ export class ReconnectHandler {
       
       if (success) {
         this.reset();
-        this.isAttempting = false;
         return true;
       } else {
-        this.isAttempting = false;
         this.scheduleNextAttempt();
         return false;
       }
     } catch (error) {
       logError("Reconnection attempt failed:", error);
-      this.isAttempting = false;
       this.scheduleNextAttempt();
       return false;
+    } finally {
+      this.isAttempting = false;
     }
   }
   

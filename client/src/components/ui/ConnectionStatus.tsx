@@ -5,25 +5,26 @@ import {
   connectionStatusSelector,
   latencySelector,
 } from "@/lib/stores/connection-store";
+import { ConnectionStatus as ConnectionStatusType } from "@/types/game-types";
+
+const STATUS_COLORS: Record<ConnectionStatusType, string> = {
+  connected: "bg-green-500",
+  disconnected: "bg-red-500",
+  reconnecting: "bg-yellow-500",
+};
+
+const STATUS_TEXT: Record<ConnectionStatusType, string> = {
+  connected: "Connected",
+  disconnected: "Disconnected",
+  reconnecting: "Reconnecting...",
+};
 
 export function ConnectionStatus() {
   const connectionStatus = useConnectionStore(connectionStatusSelector);
   const latency = useConnectionStore(latencySelector);
 
-  const statusColors = {
-    connected: "bg-green-500",
-    disconnected: "bg-red-500",
-    reconnecting: "bg-yellow-500",
-  };
-
-  const statusText = {
-    connected: "Connected",
-    disconnected: "Disconnected",
-    reconnecting: "Reconnecting...",
-  };
-  
-  const currentColor = statusColors[connectionStatus] || "bg-gray-500";
-  const currentText = statusText[connectionStatus] || connectionStatus;
+  const currentColor = STATUS_COLORS[connectionStatus];
+  const currentText = STATUS_TEXT[connectionStatus];
   
   return (
     <div 

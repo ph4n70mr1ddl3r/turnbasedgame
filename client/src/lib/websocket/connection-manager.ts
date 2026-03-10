@@ -278,9 +278,15 @@ export class ConnectionManager {
   }
   
   private handleClose(event: CloseEvent): void {
+    const wasConnecting = this.isConnecting;
     useConnectionStore.getState().setConnected(false);
     this.isConnecting = false;
     this.cleanupHeartbeat();
+    this.cleanupConnectionTimeout();
+
+    if (wasConnecting) {
+      this.connectionResolved = true;
+    }
 
     if (!this.wasIntentionallyDisconnected && this.options.autoReconnect && this.reconnectHandler) {
       if (ReconnectHandler.shouldReconnect(event)) {

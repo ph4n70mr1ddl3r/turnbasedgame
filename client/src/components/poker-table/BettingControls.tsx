@@ -45,8 +45,11 @@ export function BettingControls({
 
   const handleRaiseAmountChange = (value: string): void => {
     const numValue = parseInt(value, 10);
-    if (!isNaN(numValue)) {
-      setRaiseAmount(Math.max(0, numValue));
+    if (!isNaN(numValue) && numValue >= 0) {
+      const clampedValue = Math.max(minBet, Math.min(maxBet, numValue));
+      setRaiseAmount(clampedValue);
+    } else if (value === "") {
+      setRaiseAmount(minBet);
     }
   };
 
