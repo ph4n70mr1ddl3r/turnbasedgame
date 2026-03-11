@@ -1,22 +1,25 @@
 import { logError } from "@/lib/utils/logger";
-
-// Auto-reconnection handler for WebSocket connections
-// Implements exponential backoff with jitter
+import {
+  RECONNECT_MAX_ATTEMPTS,
+  RECONNECT_INITIAL_DELAY_MS,
+  RECONNECT_MAX_DELAY_MS,
+  RECONNECT_BACKOFF_FACTOR,
+} from "@/lib/constants/game";
 
 export interface ReconnectOptions {
-  maxAttempts?: number;          // Maximum reconnection attempts (0 = infinite)
-  initialDelay?: number;         // Initial delay in milliseconds
-  maxDelay?: number;             // Maximum delay in milliseconds
-  backoffFactor?: number;        // Exponential backoff factor
-  jitter?: boolean;              // Add random jitter to prevent thundering herd
+  maxAttempts?: number;
+  initialDelay?: number;
+  maxDelay?: number;
+  backoffFactor?: number;
+  jitter?: boolean;
 }
 
 const DEFAULT_OPTIONS: Required<ReconnectOptions> = {
-  maxAttempts: 10,               // 10 attempts max
-  initialDelay: 2000,            // Start with 2 seconds
-  maxDelay: 30000,               // Max 30 seconds between attempts
-  backoffFactor: 1.5,            // Multiply delay by 1.5 each attempt
-  jitter: true,                  // Add jitter
+  maxAttempts: RECONNECT_MAX_ATTEMPTS,
+  initialDelay: RECONNECT_INITIAL_DELAY_MS,
+  maxDelay: RECONNECT_MAX_DELAY_MS,
+  backoffFactor: RECONNECT_BACKOFF_FACTOR,
+  jitter: true,
 };
 
 export type ReconnectState = "connected" | "disconnected" | "stopped" | "failed" | `attempt_${number}` | `waiting_${number}s`;

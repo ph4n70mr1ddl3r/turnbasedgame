@@ -14,6 +14,7 @@ import {
   RECONNECT_INITIAL_DELAY_MS,
   RECONNECT_MAX_DELAY_MS,
   RECONNECT_BACKOFF_FACTOR,
+  WS_MAX_PENDING_HEARTBEATS,
 } from "@/lib/constants/game";
 
 export interface ConnectionOptions {
@@ -178,6 +179,10 @@ export class ConnectionManager {
     this.cleanupSocket();
     this.pendingHeartbeatTimestamps.clear();
     this.lastMessageTime = 0;
+    if (this.pendingResolve) {
+      this.pendingResolve(false);
+      this.pendingResolve = null;
+    }
     useConnectionStore.getState().setConnected(false);
   }
 
@@ -407,6 +412,12 @@ export class ConnectionManager {
       for (const [id, timestamp] of this.pendingHeartbeatTimestamps) {
         if (now - timestamp > WS_HEARTBEAT_TIMEOUT_MS) {
           this.pendingHeartbeatTimestamps.delete(id);
+        }
+      }
+      while (this.pendingHeartbeatTimestamps.size > WS_MAX_PENDING_HEARTBEATS) {
+        const oldestKey = this.pendingHeartbeatTimestamps.keys().next().value;
+        if (oldestKey !== undefined) {
+          this.pendingHeartbeatTimestamps.delete(oldestKey);
         }
       }
     };

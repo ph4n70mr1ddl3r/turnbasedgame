@@ -123,7 +123,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
   useEffect(() => {
     let cancelled = false;
-    let manager: ConnectionManager | null = null;
 
     initializeConnectionStore();
 
@@ -133,7 +132,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
         managerRef.current = null;
       }
 
-      manager = new ConnectionManager({
+      const manager = new ConnectionManager({
         url: url,
         autoReconnect: true,
       });
@@ -143,14 +142,16 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       manager.connect()
         .then((connected) => {
           if (cancelled) {
-            manager?.disconnect();
+            manager.disconnect();
           } else if (!connected) {
             useGameStore.getState().setError("Failed to connect to game server");
           }
         })
         .catch((err) => {
           logError("Connection promise rejected:", err);
-          useGameStore.getState().setError("Connection error occurred");
+          if (!cancelled) {
+            useGameStore.getState().setError("Connection error occurred");
+          }
         });
     }
 
