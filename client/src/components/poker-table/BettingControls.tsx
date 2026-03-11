@@ -56,8 +56,15 @@ export function BettingControls({
   };
 
   const handleRaiseAmountChange = (value: string): void => {
-    if (value === "" || /^\d+$/.test(value)) {
-      setRaiseAmountInput(value);
+    if (value === "") {
+      setRaiseAmountInput("");
+      return;
+    }
+    if (/^\d+$/.test(value)) {
+      const parsed = parseInt(value, 10);
+      if (Number.isFinite(parsed) && parsed <= maxBet * 10) {
+        setRaiseAmountInput(value);
+      }
     }
   };
 

@@ -1,4 +1,4 @@
-import { SESSION_TOKEN_KEY, PLAYER_ID_KEY, SESSION_EXPIRY_KEY } from "@/lib/constants/storage";
+import { SESSION_TOKEN_KEY, PLAYER_ID_KEY, SESSION_EXPIRY_KEY, SESSION_INTEGRITY_KEY } from "@/lib/constants/storage";
 import { SESSION_DURATION_MS } from "@/lib/constants/game";
 import { logError } from "@/lib/utils/logger";
 
@@ -55,7 +55,7 @@ export class SessionManager {
       const token = localStorage.getItem(SESSION_TOKEN_KEY);
       const playerId = localStorage.getItem(PLAYER_ID_KEY);
       const expiryStr = localStorage.getItem(SESSION_EXPIRY_KEY);
-      const integrityHash = localStorage.getItem('session_integrity');
+      const integrityHash = localStorage.getItem(SESSION_INTEGRITY_KEY);
       
       if (!token || !playerId || !expiryStr || !integrityHash) {
         return null;
@@ -108,7 +108,7 @@ export class SessionManager {
       localStorage.setItem(SESSION_TOKEN_KEY, token);
       localStorage.setItem(PLAYER_ID_KEY, playerId);
       localStorage.setItem(SESSION_EXPIRY_KEY, expiry.toString());
-      localStorage.setItem('session_integrity', integrityHash);
+      localStorage.setItem(SESSION_INTEGRITY_KEY, integrityHash);
     } catch (error) {
       logError("Error saving session to localStorage:", error);
     }
@@ -143,7 +143,7 @@ export class SessionManager {
       localStorage.removeItem(SESSION_TOKEN_KEY);
       localStorage.removeItem(PLAYER_ID_KEY);
       localStorage.removeItem(SESSION_EXPIRY_KEY);
-      localStorage.removeItem('session_integrity');
+      localStorage.removeItem(SESSION_INTEGRITY_KEY);
     } catch (error) {
       logError("Error clearing session from localStorage:", error);
     }

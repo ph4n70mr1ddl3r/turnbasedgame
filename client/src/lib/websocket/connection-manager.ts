@@ -9,7 +9,7 @@ import {
   WS_CONNECTION_TIMEOUT_MS,
   WS_HEARTBEAT_INTERVAL_MS,
   WS_HEARTBEAT_TIMEOUT_MS,
-  WS_DEFAULT_URL,
+  getDefaultWebSocketUrl,
   RECONNECT_MAX_ATTEMPTS,
   RECONNECT_INITIAL_DELAY_MS,
   RECONNECT_MAX_DELAY_MS,
@@ -24,7 +24,7 @@ export interface ConnectionOptions {
 }
 
 const DEFAULT_OPTIONS: Required<ConnectionOptions> = {
-  url: process.env.NEXT_PUBLIC_WS_URL || WS_DEFAULT_URL,
+  url: process.env.NEXT_PUBLIC_WS_URL || getDefaultWebSocketUrl(),
   autoReconnect: true,
   reconnectOptions: {
     maxAttempts: RECONNECT_MAX_ATTEMPTS,
@@ -424,7 +424,7 @@ export class ConnectionManager {
         };
         this.sendMessage(heartbeat);
 
-        if (Date.now() - this.lastMessageTime > this.options.heartbeatInterval * 2) {
+        if (Date.now() - this.lastMessageTime > WS_HEARTBEAT_TIMEOUT_MS) {
           logError("Connection stale - no message received recently");
           this.handleConnectionTimeout();
         }
