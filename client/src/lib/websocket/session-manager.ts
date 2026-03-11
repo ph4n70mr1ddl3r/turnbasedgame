@@ -8,28 +8,55 @@ export interface SessionData {
   expiry: number;
 }
 
-/**
- * Session management for WebSocket connections.
- *
- * SECURITY NOTE: Session tokens are stored in localStorage for persistence across
- * page reloads. This is a trade-off between UX and security:
- * - localStorage is vulnerable to XSS attacks
- * - For production, consider:
- *   1. Server-set HttpOnly cookies (requires server changes)
- *   2. Short session durations with automatic refresh
- *   3. Token rotation on each reconnection
- * - Ensure CSP headers are properly configured to mitigate XSS risks
- */
+  /**
+   * SECURITY NOTE: Session tokens are stored in localStorage for persistence across
+   * page reloads. This is a trade-off between UX and security:
+   * - localStorage is vulnerable to XSS attacks
+   * - For production, consider:
+   *   1. Server-set HttpOnly cookies (requires server changes)
+   *   2. Short session durations with automatic refresh
+   *   3. Token rotation on each reconnection
+   *   4. Using async SHA-256 hashing for better integrity (requires async createSession)
+   * - Ensure CSP headers are properly configured to mitigate XSS risks
+   */
 export class SessionManager {
-  private static generateIntegrityHash(token: string, playerId: string): string {
+  private static async generateIntegrityHashAsync(token: string, playerId: string): Promise<string> {
     const data = `${token}:${playerId}:${SESSION_DURATION_MS}`;
-    let hash = 0;
+    
+    if (typeof globalThis.crypto?.subtle?.digest === 'function') {
+      try {
+        const encoder = new TextEncoder();
+        const dataBuffer = encoder.encode(data);
+        const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', dataBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 32);
+      } catch (error) {
+        logError("Failed to generate SHA-256 hash, using fallback:", error);
+      }
+    }
+    
+    return this.generateIntegrityHashSync(token, playerId);
+  }
+
+  private static generateIntegrityHashSync(token: string, playerId: string): string {
+    const data = `${token}:${playerId}:${SESSION_DURATION_MS}`;
+    let hash1 = 0;
+    let hash2 = 0;
+    
     for (let i = 0; i < data.length; i++) {
       const char = data.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
+      hash1 = ((hash1 << 5) - hash1) + char;
+      hash1 = hash1 & hash1;
+      hash2 = ((hash2 << 7) - hash2) + char;
+      hash2 = hash2 & hash2;
     }
-    return Math.abs(hash).toString(36);
+    
+    const combined = Math.abs(hash1).toString(36) + Math.abs(hash2).toString(36);
+    return combined.substring(0, 16);
+  }
+
+  private static generateIntegrityHash(token: string, playerId: string): string {
+    return this.generateIntegrityHashSync(token, playerId);
   }
 
   private static validateTokenFormat(token: string): boolean {

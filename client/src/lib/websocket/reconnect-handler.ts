@@ -169,6 +169,7 @@ export class ReconnectHandler {
     if (jitter) {
       const jitterValue = 0.8 + Math.random() * 0.4;
       delay *= jitterValue;
+      delay = Math.max(delay, this.options.initialDelay * 0.5);
     }
 
     this.currentDelay = delay;
@@ -183,14 +184,23 @@ export class ReconnectHandler {
   // Static helper to determine if reconnection should be attempted
   static shouldReconnect(error: CloseEvent | Error | unknown): boolean {
     if (error instanceof CloseEvent) {
-      const dontReconnectCodes = [1000, 1001];
+      const normalClosureCodes = [1000, 1001];
       const protocolErrorCodes = [1002, 1003, 1007, 1008, 1010, 1011];
-      if (dontReconnectCodes.includes(error.code)) {
+      const policyViolationCodes = [1008];
+      
+      if (normalClosureCodes.includes(error.code)) {
         return false;
       }
       if (protocolErrorCodes.includes(error.code)) {
         return false;
       }
+      if (policyViolationCodes.includes(error.code)) {
+        return false;
+      }
+      if (error.code >= 4000 && error.code <= 4999) {
+        return false;
+      }
+      
       return true;
     }
     

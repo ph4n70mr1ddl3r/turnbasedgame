@@ -78,6 +78,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set((state) => {
       if (!state.gameState) return state;
 
+      if (updates.chip_stack !== undefined && (typeof updates.chip_stack !== 'number' || !Number.isFinite(updates.chip_stack) || updates.chip_stack < 0)) {
+        console.error('Invalid chip_stack value:', updates.chip_stack);
+        return state;
+      }
+
+      if (updates.current_bet !== undefined && (typeof updates.current_bet !== 'number' || !Number.isFinite(updates.current_bet) || updates.current_bet < 0)) {
+        console.error('Invalid current_bet value:', updates.current_bet);
+        return state;
+      }
+
+      if (updates.time_remaining !== undefined && (typeof updates.time_remaining !== 'number' || !Number.isFinite(updates.time_remaining) || updates.time_remaining < 0)) {
+        console.error('Invalid time_remaining value:', updates.time_remaining);
+        return state;
+      }
+
       const updatedPlayers = state.gameState.players.map((player) =>
         player.player_id === playerId ? { ...player, ...updates } : player
       );

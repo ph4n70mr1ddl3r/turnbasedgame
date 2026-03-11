@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { BetAction, isValidBetAction } from "@/types/game-types";
 import { MAX_QUICK_RAISE_OPTIONS } from "@/lib/constants/game";
+
+const ACTION_COOLDOWN_MS = 300;
 
 interface BettingControlsProps {
   isMyTurn: boolean;
@@ -21,10 +23,12 @@ export function BettingControls({
 }: BettingControlsProps): React.ReactElement {
   const [raiseAmountInput, setRaiseAmountInput] = useState(String(minBet));
   const [showRaiseInput, setShowRaiseInput] = useState(false);
+  const lastActionTimeRef = useRef<number>(0);
 
   const effectiveRaiseAmount = useMemo(() => {
+    if (!raiseAmountInput || raiseAmountInput.trim() === '') return minBet;
     const parsed = parseInt(raiseAmountInput, 10);
-    if (isNaN(parsed)) return minBet;
+    if (!Number.isFinite(parsed) || isNaN(parsed)) return minBet;
     return Math.max(minBet, Math.min(maxBet, parsed));
   }, [raiseAmountInput, minBet, maxBet]);
 
@@ -34,12 +38,18 @@ export function BettingControls({
   );
 
   const handleRaise = (): void => {
+    const now = Date.now();
+    if (now - lastActionTimeRef.current < ACTION_COOLDOWN_MS) return;
+    lastActionTimeRef.current = now;
     onBetAction("raise", effectiveRaiseAmount);
     setShowRaiseInput(false);
     setRaiseAmountInput(String(minBet));
   };
 
   const handleAction = (action: string): void => {
+    const now = Date.now();
+    if (now - lastActionTimeRef.current < ACTION_COOLDOWN_MS) return;
+    lastActionTimeRef.current = now;
     if (isValidBetAction(action)) {
       onBetAction(action);
     }
@@ -176,6 +186,9 @@ export function BettingControls({
               <button
                 key={amount}
                 onClick={() => {
+                  const now = Date.now();
+                  if (now - lastActionTimeRef.current < ACTION_COOLDOWN_MS) return;
+                  lastActionTimeRef.current = now;
                   const clamped = Math.max(minBet, Math.min(maxBet, amount));
                   onBetAction("raise", clamped);
                   setShowRaiseInput(false);

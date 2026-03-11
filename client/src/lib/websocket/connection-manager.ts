@@ -177,6 +177,7 @@ export class ConnectionManager {
     this.cleanupConnectionTimeout();
     this.cleanupSocket();
     this.pendingHeartbeatTimestamps.clear();
+    this.lastMessageTime = 0;
     useConnectionStore.getState().setConnected(false);
   }
 
@@ -233,9 +234,15 @@ export class ConnectionManager {
       return false;
     }
 
-    if (amount !== undefined && (!Number.isFinite(amount) || amount < 0)) {
-      logError("Cannot send bet action: invalid amount", amount);
-      return false;
+    if (amount !== undefined) {
+      if (typeof amount !== 'number' || !Number.isFinite(amount) || isNaN(amount)) {
+        logError("Cannot send bet action: invalid amount type", amount);
+        return false;
+      }
+      if (amount < 0) {
+        logError("Cannot send bet action: negative amount", amount);
+        return false;
+      }
     }
 
     return this.sendMessage({
@@ -377,6 +384,7 @@ export class ConnectionManager {
           useConnectionStore.getState().setSession(token, message.data.player_id);
         } catch (error) {
           logError("Failed to generate session token:", error);
+          useGameStore.getState().setError("Failed to establish session. Please refresh the page.");
         }
       }
     }
