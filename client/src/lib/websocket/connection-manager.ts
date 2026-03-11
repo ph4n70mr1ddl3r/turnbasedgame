@@ -378,6 +378,11 @@ export class ConnectionManager {
       const currentToken = useConnectionStore.getState().sessionToken;
       if (currentToken) {
         useConnectionStore.getState().setSession(currentToken, message.data.player_id);
+      } else if (SessionManager.isValidSession()) {
+        const existingSession = SessionManager.getSession();
+        if (existingSession) {
+          useConnectionStore.getState().setSession(existingSession.token, message.data.player_id);
+        }
       } else {
         try {
           const token = SessionManager.generateToken();

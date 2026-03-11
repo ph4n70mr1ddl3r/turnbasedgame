@@ -8,36 +8,18 @@ export interface SessionData {
   expiry: number;
 }
 
-  /**
-   * SECURITY NOTE: Session tokens are stored in localStorage for persistence across
-   * page reloads. This is a trade-off between UX and security:
-   * - localStorage is vulnerable to XSS attacks
-   * - For production, consider:
-   *   1. Server-set HttpOnly cookies (requires server changes)
-   *   2. Short session durations with automatic refresh
-   *   3. Token rotation on each reconnection
-   *   4. Using async SHA-256 hashing for better integrity (requires async createSession)
-   * - Ensure CSP headers are properly configured to mitigate XSS risks
-   */
+/**
+ * SECURITY NOTE: Session tokens are stored in localStorage for persistence across
+ * page reloads. This is a trade-off between UX and security:
+ * - localStorage is vulnerable to XSS attacks
+ * - For production, consider:
+ *   1. Server-set HttpOnly cookies (requires server changes)
+ *   2. Short session durations with automatic refresh
+ *   3. Token rotation on each reconnection
+ *   4. Using async SHA-256 hashing for better integrity (requires async createSession)
+ * - Ensure CSP headers are properly configured to mitigate XSS risks
+ */
 export class SessionManager {
-  private static async generateIntegrityHashAsync(token: string, playerId: string): Promise<string> {
-    const data = `${token}:${playerId}:${SESSION_DURATION_MS}`;
-    
-    if (typeof globalThis.crypto?.subtle?.digest === 'function') {
-      try {
-        const encoder = new TextEncoder();
-        const dataBuffer = encoder.encode(data);
-        const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', dataBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 32);
-      } catch (error) {
-        logError("Failed to generate SHA-256 hash, using fallback:", error);
-      }
-    }
-    
-    return this.generateIntegrityHashSync(token, playerId);
-  }
-
   private static generateIntegrityHashSync(token: string, playerId: string): string {
     const data = `${token}:${playerId}:${SESSION_DURATION_MS}`;
     let hash1 = 0;
