@@ -119,6 +119,11 @@ export class ReconnectHandler {
   private async attemptReconnect(): Promise<boolean> {
     if (!this.isActive || this.isAttempting) return false;
 
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+
     this.isAttempting = true;
     const { maxAttempts } = this.options;
 

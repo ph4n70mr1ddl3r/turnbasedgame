@@ -111,6 +111,7 @@ export class SessionManager {
       localStorage.setItem(SESSION_INTEGRITY_KEY, integrityHash);
     } catch (error) {
       logError("Error saving session to localStorage:", error);
+      throw new Error("Failed to persist session to localStorage");
     }
 
     return session;

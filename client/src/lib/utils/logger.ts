@@ -47,8 +47,4 @@ export function logDebug(message: string, data?: unknown): void {
   }
 }
 
-export function reloadPage(): void {
-  if (typeof window !== "undefined") {
-    window.location.reload();
-  }
-}
+

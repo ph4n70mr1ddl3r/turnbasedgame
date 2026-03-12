@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useCallback } from "react";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { PokerTable } from "@/components/poker-table/PokerTable";
 import { BettingControls } from "@/components/poker-table/BettingControls";
@@ -10,12 +10,9 @@ import { PotDisplay } from "@/components/poker-table/PotDisplay";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { BetAction, PlayerState } from "@/types/game-types";
-import { logError, reloadPage } from "@/lib/utils/logger";
-
-function formatTimeRemaining(ms: number | undefined): string {
-  if (!ms || ms <= 0) return "-";
-  return `${Math.ceil(ms / 1000)}s`;
-}
+import { logError } from "@/lib/utils/logger";
+import { reloadPage } from "@/lib/utils/browser-utils";
+import { formatTimeRemaining } from "@/lib/utils/format-utils";
 
 function GameContent(): React.ReactElement {
   const {
@@ -31,7 +28,7 @@ function GameContent(): React.ReactElement {
     autoConnect: true,
   });
 
-  const handleBetAction = (action: BetAction, amount?: number): void => {
+  const handleBetAction = useCallback((action: BetAction, amount?: number): void => {
     if (!isConnected) {
       logError("Cannot send bet action: not connected");
       return;
@@ -40,7 +37,7 @@ function GameContent(): React.ReactElement {
     if (!success) {
       logError("Failed to send bet action");
     }
-  };
+  }, [isConnected, sendBetAction]);
 
   const { player1, player2, myPlayer, isPlayer1Current, isPlayer2Current } = useMemo(() => {
     const players = gameState?.players ?? [];

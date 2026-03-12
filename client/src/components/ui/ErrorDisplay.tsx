@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import { reloadPage } from "@/lib/utils/logger";
+import { reloadPage } from "@/lib/utils/browser-utils";
 
 interface ErrorDisplayProps {
   error: string;

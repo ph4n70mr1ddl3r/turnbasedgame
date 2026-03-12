@@ -7,7 +7,7 @@ import {
   latencySelector,
 } from "@/lib/stores/connection-store";
 import { ConnectionStatus as ConnectionStatusType } from "@/types/game-types";
-import { reloadPage } from "@/lib/utils/logger";
+import { reloadPage } from "@/lib/utils/browser-utils";
 
 const STATUS_COLORS: Record<ConnectionStatusType, string> = {
   connected: "bg-green-500",

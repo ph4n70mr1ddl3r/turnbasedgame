@@ -1,7 +1,8 @@
 "use client";
 
 import { Component, ReactNode, ErrorInfo } from "react";
-import { logError, reloadPage } from "@/lib/utils/logger";
+import { logError } from "@/lib/utils/logger";
+import { reloadPage } from "@/lib/utils/browser-utils";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
