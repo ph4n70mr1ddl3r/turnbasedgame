@@ -18,6 +18,7 @@ import {
 } from "@/lib/stores/game-store";
 import { BetAction } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
+import { getDefaultWebSocketUrl } from "@/lib/constants/game";
 
 export interface UseWebSocketOptions {
   autoConnect?: boolean;
@@ -138,8 +139,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
         managerRef.current = null;
       }
 
+      const wsUrl = url || process.env.NEXT_PUBLIC_WS_URL || getDefaultWebSocketUrl();
       const manager = new ConnectionManager({
-        url: url,
+        url: wsUrl,
         autoReconnect: true,
       });
 

@@ -4,6 +4,13 @@
 #include <memory>
 #include <random>
 #include <chrono>
+#include <mutex>
+#include <thread>
+#include <atomic>
+#include <vector>
+#include <algorithm>
+#include <sstream>
+#include <iomanip>
 #include <nlohmann/json.hpp>
 #include "hv/HttpServer.h"
 #include "hv/WebSocketServer.h"
@@ -15,7 +22,27 @@ using json = nlohmann::json;
 class PokerGame;
 class SessionManager;
 
-// Session data
+std::string generate_secure_token() {
+    std::random_device rd;
+    std::mt19937_64 gen(rd());
+    std::uniform_int_distribution<uint64_t> dis;
+    
+    std::stringstream ss;
+    ss << std::hex << std::setfill('0');
+    
+    ss << std::setw(8) << (dis(gen) & 0xFFFFFFFF);
+    ss << '-';
+    ss << std::setw(4) << (dis(gen) & 0xFFFF);
+    ss << '-';
+    ss << std::setw(4) << ((dis(gen) & 0x0FFF) | 0x4000);
+    ss << '-';
+    ss << std::setw(4) << ((dis(gen) & 0x3FFF) | 0x8000);
+    ss << '-';
+    ss << std::setw(12) << (dis(gen) & 0xFFFFFFFFFFFF);
+    
+    return ss.str();
+}
+
 struct Session {
     std::string token;
     std::string player_id;
@@ -26,7 +53,7 @@ struct Session {
     bool is_expired() const {
         auto now = std::chrono::steady_clock::now();
         auto inactive_duration = std::chrono::duration_cast<std::chrono::minutes>(now - last_activity);
-        return inactive_duration.count() > 30; // 30 minute expiry
+        return inactive_duration.count() > 30;
     }
     
     void update_activity() {
@@ -34,24 +61,17 @@ struct Session {
     }
 };
 
-// Session manager
 class SessionManager {
 private:
     std::map<std::string, Session> sessions_;
-    std::map<std::string, std::string> connection_to_token_; // WebSocket channel pointer to token
+    std::map<std::string, std::string> connection_to_token_;
+    mutable std::mutex mutex_;
     
 public:
     std::string create_session(const std::string& player_id, std::shared_ptr<WebSocketChannel> channel) {
-        // Generate random token (in production, use proper UUID)
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<> dis(0, 15);
-        const char* hex_chars = "0123456789abcdef";
+        std::lock_guard<std::mutex> lock(mutex_);
         
-        std::string token = "session_";
-        for (int i = 0; i < 16; ++i) {
-            token += hex_chars[dis(gen)];
-        }
+        std::string token = generate_secure_token();
         
         Session session{
             .token = token,
@@ -68,10 +88,14 @@ public:
     }
     
     Session* get_session(const std::string& token) {
+        std::lock_guard<std::mutex> lock(mutex_);
         auto it = sessions_.find(token);
         if (it == sessions_.end()) return nullptr;
         
         if (it->second.is_expired()) {
+            if (auto conn = it->second.connection.lock()) {
+                connection_to_token_.erase(conn->peeraddr());
+            }
             sessions_.erase(it);
             return nullptr;
         }
@@ -81,6 +105,7 @@ public:
     }
     
     Session* get_session_by_connection(std::shared_ptr<WebSocketChannel> channel) {
+        std::lock_guard<std::mutex> lock(mutex_);
         auto it = connection_to_token_.find(channel->peeraddr());
         if (it == connection_to_token_.end()) return nullptr;
         
@@ -88,9 +113,9 @@ public:
     }
     
     void remove_session(const std::string& token) {
+        std::lock_guard<std::mutex> lock(mutex_);
         auto it = sessions_.find(token);
         if (it != sessions_.end()) {
-            // Remove from connection map
             if (auto conn = it->second.connection.lock()) {
                 connection_to_token_.erase(conn->peeraddr());
             }
@@ -99,6 +124,7 @@ public:
     }
     
     void cleanup_expired() {
+        std::lock_guard<std::mutex> lock(mutex_);
         std::vector<std::string> expired_tokens;
         for (const auto& [token, session] : sessions_) {
             if (session.is_expired()) {
@@ -107,12 +133,28 @@ public:
         }
         
         for (const auto& token : expired_tokens) {
-            remove_session(token);
+            auto it = sessions_.find(token);
+            if (it != sessions_.end()) {
+                if (auto conn = it->second.connection.lock()) {
+                    connection_to_token_.erase(conn->peeraddr());
+                }
+                sessions_.erase(it);
+            }
         }
+    }
+    
+    std::vector<std::shared_ptr<WebSocketChannel>> get_all_connections() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        std::vector<std::shared_ptr<WebSocketChannel>> connections;
+        for (const auto& [token, session] : sessions_) {
+            if (auto conn = session.connection.lock()) {
+                connections.push_back(conn);
+            }
+        }
+        return connections;
     }
 };
 
-// Simple poker game state
 struct Player {
     std::string id;
     int chip_stack = 1500;
@@ -133,6 +175,7 @@ struct PokerGameState {
     int min_bet = 50;
     int max_bet = 1500;
     std::string game_status = "waiting";
+    int current_highest_bet = 0;
     
     json to_json() const {
         json j;
@@ -147,7 +190,7 @@ struct PokerGameState {
             p["is_folded"] = player.is_folded;
             p["is_all_in"] = player.is_all_in;
             p["position"] = player.position;
-            p["time_remaining"] = 30000; // Fixed for now
+            p["time_remaining"] = 30000;
             j["players"].push_back(p);
         }
         
@@ -164,71 +207,216 @@ struct PokerGameState {
     }
 };
 
-// Poker game manager
 class PokerGame {
 private:
     PokerGameState state_;
     SessionManager& session_manager_;
+    mutable std::mutex mutex_;
+    
+    Player* get_player(const std::string& player_id) {
+        for (auto& player : state_.players) {
+            if (player.id == player_id) return &player;
+        }
+        return nullptr;
+    }
+    
+    void advance_turn() {
+        for (auto& player : state_.players) {
+            if (player.id != state_.current_player && !player.is_folded && !player.is_all_in) {
+                state_.current_player = player.id;
+                return;
+            }
+        }
+    }
     
 public:
     PokerGame(SessionManager& sm) : session_manager_(sm) {
-        // Initialize two players
+        std::lock_guard<std::mutex> lock(mutex_);
         Player p1{"p1", 1500};
         Player p2{"p2", 1500};
         
-        // Set positions
         p1.position = "button";
         p2.position = "big_blind";
         
         state_.players = {p1, p2};
         state_.current_player = "p1";
         state_.game_status = "active";
+        state_.current_highest_bet = 0;
     }
     
-    PokerGameState& get_state() { return state_; }
-    
-    json handle_bet_action(const std::string& player_id, const std::string& action, int amount = 0) {
-        // Simple bet handling for now
-        auto& player = (player_id == "p1") ? state_.players[0] : state_.players[1];
-        
-        if (action == "fold") {
-            player.is_folded = true;
-            // Switch to other player (game would end if both folded, but simplified)
-            state_.current_player = (player_id == "p1") ? "p2" : "p1";
-        } else if (action == "check") {
-            // Just switch player
-            state_.current_player = (player_id == "p1") ? "p2" : "p1";
-        } else if (action == "call") {
-            // Match current bet (simplified)
-            player.chip_stack -= 50; // Fixed call amount for demo
-            state_.pot += 50;
-            state_.current_player = (player_id == "p1") ? "p2" : "p1";
-        } else if (action == "raise") {
-            // Raise amount
-            amount = std::max(state_.min_bet, std::min(amount, player.chip_stack));
-            player.chip_stack -= amount;
-            state_.pot += amount;
-            state_.current_player = (player_id == "p1") ? "p2" : "p1";
-        }
-        
-        return state_.to_json();
+    PokerGameState get_state() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return state_;
     }
     
     json get_game_state() {
+        std::lock_guard<std::mutex> lock(mutex_);
         return state_.to_json();
+    }
+    
+    enum class ActionResult {
+        Success,
+        InvalidPlayer,
+        NotYourTurn,
+        InsufficientChips,
+        InvalidAmount,
+        PlayerFolded,
+        PlayerAllIn
+    };
+    
+    struct ActionResponse {
+        ActionResult result;
+        json new_state;
+        std::string error_message;
+    };
+    
+    ActionResponse handle_bet_action(const std::string& player_id, const std::string& action, int amount = 0) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        
+        ActionResponse response;
+        
+        Player* player = get_player(player_id);
+        if (!player) {
+            response.result = ActionResult::InvalidPlayer;
+            response.error_message = "Invalid player ID";
+            return response;
+        }
+        
+        if (state_.current_player != player_id) {
+            response.result = ActionResult::NotYourTurn;
+            response.error_message = "Not your turn";
+            return response;
+        }
+        
+        if (player->is_folded) {
+            response.result = ActionResult::PlayerFolded;
+            response.error_message = "Player has already folded";
+            return response;
+        }
+        
+        if (player->is_all_in && action != "fold") {
+            response.result = ActionResult::PlayerAllIn;
+            response.error_message = "Player is already all-in";
+            return response;
+        }
+        
+        int to_call = state_.current_highest_bet - player->current_bet;
+        
+        if (action == "fold") {
+            player->is_folded = true;
+            advance_turn();
+        } else if (action == "check") {
+            if (to_call > 0) {
+                response.result = ActionResult::InvalidAmount;
+                response.error_message = "Cannot check when there is a bet to call";
+                return response;
+            }
+            advance_turn();
+        } else if (action == "call") {
+            int call_amount = std::min(to_call, player->chip_stack);
+            if (call_amount > player->chip_stack) {
+                response.result = ActionResult::InsufficientChips;
+                response.error_message = "Insufficient chips to call";
+                return response;
+            }
+            
+            player->chip_stack -= call_amount;
+            player->current_bet += call_amount;
+            state_.pot += call_amount;
+            
+            if (player->chip_stack == 0) {
+                player->is_all_in = true;
+            }
+            
+            advance_turn();
+        } else if (action == "raise") {
+            if (amount < state_.min_bet) {
+                amount = state_.min_bet;
+            }
+            
+            int total_raise = to_call + amount;
+            
+            if (total_raise > player->chip_stack) {
+                total_raise = player->chip_stack;
+                amount = total_raise - to_call;
+            }
+            
+            if (amount < state_.min_bet && player->chip_stack > to_call) {
+                response.result = ActionResult::InvalidAmount;
+                response.error_message = "Raise amount must be at least min_bet";
+                return response;
+            }
+            
+            player->chip_stack -= total_raise;
+            player->current_bet += total_raise;
+            state_.pot += total_raise;
+            state_.current_highest_bet = player->current_bet;
+            
+            if (player->chip_stack == 0) {
+                player->is_all_in = true;
+            }
+            
+            advance_turn();
+        } else {
+            response.result = ActionResult::InvalidAmount;
+            response.error_message = "Unknown action: " + action;
+            return response;
+        }
+        
+        response.result = ActionResult::Success;
+        response.new_state = state_.to_json();
+        return response;
+    }
+    
+    void reset_game() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        for (auto& player : state_.players) {
+            player.chip_stack = 1500;
+            player.current_bet = 0;
+            player.is_folded = false;
+            player.is_all_in = false;
+            player.hole_cards.clear();
+        }
+        state_.pot = 0;
+        state_.community_cards.clear();
+        state_.current_player = "p1";
+        state_.round = "preflop";
+        state_.game_status = "active";
+        state_.current_highest_bet = 0;
     }
 };
 
-// Global instances (in real app, use dependency injection)
-SessionManager session_manager;
-PokerGame poker_game(session_manager);
+std::unique_ptr<SessionManager> session_manager;
+std::unique_ptr<PokerGame> poker_game;
+std::atomic<bool> server_running(false);
 
-// WebSocket message handler
+void cleanup_thread_func() {
+    while (server_running) {
+        std::this_thread::sleep_for(std::chrono::minutes(5));
+        if (session_manager) {
+            session_manager->cleanup_expired();
+        }
+    }
+}
+
+void broadcast_game_state() {
+    if (!session_manager || !poker_game) return;
+    
+    json response = {
+        {"type", "game_state_update"},
+        {"data", poker_game->get_game_state()}
+    };
+    
+    auto connections = session_manager->get_all_connections();
+    for (auto& conn : connections) {
+        conn->send(response.dump());
+    }
+}
+
 void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const std::string& msg) {
     try {
         json message = json::parse(msg);
         
-        // Validate message structure
         if (!message.contains("type") || !message["type"].is_string()) {
             json error = {
                 {"type", "error"},
@@ -244,25 +432,41 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
         std::string type = message["type"];
         
         if (type == "session_init") {
-            // Create or restore session
-            Session* session = session_manager.get_session_by_connection(channel);
-            std::string player_id = "p1"; // Simplified: first connection gets p1
+            Session* session = session_manager->get_session_by_connection(channel);
+            std::string player_id = "p1";
             
             if (!session) {
-                std::string token = session_manager.create_session(player_id, channel);
-                session = session_manager.get_session(token);
+                session = session_manager->get_session_by_connection(channel);
+                if (!session) {
+                    bool p1_exists = false;
+                    auto connections = session_manager->get_all_connections();
+                    if (connections.size() >= 1) {
+                        p1_exists = true;
+                    }
+                    player_id = p1_exists ? "p2" : "p1";
+                    
+                    std::string token = session_manager->create_session(player_id, channel);
+                    session = session_manager->get_session(token);
+                }
             }
             
-            // Send game state
             json response = {
-                {"type", "game_state_update"},
-                {"data", poker_game.get_game_state()}
+                {"type", "connection_status"},
+                {"data", {
+                    {"status", "connected"},
+                    {"player_id", session ? session->player_id : player_id}
+                }}
             };
             channel->send(response.dump());
             
+            json game_response = {
+                {"type", "game_state_update"},
+                {"data", poker_game->get_game_state()}
+            };
+            channel->send(game_response.dump());
+            
         } else if (type == "bet_action") {
-            // Validate session
-            Session* session = session_manager.get_session_by_connection(channel);
+            Session* session = session_manager->get_session_by_connection(channel);
             if (!session) {
                 json error = {
                     {"type", "error"},
@@ -275,7 +479,6 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                 return;
             }
             
-            // Validate bet action data
             if (!message.contains("data") || !message["data"].is_object()) {
                 json error = {
                     {"type", "error"},
@@ -305,28 +508,45 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
             int amount = 0;
             if (data.contains("amount") && data["amount"].is_number()) {
                 amount = data["amount"];
+                if (amount < 0) {
+                    json error = {
+                        {"type", "error"},
+                        {"data", {
+                            {"code", "invalid_amount"},
+                            {"message", "Amount must be non-negative"}
+                        }}
+                    };
+                    channel->send(error.dump());
+                    return;
+                }
             }
             
-            // Process bet action
-            json new_state = poker_game.handle_bet_action(session->player_id, action, amount);
+            auto result = poker_game->handle_bet_action(session->player_id, action, amount);
             
-            // Send updated game state to all connected clients
-            json response = {
-                {"type", "game_state_update"},
-                {"data", new_state}
-            };
-            
-            // Broadcast to all connections (simplified - would need connection manager)
-            channel->send(response.dump());
+            if (result.result == PokerGame::ActionResult::Success) {
+                broadcast_game_state();
+            } else {
+                json error = {
+                    {"type", "error"},
+                    {"data", {
+                        {"code", "action_failed"},
+                        {"message", result.error_message}
+                    }}
+                };
+                channel->send(error.dump());
+            }
             
         } else if (type == "heartbeat") {
-            // Respond with heartbeat echo
+            uint64_t timestamp = 0;
+            if (message.contains("data") && message["data"].is_object() && 
+                message["data"].contains("timestamp") && message["data"]["timestamp"].is_number()) {
+                timestamp = message["data"]["timestamp"];
+            }
+            
             json response = {
                 {"type", "heartbeat"},
                 {"data", {
-                    {"timestamp", std::chrono::duration_cast<std::chrono::milliseconds>(
-                        std::chrono::system_clock::now().time_since_epoch()
-                    ).count()}
+                    {"timestamp", timestamp}
                 }}
             };
             channel->send(response.dump());
@@ -364,18 +584,17 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
 }
 
 int main() {
-    // Combined HTTP + WebSocket server
+    session_manager = std::make_unique<SessionManager>();
+    poker_game = std::make_unique<PokerGame>(*session_manager);
+    
     HttpService http;
     WebSocketService ws;
     
-    // HTTP: Serve static files from ../client/out
     http.static("/", "../client/out");
     
-    // WebSocket event handlers
     ws.onopen = [](const WebSocketChannelPtr& channel, const HttpRequestPtr& req) {
         std::cout << "WebSocket connection opened: " << req->path << std::endl;
         
-        // Send connection status
         json status_msg = {
             {"type", "connection_status"},
             {"data", {
@@ -392,22 +611,27 @@ int main() {
     
     ws.onclose = [](const WebSocketChannelPtr& channel) {
         std::cout << "WebSocket connection closed: " << channel->peeraddr() << std::endl;
-        
-        // Clean up session
-        session_manager.cleanup_expired();
+        session_manager->cleanup_expired();
     };
     
-    // Create combined server
     WebSocketServer server(&ws);
     server.registerHttpService(&http);
     server.setPort(8080);
     server.setThreadNum(4);
+    
+    server_running = true;
+    std::thread cleanup_thread(cleanup_thread_func);
     
     std::cout << "Poker server starting on port 8080..." << std::endl;
     std::cout << "HTTP server serving static files from ../client/out" << std::endl;
     std::cout << "WebSocket server ready for connections" << std::endl;
     
     server.run();
+    
+    server_running = false;
+    if (cleanup_thread.joinable()) {
+        cleanup_thread.join();
+    }
     
     return 0;
 }
