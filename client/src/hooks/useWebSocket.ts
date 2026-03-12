@@ -88,7 +88,13 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
   const connect = useCallback(async () => {
     if (managerRef.current) {
-      return managerRef.current.connect();
+      try {
+        return await managerRef.current.connect();
+      } catch (error) {
+        logError("Connection failed:", error);
+        useGameStore.getState().setError("Connection failed");
+        return false;
+      }
     }
     return false;
   }, []);

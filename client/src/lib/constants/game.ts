@@ -7,9 +7,10 @@ export function getDefaultWebSocketUrl(): string {
   if (typeof window === "undefined") {
     return "ws://localhost:8080";
   }
-  return window.location.protocol === "https:"
-    ? "wss://localhost:8080"
-    : "ws://localhost:8080";
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const host = window.location.hostname;
+  const port = window.location.port ? `:${window.location.port}` : "";
+  return `${protocol}//${host}${port}`;
 }
 
 export const WS_DEFAULT_URL = "ws://localhost:8080";

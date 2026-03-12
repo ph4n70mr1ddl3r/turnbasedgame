@@ -181,6 +181,7 @@ export class ConnectionManager {
     this.cleanupSocket();
     this.pendingHeartbeatTimestamps.clear();
     this.lastMessageTime = 0;
+    this.connectionGeneration = 0;
     if (this.pendingResolve) {
       this.pendingResolve(false);
       this.pendingResolve = null;

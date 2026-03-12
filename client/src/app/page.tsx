@@ -42,14 +42,17 @@ function GameContent(): React.ReactElement {
     }
   };
 
-  const { player1, player2, myPlayer } = useMemo(() => {
+  const { player1, player2, myPlayer, isPlayer1Current, isPlayer2Current } = useMemo(() => {
     const players = gameState?.players ?? [];
+    const currentPlayerId = gameState?.current_player;
     return {
       player1: players[0] ?? null,
       player2: players[1] ?? null,
       myPlayer: playerId ? players.find((p: PlayerState) => p.player_id === playerId) : null,
+      isPlayer1Current: currentPlayerId !== null && players[0]?.player_id === currentPlayerId,
+      isPlayer2Current: currentPlayerId !== null && players[1]?.player_id === currentPlayerId,
     };
-  }, [gameState?.players, playerId]);
+  }, [gameState?.players, gameState?.current_player, playerId]);
 
   return (
     <div className="flex flex-col items-center justify-center p-4">
@@ -98,7 +101,7 @@ function GameContent(): React.ReactElement {
             <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
               <PlayerSeat
                 player={player1}
-                isCurrentPlayer={gameState?.current_player === player1?.player_id}
+                isCurrentPlayer={isPlayer1Current}
               />
             </div>
 
@@ -109,7 +112,7 @@ function GameContent(): React.ReactElement {
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
               <PlayerSeat
                 player={player2}
-                isCurrentPlayer={gameState?.current_player === player2?.player_id}
+                isCurrentPlayer={isPlayer2Current}
               />
             </div>
           </PokerTable>
