@@ -196,7 +196,7 @@ export function BettingControls({
           )}
         </div>
 
- {showRaiseInput && quickRaiseAmounts.length > 0 && (
+        {showRaiseInput && quickRaiseAmounts.length > 0 && (
           <div className="flex flex-wrap gap-2" role="group" aria-label="Quick raise options">
             <span className="text-green-300 mr-2">Quick raise:</span>
             {quickRaiseAmounts.map((amount) => (

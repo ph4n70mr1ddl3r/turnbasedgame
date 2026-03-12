@@ -52,7 +52,7 @@ function GameContent(): React.ReactElement {
       isPlayer1Current: currentPlayerId !== null && players[0]?.player_id === currentPlayerId,
       isPlayer2Current: currentPlayerId !== null && players[1]?.player_id === currentPlayerId,
     };
-  }, [gameState?.players, gameState?.current_player, playerId]);
+  }, [gameState, playerId]);
 
   return (
     <div className="flex flex-col items-center justify-center p-4">

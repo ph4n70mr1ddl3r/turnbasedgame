@@ -183,9 +183,9 @@ export class ReconnectHandler {
   // Static helper to determine if reconnection should be attempted
   static shouldReconnect(error: CloseEvent | Error | unknown): boolean {
     if (error instanceof CloseEvent) {
-      const normalClosureCodes = [1000, 1001];
-      const protocolErrorCodes = [1002, 1003, 1007, 1008, 1010, 1011];
-      const policyViolationCodes = [1008];
+      const normalClosureCodes: readonly number[] = [1000, 1001];
+      const protocolErrorCodes: readonly number[] = [1002, 1003, 1007, 1008, 1010, 1011];
+      const policyViolationCodes: readonly number[] = [1008];
       
       if (normalClosureCodes.includes(error.code)) {
         return false;
@@ -204,7 +204,7 @@ export class ReconnectHandler {
     }
     
     if (error instanceof Error) {
-      const reconnectablePatterns = [
+      const reconnectablePatterns: readonly RegExp[] = [
         /network/i,
         /fetch/i,
         /websocket.*not.*open/i,
