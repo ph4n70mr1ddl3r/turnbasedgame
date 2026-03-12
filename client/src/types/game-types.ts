@@ -136,7 +136,7 @@ export function isString(value: unknown): value is string {
 }
 
 export function isNumber(value: unknown): value is number {
-  return typeof value === "number";
+  return typeof value === "number" && Number.isFinite(value);
 }
 
 export function isArray(value: unknown): value is unknown[] {

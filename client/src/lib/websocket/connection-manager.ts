@@ -94,7 +94,8 @@ export class ConnectionManager {
         return false;
       }
       return true;
-    } catch {
+    } catch (error) {
+      logError('Failed to parse WebSocket URL:', error);
       return false;
     }
   }
