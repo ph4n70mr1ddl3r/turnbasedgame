@@ -136,6 +136,7 @@ export class MessageParser {
         return null;
       }
 
+      const validatedHoleCards: Card[] = [];
       for (const card of player.hole_cards) {
         if (card === null || card === undefined || card === "") {
           continue;
@@ -144,6 +145,7 @@ export class MessageParser {
           logError("Invalid game_state_update: invalid card", card);
           return null;
         }
+        validatedHoleCards.push(card as Card);
       }
 
       const timeRemaining = player.time_remaining;
@@ -185,7 +187,7 @@ export class MessageParser {
       validatedPlayers.push({
         player_id: playerId,
         chip_stack: chipStack,
-        hole_cards: player.hole_cards as Card[],
+        hole_cards: validatedHoleCards,
         position: player.position as PlayerPosition,
         current_bet: player.current_bet,
         is_active: player.is_active,

@@ -338,8 +338,10 @@ export class ConnectionManager {
     this.cleanupHeartbeat();
     this.cleanupConnectionTimeout();
 
-    if (wasConnecting) {
+    if (wasConnecting && this.pendingResolve) {
       this.connectionResolved = true;
+      this.pendingResolve(false);
+      this.pendingResolve = null;
     }
 
     if (!this.wasIntentionallyDisconnected && this.options.autoReconnect && this.reconnectHandler) {

@@ -7,6 +7,7 @@ import {
   latencySelector,
 } from "@/lib/stores/connection-store";
 import { ConnectionStatus as ConnectionStatusType } from "@/types/game-types";
+import { reloadPage } from "@/lib/utils/logger";
 
 const STATUS_COLORS: Record<ConnectionStatusType, string> = {
   connected: "bg-green-500",
@@ -52,7 +53,7 @@ export function ConnectionStatusIndicator(): React.ReactElement {
       
       {connectionStatus === "disconnected" && (
         <button
-          onClick={() => window.location.reload()}
+          onClick={reloadPage}
           className="text-sm bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded"
         >
           Reconnect

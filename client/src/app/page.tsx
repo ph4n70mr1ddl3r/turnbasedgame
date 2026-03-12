@@ -10,7 +10,7 @@ import { PotDisplay } from "@/components/poker-table/PotDisplay";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { BetAction, PlayerState } from "@/types/game-types";
-import { logError } from "@/lib/utils/logger";
+import { logError, reloadPage } from "@/lib/utils/logger";
 
 function formatTimeRemaining(ms: number | undefined): string {
   if (!ms || ms <= 0) return "-";
@@ -65,11 +65,7 @@ function GameContent(): React.ReactElement {
               <span className="font-medium">Connecting to game server...</span>
             </div>
             <button
-              onClick={() => {
-                if (typeof window !== "undefined") {
-                  window.location.reload();
-                }
-              }}
+              onClick={reloadPage}
               aria-label="Retry connection to game server"
               className="px-4 py-2 bg-yellow-700 hover:bg-yellow-600 rounded"
             >

@@ -1,27 +1,11 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
+import { reloadPage } from "@/lib/utils/logger";
 
 interface ErrorDisplayProps {
   error: string;
   onClose: () => void;
-}
-
-function escapeHtml(text: string): string {
-  const map: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;',
-  };
-  return text.replace(/[&<>"']/g, (m) => map[m]);
-}
-
-function handleReload(): void {
-  if (typeof window !== "undefined") {
-    window.location.reload();
-  }
 }
 
 export function ErrorDisplay({ error, onClose }: ErrorDisplayProps): React.ReactElement | null {
@@ -50,7 +34,7 @@ export function ErrorDisplay({ error, onClose }: ErrorDisplayProps): React.React
           <div className="ml-3 flex-1">
             <h3 className="text-lg font-bold text-white">Error</h3>
             <div className="mt-1 text-red-200">
-              {escapeHtml(error)}
+              {error}
             </div>
           </div>
           <button
@@ -66,7 +50,7 @@ export function ErrorDisplay({ error, onClose }: ErrorDisplayProps): React.React
         
         <div className="mt-4 flex justify-end space-x-3">
           <button
-            onClick={handleReload}
+            onClick={reloadPage}
             className="px-3 py-1 bg-red-700 hover:bg-red-600 rounded text-sm"
           >
             Reload Page

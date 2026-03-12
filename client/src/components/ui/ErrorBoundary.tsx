@@ -1,7 +1,7 @@
 "use client";
 
 import { Component, ReactNode, ErrorInfo } from "react";
-import { logError } from "@/lib/utils/logger";
+import { logError, reloadPage } from "@/lib/utils/logger";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -32,12 +32,6 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     this.setState((prev) => ({ hasError: false, error: null, retryKey: prev.retryKey + 1 }));
   };
 
-  private handleReload = (): void => {
-    if (typeof window !== "undefined") {
-      window.location.reload();
-    }
-  };
-
   render(): ReactNode {
     if (this.state.hasError) {
       if (this.props.fallback) {
@@ -64,7 +58,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                 Try Again
               </button>
               <button
-                onClick={this.handleReload}
+                onClick={reloadPage}
                 className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm"
               >
                 Reload Page
