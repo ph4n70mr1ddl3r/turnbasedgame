@@ -172,7 +172,7 @@ export function isConnectionStatus(msg: unknown): msg is ConnectionStatusMessage
   if (!isObject(msg)) return false;
   if (msg.type !== "connection_status") return false;
   if (!isObject(msg.data)) return false;
-  return ["connected", "disconnected", "reconnecting"].includes(msg.data.status as string);
+  return VALID_CONNECTION_STATUSES.includes(msg.data.status as ConnectionStatus);
 }
 
 export function isErrorMessage(msg: unknown): msg is ErrorMessage {

@@ -173,6 +173,7 @@ export class ConnectionManager {
   disconnect(): void {
     this.wasIntentionallyDisconnected = true;
     this.isConnecting = false;
+    this.connectionResolved = true;
     this.reconnectHandler?.stop();
     this.cleanupHeartbeat();
     this.cleanupConnectionTimeout();

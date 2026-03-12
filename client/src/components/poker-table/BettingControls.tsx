@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useCallback } from "react";
 import { BetAction, isValidBetAction } from "@/types/game-types";
 import { MAX_QUICK_RAISE_OPTIONS } from "@/lib/constants/game";
 
@@ -37,25 +37,25 @@ export function BettingControls({
     [availableActions],
   );
 
-  const handleRaise = (): void => {
+  const handleRaise = useCallback((): void => {
     const now = Date.now();
     if (now - lastActionTimeRef.current < ACTION_COOLDOWN_MS) return;
     lastActionTimeRef.current = now;
     onBetAction("raise", effectiveRaiseAmount);
     setShowRaiseInput(false);
     setRaiseAmountInput(String(minBet));
-  };
+  }, [effectiveRaiseAmount, minBet, onBetAction]);
 
-  const handleAction = (action: string): void => {
+  const handleAction = useCallback((action: string): void => {
     const now = Date.now();
     if (now - lastActionTimeRef.current < ACTION_COOLDOWN_MS) return;
     lastActionTimeRef.current = now;
     if (isValidBetAction(action)) {
       onBetAction(action);
     }
-  };
+  }, [onBetAction]);
 
-  const handleRaiseAmountChange = (value: string): void => {
+  const handleRaiseAmountChange = useCallback((value: string): void => {
     if (value === "") {
       setRaiseAmountInput("");
       return;
@@ -66,16 +66,30 @@ export function BettingControls({
         setRaiseAmountInput(value);
       }
     }
-  };
+  }, [maxBet]);
 
-  const handleRaiseAmountBlur = (): void => {
+  const handleRaiseAmountBlur = useCallback((): void => {
     const parsed = parseInt(raiseAmountInput, 10);
     if (isNaN(parsed) || parsed < minBet) {
       setRaiseAmountInput(String(minBet));
     } else if (parsed > maxBet) {
       setRaiseAmountInput(String(maxBet));
     }
-  };
+  }, [raiseAmountInput, minBet, maxBet]);
+
+  const handleQuickRaise = useCallback((amount: number): void => {
+    const now = Date.now();
+    if (now - lastActionTimeRef.current < ACTION_COOLDOWN_MS) return;
+    lastActionTimeRef.current = now;
+    const clamped = Math.max(minBet, Math.min(maxBet, amount));
+    onBetAction("raise", clamped);
+    setShowRaiseInput(false);
+  }, [minBet, maxBet, onBetAction]);
+
+  const handleCancelRaise = useCallback((): void => {
+    setShowRaiseInput(false);
+    setRaiseAmountInput(String(minBet));
+  }, [minBet]);
 
   const quickRaiseAmounts = useMemo(
     () => {
@@ -146,8 +160,7 @@ export function BettingControls({
                       if (e.key === 'Enter') {
                         handleRaise();
                       } else if (e.key === 'Escape') {
-                        setShowRaiseInput(false);
-                        setRaiseAmountInput(String(minBet));
+                        handleCancelRaise();
                       }
                     }}
                     aria-label="Raise amount"
@@ -161,10 +174,7 @@ export function BettingControls({
                     Raise {effectiveRaiseAmount}
                   </button>
                   <button
-                    onClick={() => {
-                      setShowRaiseInput(false);
-                      setRaiseAmountInput(String(minBet));
-                    }}
+                    onClick={handleCancelRaise}
                     aria-label="Cancel raise"
                     className="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded"
                   >
@@ -186,20 +196,13 @@ export function BettingControls({
           )}
         </div>
 
-        {showRaiseInput && quickRaiseAmounts.length > 0 && (
+ {showRaiseInput && quickRaiseAmounts.length > 0 && (
           <div className="flex flex-wrap gap-2" role="group" aria-label="Quick raise options">
             <span className="text-green-300 mr-2">Quick raise:</span>
             {quickRaiseAmounts.map((amount) => (
               <button
                 key={amount}
-                onClick={() => {
-                  const now = Date.now();
-                  if (now - lastActionTimeRef.current < ACTION_COOLDOWN_MS) return;
-                  lastActionTimeRef.current = now;
-                  const clamped = Math.max(minBet, Math.min(maxBet, amount));
-                  onBetAction("raise", clamped);
-                  setShowRaiseInput(false);
-                }}
+                onClick={() => handleQuickRaise(amount)}
                 aria-label={amount === maxBet ? "Go all-in" : `Raise to ${amount}`}
                 className="px-3 py-1 bg-green-700 hover:bg-green-600 rounded text-sm"
               >
