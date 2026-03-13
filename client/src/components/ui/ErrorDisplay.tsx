@@ -1,7 +1,16 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useMemo } from "react";
 import { reloadPage } from "@/lib/utils/browser-utils";
+
+function sanitizeErrorMessage(error: string): string {
+  return error
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .slice(0, 500);
+}
 
 interface ErrorDisplayProps {
   error: string;
@@ -10,6 +19,7 @@ interface ErrorDisplayProps {
 
 export function ErrorDisplay({ error, onClose }: ErrorDisplayProps): React.ReactElement | null {
   const errorRef = useRef<HTMLDivElement>(null);
+  const sanitizedError = useMemo(() => sanitizeErrorMessage(error), [error]);
 
   useEffect(() => {
     if (error && errorRef.current) {
@@ -33,9 +43,7 @@ export function ErrorDisplay({ error, onClose }: ErrorDisplayProps): React.React
           </div>
           <div className="ml-3 flex-1">
             <h3 className="text-lg font-bold text-white">Error</h3>
-            <div className="mt-1 text-red-200">
-              {error}
-            </div>
+            <div className="mt-1 text-red-200" dangerouslySetInnerHTML={{ __html: sanitizedError }} />
           </div>
           <button
             onClick={onClose}

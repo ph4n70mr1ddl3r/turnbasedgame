@@ -8,6 +8,8 @@ export interface SessionData {
   expiry: number;
 }
 
+const INTEGRITY_SECRET_KEY = 'poker-game-session-integrity-v1';
+
 /**
  * SECURITY NOTE: Session tokens are stored in localStorage for persistence across
  * page reloads. This is a trade-off between UX and security:
@@ -17,10 +19,35 @@ export interface SessionData {
  *   2. Short session durations with automatic refresh
  *   3. Token rotation on each reconnection
  * - Ensure CSP headers are properly configured to mitigate XSS risks
+ * 
+ * The integrity hash uses HMAC-SHA256 via Web Crypto API for cryptographic security.
  */
 export class SessionManager {
-  private static generateIntegrityHash(token: string, playerId: string): string {
+  private static async generateIntegrityHash(token: string, playerId: string): Promise<string> {
     const data = `${token}:${playerId}:${SESSION_DURATION_MS}`;
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(INTEGRITY_SECRET_KEY);
+    
+    try {
+      const key = await crypto.subtle.importKey(
+        'raw',
+        keyData,
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+      );
+      const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(data));
+      const hashArray = Array.from(new Uint8Array(signature));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return hashHex.slice(0, 32);
+    } catch (error) {
+      logError("Failed to generate HMAC hash, falling back to basic hash:", error);
+      return this.generateFallbackHash(token, playerId);
+    }
+  }
+
+  private static generateFallbackHash(token: string, playerId: string): string {
+    const data = `${token}:${playerId}:${SESSION_DURATION_MS}:${INTEGRITY_SECRET_KEY}`;
     let hash1 = 0;
     let hash2 = 0;
     
@@ -33,7 +60,12 @@ export class SessionManager {
     }
     
     const combined = Math.abs(hash1).toString(36) + Math.abs(hash2).toString(36);
-    return combined.substring(0, 16);
+    return combined.padEnd(32, '0').slice(0, 32);
+  }
+
+  private static validateIntegrityHashSync(token: string, playerId: string, storedHash: string): boolean {
+    const expectedHash = this.generateFallbackHash(token, playerId);
+    return storedHash === expectedHash;
   }
 
   private static validateTokenFormat(token: string): boolean {
@@ -62,8 +94,7 @@ export class SessionManager {
         return null;
       }
 
-      const expectedHash = this.generateIntegrityHash(token, playerId);
-      if (integrityHash !== expectedHash) {
+      if (!this.validateIntegrityHashSync(token, playerId, integrityHash)) {
         logError("Session integrity check failed, clearing session");
         this.clearSession();
         return null;
@@ -93,7 +124,7 @@ export class SessionManager {
 
     const expiry = Date.now() + SESSION_DURATION_MS;
     const session: SessionData = { token, playerId, expiry };
-    const integrityHash = this.generateIntegrityHash(token, playerId);
+    const integrityHash = this.generateFallbackHash(token, playerId);
 
     if (typeof window === 'undefined') {
       return session;

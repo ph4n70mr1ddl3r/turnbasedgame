@@ -314,11 +314,6 @@ public:
             advance_turn();
         } else if (action == "call") {
             int call_amount = std::min(to_call, player->chip_stack);
-            if (call_amount > player->chip_stack) {
-                response.result = ActionResult::InsufficientChips;
-                response.error_message = "Insufficient chips to call";
-                return response;
-            }
             
             player->chip_stack -= call_amount;
             player->current_bet += call_amount;
@@ -433,28 +428,31 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
         
         if (type == "session_init") {
             Session* session = session_manager->get_session_by_connection(channel);
-            std::string player_id = "p1";
+            std::string player_id;
             
             if (!session) {
-                session = session_manager->get_session_by_connection(channel);
-                if (!session) {
-                    bool p1_exists = false;
-                    auto connections = session_manager->get_all_connections();
-                    if (connections.size() >= 1) {
+                bool p1_exists = false;
+                auto connections = session_manager->get_all_connections();
+                for (const auto& conn : connections) {
+                    Session* s = session_manager->get_session_by_connection(conn);
+                    if (s && s->player_id == "p1") {
                         p1_exists = true;
+                        break;
                     }
-                    player_id = p1_exists ? "p2" : "p1";
-                    
-                    std::string token = session_manager->create_session(player_id, channel);
-                    session = session_manager->get_session(token);
                 }
+                player_id = p1_exists ? "p2" : "p1";
+                
+                std::string token = session_manager->create_session(player_id, channel);
+                session = session_manager->get_session(token);
+            } else {
+                player_id = session->player_id;
             }
             
             json response = {
                 {"type", "connection_status"},
                 {"data", {
                     {"status", "connected"},
-                    {"player_id", session ? session->player_id : player_id}
+                    {"player_id", player_id}
                 }}
             };
             channel->send(response.dump());

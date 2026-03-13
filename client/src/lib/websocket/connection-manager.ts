@@ -44,7 +44,7 @@ export class ConnectionManager {
   private heartbeatIntervalId: ReturnType<typeof setInterval> | null = null;
   private connectionTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private connectionResolved = false;
-  private isConnecting = false;
+  private connectionLock: Promise<boolean> | null = null;
   private wasIntentionallyDisconnected = false;
   private connectionGeneration = 0;
   private pendingHeartbeatTimestamps: Map<number, number> = new Map();
@@ -89,7 +89,8 @@ export class ConnectionManager {
         logError('WebSocket must use wss:// in production');
         return false;
       }
-      if (parsed.protocol === 'ws:' && parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1') {
+      const localhostHosts = ['localhost', '127.0.0.1', '::1', '[::1]'];
+      if (parsed.protocol === 'ws:' && !localhostHosts.includes(parsed.hostname)) {
         logError('Non-secure WebSocket (ws://) only allowed on localhost');
         return false;
       }
@@ -101,8 +102,8 @@ export class ConnectionManager {
   }
 
   async connect(): Promise<boolean> {
-    if (this.isConnecting) {
-      return false;
+    if (this.connectionLock) {
+      return this.connectionLock;
     }
 
     if (this.pendingResolve) {
@@ -110,13 +111,12 @@ export class ConnectionManager {
       this.pendingResolve = null;
     }
 
-    this.isConnecting = true;
     this.connectionGeneration++;
     const currentGeneration = this.connectionGeneration;
     this.cleanupSocket();
     this.connectionResolved = false;
 
-    return new Promise((resolve) => {
+    this.connectionLock = new Promise((resolve) => {
       this.pendingResolve = resolve;
       
       try {
@@ -125,7 +125,7 @@ export class ConnectionManager {
         const handleTimeout = (): void => {
           if (!this.connectionResolved && this.socket?.readyState !== WebSocket.OPEN) {
             this.connectionResolved = true;
-            this.isConnecting = false;
+            this.connectionLock = null;
             this.connectionTimeoutId = null;
             this.pendingResolve = null;
             this.handleConnectionTimeout();
@@ -144,7 +144,7 @@ export class ConnectionManager {
             return;
           }
           this.connectionResolved = true;
-          this.isConnecting = false;
+          this.connectionLock = null;
           this.pendingResolve = null;
           if (this.connectionTimeoutId !== null) {
             clearTimeout(this.connectionTimeoutId);
@@ -164,16 +164,18 @@ export class ConnectionManager {
         useConnectionStore.getState().setConnected(false);
         useGameStore.getState().setError("Failed to create WebSocket connection");
         this.connectionResolved = true;
-        this.isConnecting = false;
+        this.connectionLock = null;
         this.pendingResolve = null;
         resolve(false);
       }
     });
+
+    return this.connectionLock;
   }
 
   disconnect(): void {
     this.wasIntentionallyDisconnected = true;
-    this.isConnecting = false;
+    this.connectionLock = null;
     this.connectionResolved = true;
     this.reconnectHandler?.stop();
     this.cleanupHeartbeat();
@@ -332,14 +334,14 @@ export class ConnectionManager {
       ? `${errorEvent.message}${errorEvent.filename ? ` (${errorEvent.filename}:${errorEvent.lineno}:${errorEvent.colno})` : ''}`
       : 'Unknown WebSocket error';
     logError("WebSocket error:", errorDetails);
-    this.isConnecting = false;
+    this.connectionLock = null;
     useGameStore.getState().setError("Connection error");
   }
   
   private handleClose(event: CloseEvent): void {
-    const wasConnecting = this.isConnecting;
+    const wasConnecting = this.connectionLock !== null;
     useConnectionStore.getState().setConnected(false);
-    this.isConnecting = false;
+    this.connectionLock = null;
     this.cleanupHeartbeat();
     this.cleanupConnectionTimeout();
 
@@ -358,7 +360,7 @@ export class ConnectionManager {
   
   private handleConnectionTimeout(): void {
     logError("WebSocket connection timeout");
-    this.isConnecting = false;
+    this.connectionLock = null;
     this.connectionResolved = true;
     this.cleanupHeartbeat();
     this.cleanupConnectionTimeout();
