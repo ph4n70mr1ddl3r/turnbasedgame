@@ -15,14 +15,6 @@ export type GameStatus = "waiting" | "active" | "finished";
 export type BetAction = "check" | "call" | "raise" | "fold";
 export type ConnectionStatus = "connected" | "disconnected" | "reconnecting";
 
-export interface ConnectionStatusInfo {
-  isConnected: boolean;
-  status: ConnectionStatus;
-  latency: number | null;
-  sessionToken: string | null;
-  playerId: string | null;
-}
-
 // Player state
 export interface PlayerState {
   player_id: string;           // "p1" or "p2"
@@ -81,6 +73,14 @@ export interface ConnectionStatusMessage {
     player_id?: string;
     message?: string;
   };
+}
+
+export interface ConnectionStatusInfo {
+  isConnected: boolean;
+  status: ConnectionStatus;
+  latency: number | null;
+  sessionToken: string | null;
+  playerId: string | null;
 }
 
 export interface ErrorMessage {
@@ -155,12 +155,12 @@ export function isValidGameStatus(value: string): value is GameStatus {
   return VALID_GAME_STATUSES.includes(value as GameStatus);
 }
 
-export function isGameStateUpdate(msg: unknown): msg is GameStateUpdateMessage {
+function _isGameStateUpdate(msg: unknown): msg is GameStateUpdateMessage {
   if (!isObject(msg)) return false;
   return msg.type === "game_state_update" && isObject(msg.data);
 }
 
-export function isBetAction(msg: unknown): msg is BetActionMessage {
+function _isBetAction(msg: unknown): msg is BetActionMessage {
   if (!isObject(msg)) return false;
   if (msg.type !== "bet_action") return false;
   if (!isObject(msg.data)) return false;
@@ -168,28 +168,29 @@ export function isBetAction(msg: unknown): msg is BetActionMessage {
   return typeof msg.data.action === "string" && isValidBetAction(msg.data.action);
 }
 
-export function isConnectionStatus(msg: unknown): msg is ConnectionStatusMessage {
+function _isConnectionStatus(msg: unknown): msg is ConnectionStatusMessage {
   if (!isObject(msg)) return false;
   if (msg.type !== "connection_status") return false;
   if (!isObject(msg.data)) return false;
   return VALID_CONNECTION_STATUSES.includes(msg.data.status as ConnectionStatus);
 }
 
-export function isErrorMessage(msg: unknown): msg is ErrorMessage {
+function _isErrorMessage(msg: unknown): msg is ErrorMessage {
   if (!isObject(msg)) return false;
   if (msg.type !== "error") return false;
   if (!isObject(msg.data)) return false;
   return typeof msg.data.code === "string" && typeof msg.data.message === "string";
 }
 
-export function isHeartbeat(msg: unknown): msg is HeartbeatMessage {
+function _isHeartbeat(msg: unknown): msg is HeartbeatMessage {
   if (!isObject(msg)) return false;
   if (msg.type !== "heartbeat") return false;
   if (!isObject(msg.data)) return false;
   return typeof msg.data.timestamp === "number";
 }
 
-// Validation functions
+export const VALID_PLAYER_POSITIONS: readonly PlayerPosition[] = ["button", "small_blind", "big_blind", "none"];
+
 export function isValidCard(card: string): boolean {
   return /^[2-9TJQKA][cdhs]$/.test(card);
 }
@@ -200,6 +201,10 @@ export function isValidPlayerId(id: string): boolean {
 
 export function isValidBetAction(action: string): action is BetAction {
   return ["check", "call", "raise", "fold"].includes(action);
+}
+
+export function isValidPosition(position: string): position is PlayerPosition {
+  return VALID_PLAYER_POSITIONS.includes(position as PlayerPosition);
 }
 
 // Helper to create messages
