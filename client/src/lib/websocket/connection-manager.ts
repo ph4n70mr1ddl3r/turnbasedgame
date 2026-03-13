@@ -50,7 +50,6 @@ export class ConnectionManager {
   private pendingHeartbeatTimestamps: Map<number, number> = new Map();
   private lastMessageTime = 0;
   private pendingResolve: ((value: boolean) => void) | null = null;
-  private storeUpdateLock: Promise<void> | null = null;
   
   constructor(options: ConnectionOptions = {}) {
     this.options = { ...DEFAULT_OPTIONS, ...options };
@@ -73,24 +72,20 @@ export class ConnectionManager {
             connectionStatus = "reconnecting";
           }
 
-          this.safeStoreUpdate(() => {
-            useConnectionStore.getState().setStatus(connectionStatus);
-          });
+          useConnectionStore.getState().setStatus(connectionStatus);
         },
         this.options.reconnectOptions
       );
     }
   }
 
-  private safeStoreUpdate(updateFn: () => void): void {
-    if (this.storeUpdateLock) {
-      this.storeUpdateLock.then(updateFn);
-    } else {
-      updateFn();
-    }
-  }
-
   private enforceHeartbeatBounds(): void {
+    const now = Date.now();
+    for (const [id, timestamp] of this.pendingHeartbeatTimestamps) {
+      if (now - timestamp > WS_HEARTBEAT_TIMEOUT_MS) {
+        this.pendingHeartbeatTimestamps.delete(id);
+      }
+    }
     while (this.pendingHeartbeatTimestamps.size > WS_MAX_PENDING_HEARTBEATS) {
       const oldestKey = this.pendingHeartbeatTimestamps.keys().next().value;
       if (oldestKey !== undefined) {
@@ -267,7 +262,7 @@ export class ConnectionManager {
     }
 
     if (amount !== undefined) {
-      if (typeof amount !== 'number' || !Number.isFinite(amount) || isNaN(amount)) {
+      if (typeof amount !== 'number' || !Number.isFinite(amount)) {
         logError("Cannot send bet action: invalid amount type", amount);
         return false;
       }
@@ -451,28 +446,12 @@ export class ConnectionManager {
 
     this.lastMessageTime = Date.now();
 
-    const cleanupStaleHeartbeats = (): void => {
-      const now = Date.now();
-      for (const [id, timestamp] of this.pendingHeartbeatTimestamps) {
-        if (now - timestamp > WS_HEARTBEAT_TIMEOUT_MS) {
-          this.pendingHeartbeatTimestamps.delete(id);
-        }
-      }
-      while (this.pendingHeartbeatTimestamps.size > WS_MAX_PENDING_HEARTBEATS) {
-        const oldestKey = this.pendingHeartbeatTimestamps.keys().next().value;
-        if (oldestKey !== undefined) {
-          this.pendingHeartbeatTimestamps.delete(oldestKey);
-        }
-      }
-    };
-
     const sendHeartbeat = (): void => {
       if (this.socket?.readyState === WebSocket.OPEN) {
-        cleanupStaleHeartbeats();
+        this.enforceHeartbeatBounds();
         
         const clientTimestamp = Date.now();
         const heartbeatId = clientTimestamp;
-        this.enforceHeartbeatBounds();
         this.pendingHeartbeatTimestamps.set(heartbeatId, clientTimestamp);
         const heartbeat = {
           type: "heartbeat" as const,

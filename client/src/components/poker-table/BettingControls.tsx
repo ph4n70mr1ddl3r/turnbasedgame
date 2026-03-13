@@ -2,9 +2,7 @@
 
 import React, { useState, useMemo, useRef, useCallback } from "react";
 import { BetAction, isValidBetAction } from "@/types/game-types";
-import { MAX_QUICK_RAISE_OPTIONS } from "@/lib/constants/game";
-
-const ACTION_COOLDOWN_MS = 300;
+import { MAX_QUICK_RAISE_OPTIONS, UI_ACTION_COOLDOWN_MS, UI_ACTION_PROCESSING_DELAY_MS } from "@/lib/constants/game";
 
 interface BettingControlsProps {
   isMyTurn: boolean;
@@ -29,7 +27,7 @@ export function BettingControls({
   const effectiveRaiseAmount = useMemo(() => {
     if (!raiseAmountInput || raiseAmountInput.trim() === '') return minBet;
     const parsed = parseInt(raiseAmountInput, 10);
-    if (!Number.isFinite(parsed) || isNaN(parsed)) return minBet;
+    if (!Number.isFinite(parsed)) return minBet;
     return Math.max(minBet, Math.min(maxBet, parsed));
   }, [raiseAmountInput, minBet, maxBet]);
 
@@ -40,7 +38,7 @@ export function BettingControls({
 
   const handleRaise = useCallback((): void => {
     const now = Date.now();
-    if (now - lastActionTimeRef.current < ACTION_COOLDOWN_MS) return;
+    if (now - lastActionTimeRef.current < UI_ACTION_COOLDOWN_MS) return;
     lastActionTimeRef.current = now;
     setIsProcessing(true);
     try {
@@ -48,13 +46,13 @@ export function BettingControls({
       setShowRaiseInput(false);
       setRaiseAmountInput(String(minBet));
     } finally {
-      setTimeout(() => setIsProcessing(false), 100);
+      setTimeout(() => setIsProcessing(false), UI_ACTION_PROCESSING_DELAY_MS);
     }
   }, [effectiveRaiseAmount, minBet, onBetAction]);
 
   const handleAction = useCallback((action: string): void => {
     const now = Date.now();
-    if (now - lastActionTimeRef.current < ACTION_COOLDOWN_MS) return;
+    if (now - lastActionTimeRef.current < UI_ACTION_COOLDOWN_MS) return;
     lastActionTimeRef.current = now;
     if (isValidBetAction(action)) {
       setIsProcessing(true);
@@ -90,7 +88,7 @@ export function BettingControls({
 
   const handleQuickRaise = useCallback((amount: number): void => {
     const now = Date.now();
-    if (now - lastActionTimeRef.current < ACTION_COOLDOWN_MS) return;
+    if (now - lastActionTimeRef.current < UI_ACTION_COOLDOWN_MS) return;
     lastActionTimeRef.current = now;
     const clamped = Math.max(minBet, Math.min(maxBet, amount));
     onBetAction("raise", clamped);

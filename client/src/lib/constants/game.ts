@@ -3,6 +3,9 @@ export const WS_HEARTBEAT_INTERVAL_MS = 30000;
 export const WS_HEARTBEAT_TIMEOUT_MS = 60000;
 export const WS_MAX_PENDING_HEARTBEATS = 10;
 
+export const UI_ACTION_COOLDOWN_MS = 300;
+export const UI_ACTION_PROCESSING_DELAY_MS = 100;
+
 export function getDefaultWebSocketUrl(): string {
   if (typeof window === "undefined") {
     return "ws://localhost:8080";
