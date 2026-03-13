@@ -23,9 +23,16 @@ import {
 } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
 
+const MAX_MESSAGE_SIZE_BYTES = 64 * 1024;
+
 export class MessageParser {
   static parseMessage(data: string): WebSocketMessage | null {
     if (!data || typeof data !== 'string') {
+      return null;
+    }
+
+    if (data.length > MAX_MESSAGE_SIZE_BYTES) {
+      logError(`Message too large: ${data.length} bytes (max: ${MAX_MESSAGE_SIZE_BYTES})`);
       return null;
     }
     

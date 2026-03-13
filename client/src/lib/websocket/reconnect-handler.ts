@@ -171,13 +171,13 @@ export class ReconnectHandler {
 
     let delay = this.currentDelay;
 
+    this.currentDelay = Math.min(this.currentDelay * backoffFactor, maxDelay);
+
     if (jitter) {
       const jitterValue = 0.8 + Math.random() * 0.4;
       delay *= jitterValue;
       delay = Math.max(delay, this.options.initialDelay * 0.5);
     }
-
-    this.currentDelay = Math.min(this.currentDelay * backoffFactor, maxDelay);
 
     this.timeoutId = setTimeout(() => {
       this.attemptReconnect();

@@ -80,7 +80,7 @@ export function BettingControls({
     }
     if (/^\d+$/.test(value)) {
       const parsed = parseInt(value, 10);
-      if (Number.isFinite(parsed) && parsed <= maxBet) {
+      if (Number.isFinite(parsed) && parsed >= 0 && parsed <= maxBet) {
         setRaiseAmountInput(value);
       }
     }
