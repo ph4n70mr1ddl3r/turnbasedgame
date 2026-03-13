@@ -155,40 +155,6 @@ export function isValidGameStatus(value: string): value is GameStatus {
   return VALID_GAME_STATUSES.includes(value as GameStatus);
 }
 
-function _isGameStateUpdate(msg: unknown): msg is GameStateUpdateMessage {
-  if (!isObject(msg)) return false;
-  return msg.type === "game_state_update" && isObject(msg.data);
-}
-
-function _isBetAction(msg: unknown): msg is BetActionMessage {
-  if (!isObject(msg)) return false;
-  if (msg.type !== "bet_action") return false;
-  if (!isObject(msg.data)) return false;
-  if (typeof msg.token !== "string") return false;
-  return typeof msg.data.action === "string" && isValidBetAction(msg.data.action);
-}
-
-function _isConnectionStatus(msg: unknown): msg is ConnectionStatusMessage {
-  if (!isObject(msg)) return false;
-  if (msg.type !== "connection_status") return false;
-  if (!isObject(msg.data)) return false;
-  return VALID_CONNECTION_STATUSES.includes(msg.data.status as ConnectionStatus);
-}
-
-function _isErrorMessage(msg: unknown): msg is ErrorMessage {
-  if (!isObject(msg)) return false;
-  if (msg.type !== "error") return false;
-  if (!isObject(msg.data)) return false;
-  return typeof msg.data.code === "string" && typeof msg.data.message === "string";
-}
-
-function _isHeartbeat(msg: unknown): msg is HeartbeatMessage {
-  if (!isObject(msg)) return false;
-  if (msg.type !== "heartbeat") return false;
-  if (!isObject(msg.data)) return false;
-  return typeof msg.data.timestamp === "number";
-}
-
 export const VALID_PLAYER_POSITIONS: readonly PlayerPosition[] = ["button", "small_blind", "big_blind", "none"];
 
 export function isValidCard(card: string): boolean {
@@ -201,10 +167,6 @@ export function isValidPlayerId(id: string): boolean {
 
 export function isValidBetAction(action: string): action is BetAction {
   return ["check", "call", "raise", "fold"].includes(action);
-}
-
-export function isValidPosition(position: string): position is PlayerPosition {
-  return VALID_PLAYER_POSITIONS.includes(position as PlayerPosition);
 }
 
 // Helper to create messages

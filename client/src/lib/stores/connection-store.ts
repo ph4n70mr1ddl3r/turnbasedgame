@@ -108,6 +108,22 @@ export const latencySelector = (state: ConnectionStore): number | null =>
 export const lastHeartbeatSelector = (state: ConnectionStore): number | null =>
   state.lastHeartbeat;
 
+export interface ConnectionSelectorState {
+  isConnected: boolean;
+  status: ConnectionStatus;
+  latency: number | null;
+  sessionToken: string | null;
+  playerId: string | null;
+}
+
+export const connectionSelector = (state: ConnectionStore): ConnectionSelectorState => ({
+  isConnected: state.isConnected,
+  status: state.status,
+  latency: state.latency,
+  sessionToken: state.sessionToken,
+  playerId: state.playerId,
+});
+
 export function initializeConnectionStore(): void {
   if (typeof window !== "undefined") {
     useConnectionStore.getState().initializeFromSession();

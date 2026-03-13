@@ -13,8 +13,6 @@ export function getDefaultWebSocketUrl(): string {
   return `${protocol}//${host}${port}`;
 }
 
-export const WS_DEFAULT_URL = "ws://localhost:8080";
-
 export const SESSION_DURATION_MS = 30 * 60 * 1000;
 
 export const RECONNECT_MAX_ATTEMPTS = 10;

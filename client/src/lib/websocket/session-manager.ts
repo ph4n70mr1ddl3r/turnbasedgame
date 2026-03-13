@@ -20,6 +20,21 @@ export interface SessionData {
  * - Ensure CSP headers are properly configured to mitigate XSS risks
  */
 export class SessionManager {
+  private static async generateIntegrityHashAsync(token: string, playerId: string): Promise<string> {
+    const data = `${token}:${playerId}:${SESSION_DURATION_MS}`;
+    const encoder = new TextEncoder();
+    const dataBuffer = encoder.encode(data);
+    
+    try {
+      const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', dataBuffer);
+      const hashArray = new Uint8Array(hashBuffer);
+      const hashHex = Array.from(hashArray, (b) => b.toString(16).padStart(2, '0')).join('');
+      return hashHex.substring(0, 16);
+    } catch {
+      return this.generateIntegrityHashSync(token, playerId);
+    }
+  }
+
   private static generateIntegrityHashSync(token: string, playerId: string): string {
     const data = `${token}:${playerId}:${SESSION_DURATION_MS}`;
     let hash1 = 0;
@@ -44,6 +59,49 @@ export class SessionManager {
   private static validateTokenFormat(token: string): boolean {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return uuidRegex.test(token);
+  }
+
+  static async getSessionAsync(): Promise<SessionData | null> {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    try {
+      const token = localStorage.getItem(SESSION_TOKEN_KEY);
+      const playerId = localStorage.getItem(PLAYER_ID_KEY);
+      const expiryStr = localStorage.getItem(SESSION_EXPIRY_KEY);
+      const integrityHash = localStorage.getItem(SESSION_INTEGRITY_KEY);
+      
+      if (!token || !playerId || !expiryStr || !integrityHash) {
+        return null;
+      }
+
+      if (!this.validateTokenFormat(token)) {
+        logError("Invalid token format detected, clearing session");
+        this.clearSession();
+        return null;
+      }
+
+      const expectedHash = this.generateIntegrityHash(token, playerId);
+      if (integrityHash !== expectedHash) {
+        logError("Session integrity check failed, clearing session");
+        this.clearSession();
+        return null;
+      }
+      
+      const expiry = parseInt(expiryStr, 10);
+      const now = Date.now();
+      
+      if (now > expiry) {
+        this.clearSession();
+        return null;
+      }
+      
+      return { token, playerId, expiry };
+    } catch (error) {
+      logError("Error reading session from localStorage:", error);
+      return null;
+    }
   }
 
   static getSession(): SessionData | null {
@@ -88,6 +146,33 @@ export class SessionManager {
       logError("Error reading session from localStorage:", error);
       return null;
     }
+  }
+
+  static async createSessionAsync(token: string, playerId: string): Promise<SessionData> {
+    if (!this.validateTokenFormat(token)) {
+      logError("Attempted to create session with invalid token format");
+      throw new Error("Invalid token format");
+    }
+
+    const expiry = Date.now() + SESSION_DURATION_MS;
+    const session: SessionData = { token, playerId, expiry };
+    const integrityHash = await this.generateIntegrityHashAsync(token, playerId);
+
+    if (typeof window === 'undefined') {
+      return session;
+    }
+
+    try {
+      localStorage.setItem(SESSION_TOKEN_KEY, token);
+      localStorage.setItem(PLAYER_ID_KEY, playerId);
+      localStorage.setItem(SESSION_EXPIRY_KEY, expiry.toString());
+      localStorage.setItem(SESSION_INTEGRITY_KEY, integrityHash);
+    } catch (error) {
+      logError("Error saving session to localStorage:", error);
+      throw new Error("Failed to persist session to localStorage");
+    }
+
+    return session;
   }
 
   static createSession(token: string, playerId: string): SessionData {

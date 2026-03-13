@@ -2,11 +2,8 @@ import { useEffect, useRef, useCallback } from "react";
 import { ConnectionManager } from "@/lib/websocket/connection-manager";
 import {
   useConnectionStore,
-  connectionStatusSelector,
-  isConnectedSelector,
-  latencySelector,
-  sessionTokenSelector,
-  playerIdSelector,
+  connectionSelector,
+  ConnectionSelectorState,
   initializeConnectionStore,
 } from "@/lib/stores/connection-store";
 import {
@@ -63,11 +60,13 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   const autoConnect = options.autoConnect;
   const url = options.url;
 
-  const isConnected = useConnectionStore(isConnectedSelector);
-  const connectionStatus = useConnectionStore(connectionStatusSelector);
-  const latency = useConnectionStore(latencySelector);
-  const sessionToken = useConnectionStore(sessionTokenSelector);
-  const playerId = useConnectionStore(playerIdSelector);
+  const {
+    isConnected,
+    status: connectionStatus,
+    latency,
+    sessionToken,
+    playerId,
+  } = useConnectionStore(connectionSelector) as ConnectionSelectorState;
 
   const gameState = useGameStore(gameStateSelector);
   const isMyTurn = useGameStore(isMyTurnSelector);

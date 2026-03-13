@@ -46,5 +46,3 @@ export function logDebug(message: string, data?: unknown): void {
     console.debug(`[DEBUG] ${message}`, data ?? "");
   }
 }
-
-

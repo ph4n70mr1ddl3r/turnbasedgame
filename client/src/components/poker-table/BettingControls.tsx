@@ -9,7 +9,7 @@ const ACTION_COOLDOWN_MS = 300;
 interface BettingControlsProps {
   isMyTurn: boolean;
   availableActions: BetAction[];
-  onBetAction: (_action: BetAction, _amount?: number) => void;
+  onBetAction: (action: BetAction, amount?: number) => void;
   minBet: number;
   maxBet: number;
 }

@@ -34,8 +34,6 @@ function deriveAvailableActions(
   return actions;
 }
 
-export { deriveAvailableActions };
-
 interface GameStore {
   gameState: GameState | null;
   isMyTurn: boolean;
