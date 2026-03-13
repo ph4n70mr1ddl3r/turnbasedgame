@@ -66,6 +66,7 @@ export class ReconnectHandler {
 
   stop(): void {
     this.isActive = false;
+    this.isAttempting = false;
     if (this.timeoutId) {
       clearTimeout(this.timeoutId);
       this.timeoutId = null;

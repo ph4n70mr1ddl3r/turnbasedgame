@@ -358,7 +358,18 @@ export class ConnectionManager {
   
   private handleConnectionTimeout(): void {
     logError("WebSocket connection timeout");
-    this.disconnect();
+    this.isConnecting = false;
+    this.connectionResolved = true;
+    this.cleanupHeartbeat();
+    this.cleanupConnectionTimeout();
+    this.cleanupSocket();
+    this.pendingHeartbeatTimestamps.clear();
+    this.lastMessageTime = 0;
+    if (this.pendingResolve) {
+      this.pendingResolve(false);
+      this.pendingResolve = null;
+    }
+    useConnectionStore.getState().setConnected(false);
 
     if (this.options.autoReconnect && this.reconnectHandler) {
       this.reconnectHandler.start();
