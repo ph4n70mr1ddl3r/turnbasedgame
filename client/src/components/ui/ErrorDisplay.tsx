@@ -3,13 +3,13 @@
 import React, { useEffect, useRef, useMemo } from "react";
 import { reloadPage } from "@/lib/utils/browser-utils";
 
-function sanitizeErrorMessage(error: string): string {
-  return error
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .slice(0, 500);
+const MAX_ERROR_LENGTH = 500;
+
+function truncateErrorMessage(error: string): string {
+  if (error.length <= MAX_ERROR_LENGTH) {
+    return error;
+  }
+  return error.slice(0, MAX_ERROR_LENGTH) + '...';
 }
 
 interface ErrorDisplayProps {
@@ -19,7 +19,7 @@ interface ErrorDisplayProps {
 
 export function ErrorDisplay({ error, onClose }: ErrorDisplayProps): React.ReactElement | null {
   const errorRef = useRef<HTMLDivElement>(null);
-  const sanitizedError = useMemo(() => sanitizeErrorMessage(error), [error]);
+  const truncatedError = useMemo(() => truncateErrorMessage(error), [error]);
 
   useEffect(() => {
     if (error && errorRef.current) {
@@ -43,7 +43,7 @@ export function ErrorDisplay({ error, onClose }: ErrorDisplayProps): React.React
           </div>
           <div className="ml-3 flex-1">
             <h3 className="text-lg font-bold text-white">Error</h3>
-            <div className="mt-1 text-red-200" dangerouslySetInnerHTML={{ __html: sanitizedError }} />
+            <p className="mt-1 text-red-200 break-words">{truncatedError}</p>
           </div>
           <button
             onClick={onClose}

@@ -23,6 +23,7 @@ export function BettingControls({
 }: BettingControlsProps): React.ReactElement {
   const [raiseAmountInput, setRaiseAmountInput] = useState(String(minBet));
   const [showRaiseInput, setShowRaiseInput] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const lastActionTimeRef = useRef<number>(0);
 
   const effectiveRaiseAmount = useMemo(() => {
@@ -41,9 +42,14 @@ export function BettingControls({
     const now = Date.now();
     if (now - lastActionTimeRef.current < ACTION_COOLDOWN_MS) return;
     lastActionTimeRef.current = now;
-    onBetAction("raise", effectiveRaiseAmount);
-    setShowRaiseInput(false);
-    setRaiseAmountInput(String(minBet));
+    setIsProcessing(true);
+    try {
+      onBetAction("raise", effectiveRaiseAmount);
+      setShowRaiseInput(false);
+      setRaiseAmountInput(String(minBet));
+    } finally {
+      setTimeout(() => setIsProcessing(false), 100);
+    }
   }, [effectiveRaiseAmount, minBet, onBetAction]);
 
   const handleAction = useCallback((action: string): void => {
@@ -51,7 +57,12 @@ export function BettingControls({
     if (now - lastActionTimeRef.current < ACTION_COOLDOWN_MS) return;
     lastActionTimeRef.current = now;
     if (isValidBetAction(action)) {
-      onBetAction(action);
+      setIsProcessing(true);
+      try {
+        onBetAction(action);
+      } finally {
+        setTimeout(() => setIsProcessing(false), 100);
+      }
     }
   }, [onBetAction]);
 
@@ -114,14 +125,16 @@ export function BettingControls({
   }
 
   return (
-    <div className="bg-green-800 p-6 rounded-lg">
+    <div className="bg-green-800 p-6 rounded-lg" aria-busy={isProcessing}>
       <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
         <div className="flex flex-wrap gap-3">
           {validatedActions.includes("check") && (
             <button
               onClick={() => handleAction("check")}
+              disabled={isProcessing}
               aria-label="Check your hand"
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-white transition-colors"
+              aria-disabled={isProcessing}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 rounded-lg font-bold text-white transition-colors"
             >
               Check
             </button>
@@ -130,8 +143,10 @@ export function BettingControls({
           {validatedActions.includes("call") && (
             <button
               onClick={() => handleAction("call")}
+              disabled={isProcessing}
               aria-label="Call the current bet"
-              className="px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-bold text-white transition-colors"
+              aria-disabled={isProcessing}
+              className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:opacity-50 rounded-lg font-bold text-white transition-colors"
             >
               Call
             </button>
@@ -142,8 +157,10 @@ export function BettingControls({
               {!showRaiseInput ? (
                 <button
                   onClick={() => setShowRaiseInput(true)}
+                  disabled={isProcessing}
                   aria-label="Open raise amount input"
-                  className="px-6 py-3 bg-yellow-600 hover:bg-yellow-700 rounded-lg font-bold text-white transition-colors"
+                  aria-disabled={isProcessing}
+                  className="px-6 py-3 bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-800 disabled:opacity-50 rounded-lg font-bold text-white transition-colors"
                 >
                   Raise
                 </button>
@@ -168,8 +185,10 @@ export function BettingControls({
                   />
                   <button
                     onClick={handleRaise}
+                    disabled={isProcessing}
                     aria-label={`Raise by ${effectiveRaiseAmount} chips`}
-                    className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded font-bold"
+                    aria-disabled={isProcessing}
+                    className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-800 disabled:opacity-50 rounded font-bold"
                   >
                     Raise {effectiveRaiseAmount}
                   </button>
@@ -188,8 +207,10 @@ export function BettingControls({
           {validatedActions.includes("fold") && (
             <button
               onClick={() => handleAction("fold")}
+              disabled={isProcessing}
               aria-label="Fold your hand"
-              className="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-bold text-white transition-colors"
+              aria-disabled={isProcessing}
+              className="px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:opacity-50 rounded-lg font-bold text-white transition-colors"
             >
               Fold
             </button>
@@ -203,8 +224,10 @@ export function BettingControls({
               <button
                 key={amount}
                 onClick={() => handleQuickRaise(amount)}
+                disabled={isProcessing}
                 aria-label={amount === maxBet ? "Go all-in" : `Raise to ${amount}`}
-                className="px-3 py-1 bg-green-700 hover:bg-green-600 rounded text-sm"
+                aria-disabled={isProcessing}
+                className="px-3 py-1 bg-green-700 hover:bg-green-600 disabled:bg-green-800 disabled:opacity-50 rounded text-sm"
               >
                 {amount === maxBet ? "All-in" : amount}
               </button>

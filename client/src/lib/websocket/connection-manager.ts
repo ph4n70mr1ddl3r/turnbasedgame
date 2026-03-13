@@ -50,6 +50,7 @@ export class ConnectionManager {
   private pendingHeartbeatTimestamps: Map<number, number> = new Map();
   private lastMessageTime = 0;
   private pendingResolve: ((value: boolean) => void) | null = null;
+  private storeUpdateLock: Promise<void> | null = null;
   
   constructor(options: ConnectionOptions = {}) {
     this.options = { ...DEFAULT_OPTIONS, ...options };
@@ -72,10 +73,31 @@ export class ConnectionManager {
             connectionStatus = "reconnecting";
           }
 
-          useConnectionStore.getState().setStatus(connectionStatus);
+          this.safeStoreUpdate(() => {
+            useConnectionStore.getState().setStatus(connectionStatus);
+          });
         },
         this.options.reconnectOptions
       );
+    }
+  }
+
+  private safeStoreUpdate(updateFn: () => void): void {
+    if (this.storeUpdateLock) {
+      this.storeUpdateLock.then(updateFn);
+    } else {
+      updateFn();
+    }
+  }
+
+  private enforceHeartbeatBounds(): void {
+    while (this.pendingHeartbeatTimestamps.size > WS_MAX_PENDING_HEARTBEATS) {
+      const oldestKey = this.pendingHeartbeatTimestamps.keys().next().value;
+      if (oldestKey !== undefined) {
+        this.pendingHeartbeatTimestamps.delete(oldestKey);
+      } else {
+        break;
+      }
     }
   }
 
@@ -450,6 +472,7 @@ export class ConnectionManager {
         
         const clientTimestamp = Date.now();
         const heartbeatId = clientTimestamp;
+        this.enforceHeartbeatBounds();
         this.pendingHeartbeatTimestamps.set(heartbeatId, clientTimestamp);
         const heartbeat = {
           type: "heartbeat" as const,
