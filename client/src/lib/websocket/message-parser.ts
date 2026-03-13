@@ -6,7 +6,6 @@ import {
   HeartbeatMessage,
   SessionInitMessage,
   PlayerState,
-  PlayerPosition,
   BettingRound,
   GameStatus,
   Card,
@@ -14,6 +13,7 @@ import {
   isValidPlayerId,
   isValidBettingRound,
   isValidGameStatus,
+  isValidPlayerPosition,
   MAX_PLAYERS,
   MAX_COMMUNITY_CARDS,
   isObject,
@@ -154,7 +154,7 @@ export class MessageParser {
         return null;
       }
 
-      if (!isString(player.position)) {
+      if (!isString(player.position) || !isValidPlayerPosition(player.position)) {
         logError("Invalid game_state_update: missing or invalid position", player);
         return null;
       }
@@ -188,7 +188,7 @@ export class MessageParser {
         player_id: playerId,
         chip_stack: chipStack,
         hole_cards: validatedHoleCards,
-        position: player.position as PlayerPosition,
+        position: player.position,
         current_bet: player.current_bet,
         is_active: player.is_active,
         is_folded: player.is_folded,

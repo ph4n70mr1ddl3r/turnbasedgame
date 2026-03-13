@@ -3,7 +3,6 @@ import { ConnectionManager } from "@/lib/websocket/connection-manager";
 import {
   useConnectionStore,
   connectionSelector,
-  ConnectionSelectorState,
   initializeConnectionStore,
 } from "@/lib/stores/connection-store";
 import {
@@ -66,7 +65,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     latency,
     sessionToken,
     playerId,
-  } = useConnectionStore(connectionSelector) as ConnectionSelectorState;
+  } = useConnectionStore(connectionSelector);
 
   const gameState = useGameStore(gameStateSelector);
   const isMyTurn = useGameStore(isMyTurnSelector);

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef, useCallback } from "react";
+import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { BetAction, isValidBetAction } from "@/types/game-types";
 import { MAX_QUICK_RAISE_OPTIONS, UI_ACTION_COOLDOWN_MS, UI_ACTION_PROCESSING_DELAY_MS } from "@/lib/constants/game";
 
@@ -23,6 +23,15 @@ export function BettingControls({
   const [showRaiseInput, setShowRaiseInput] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const lastActionTimeRef = useRef<number>(0);
+  const processingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (processingTimeoutRef.current) {
+        clearTimeout(processingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const effectiveRaiseAmount = useMemo(() => {
     if (!raiseAmountInput || raiseAmountInput.trim() === '') return minBet;
@@ -46,7 +55,7 @@ export function BettingControls({
       setShowRaiseInput(false);
       setRaiseAmountInput(String(minBet));
     } finally {
-      setTimeout(() => setIsProcessing(false), UI_ACTION_PROCESSING_DELAY_MS);
+      processingTimeoutRef.current = setTimeout(() => setIsProcessing(false), UI_ACTION_PROCESSING_DELAY_MS);
     }
   }, [effectiveRaiseAmount, minBet, onBetAction]);
 
@@ -59,7 +68,7 @@ export function BettingControls({
       try {
         onBetAction(action);
       } finally {
-        setTimeout(() => setIsProcessing(false), 100);
+        processingTimeoutRef.current = setTimeout(() => setIsProcessing(false), UI_ACTION_PROCESSING_DELAY_MS);
       }
     }
   }, [onBetAction]);

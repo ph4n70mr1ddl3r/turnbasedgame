@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo } from "react";
+import React, { memo, useMemo } from "react";
 import { PlayerState } from "@/types/game-types";
 import { DEFAULT_TURN_TIME_MS } from "@/lib/constants/game";
 
@@ -10,6 +10,11 @@ interface PlayerSeatProps {
 }
 
 function PlayerSeatInner({ player, isCurrentPlayer }: PlayerSeatProps): React.ReactElement {
+  const timerWidthPercent = useMemo(() => {
+    if (!player?.time_remaining) return 0;
+    return (player.time_remaining / Math.max(1, DEFAULT_TURN_TIME_MS)) * 100;
+  }, [player?.time_remaining]);
+
   if (!player) {
     return (
       <div className="bg-green-950/70 p-4 rounded-lg border-2 border-dashed border-green-700">
@@ -53,7 +58,9 @@ function PlayerSeatInner({ player, isCurrentPlayer }: PlayerSeatProps): React.Re
         
         {/* Player status indicators */}
         <div className="text-right">
-          <div className="text-2xl font-bold">${chip_stack}</div>
+          <div className="text-2xl font-bold" aria-label={`${chip_stack} chips`}>
+            <span aria-hidden="true">$</span>{chip_stack}
+          </div>
           <div className="text-sm text-green-300">Chips</div>
         </div>
       </div>
@@ -95,7 +102,7 @@ function PlayerSeatInner({ player, isCurrentPlayer }: PlayerSeatProps): React.Re
           <div className="w-full bg-green-900 h-2 rounded-full overflow-hidden">
             <div
               className="bg-yellow-500 h-full transition-all duration-1000"
-              style={{ width: `${(time_remaining / Math.max(1, DEFAULT_TURN_TIME_MS)) * 100}%` }}
+              style={{ width: `${timerWidthPercent}%` }}
             />
           </div>
           <div className="text-xs text-right mt-1">

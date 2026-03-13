@@ -78,7 +78,7 @@ function GameContent(): React.ReactElement {
       <div className="w-full max-w-6xl">
         <div className="bg-green-800 rounded-t-lg p-4 flex justify-between items-center">
           <div>
-            <h2 className="text-xl font-bold">
+            <h2 className="text-xl font-bold" aria-label={gameState ? `Game: ${gameState.round}` : "Waiting for game"}>
               {gameState ? `Game: ${gameState.round.toUpperCase()}` : "Waiting for game..."}
             </h2>
             <p className="text-green-300">

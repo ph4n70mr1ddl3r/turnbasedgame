@@ -157,6 +157,10 @@ export function isValidGameStatus(value: string): value is GameStatus {
 
 export const VALID_PLAYER_POSITIONS: readonly PlayerPosition[] = ["button", "small_blind", "big_blind", "none"];
 
+export function isValidPlayerPosition(value: string): value is PlayerPosition {
+  return VALID_PLAYER_POSITIONS.includes(value as PlayerPosition);
+}
+
 export function isValidCard(card: string): boolean {
   return /^[2-9TJQKA][cdhs]$/.test(card);
 }
