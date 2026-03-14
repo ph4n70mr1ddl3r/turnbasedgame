@@ -212,17 +212,12 @@ export class ReconnectHandler {
   // Static helper to determine if reconnection should be attempted
   static shouldReconnect(error: CloseEvent | Error | unknown): boolean {
     if (error instanceof CloseEvent) {
-      const normalClosureCodes: readonly number[] = [1000, 1001];
-      const protocolErrorCodes: readonly number[] = [1002, 1003, 1007, 1008, 1010, 1011];
-      const policyViolationCodes: readonly number[] = [1008];
+      const nonReconnectableCodes: readonly number[] = [
+        1000, 1001,
+        1002, 1003, 1007, 1008, 1010, 1011,
+      ];
       
-      if (normalClosureCodes.includes(error.code)) {
-        return false;
-      }
-      if (protocolErrorCodes.includes(error.code)) {
-        return false;
-      }
-      if (policyViolationCodes.includes(error.code)) {
+      if (nonReconnectableCodes.includes(error.code)) {
         return false;
       }
       if (error.code >= 4000 && error.code <= 4999) {
