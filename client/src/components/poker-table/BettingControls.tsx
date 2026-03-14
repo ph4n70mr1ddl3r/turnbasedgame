@@ -12,7 +12,7 @@ interface BettingControlsProps {
   maxBet: number;
 }
 
-export function BettingControls({
+function BettingControlsInner({
   isMyTurn,
   availableActions,
   onBetAction,
@@ -34,6 +34,10 @@ export function BettingControls({
     };
   }, []);
 
+  useEffect(() => {
+    setRaiseAmountInput(String(minBet));
+  }, [minBet]);
+
   const effectiveRaiseAmount = useMemo(() => {
     if (!raiseAmountInput || raiseAmountInput.trim() === '') return minBet;
     const parsed = parseInt(raiseAmountInput, 10);
@@ -42,7 +46,7 @@ export function BettingControls({
   }, [raiseAmountInput, minBet, maxBet]);
 
   const validatedActions = useMemo(
-    () => availableActions.filter(isValidBetAction),
+    () => (availableActions ?? []).filter(isValidBetAction),
     [availableActions],
   );
 
@@ -129,7 +133,7 @@ export function BettingControls({
     },
     [minBet, maxBet],
   );
-  
+
   if (!isMyTurn) {
     return (
       <div className="bg-gray-800 p-6 rounded-lg text-center">
@@ -268,3 +272,5 @@ export function BettingControls({
     </div>
   );
 }
+
+export const BettingControls = React.memo(BettingControlsInner);
