@@ -9,7 +9,7 @@ import { CommunityCards } from "@/components/poker-table/CommunityCards";
 import { PotDisplay } from "@/components/poker-table/PotDisplay";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
-import { BetAction, PlayerState } from "@/types/game-types";
+import { BetAction } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
 import { reloadPage } from "@/lib/utils/browser-utils";
 import { formatTimeRemaining } from "@/lib/utils/format-utils";

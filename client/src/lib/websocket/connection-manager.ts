@@ -309,20 +309,15 @@ export class ConnectionManager {
     this.wasIntentionallyDisconnected = false;
     useConnectionStore.getState().setConnected(true);
 
-    // Start heartbeat
     this.startHeartbeat();
 
-    // Send session init message
     const session = SessionManager.getSession();
     if (session) {
-      // Reconnection with existing token
       this.sendMessage(MessageParser.createSessionInit(session.token));
     } else {
-      // New session
       this.sendMessage(MessageParser.createSessionInit());
     }
 
-    // Reset reconnection handler
     this.reconnectHandler?.reset();
   }
   
@@ -426,14 +421,12 @@ export class ConnectionManager {
     logError("Server error:", message.data);
     useGameStore.getState().setError(message.data.message);
 
-    // Handle specific error codes
     switch (message.data.code) {
       case "invalid_token":
         SessionManager.clearSession();
         useConnectionStore.getState().clearSession();
         break;
       case "game_not_active":
-        // Maybe show game lobby
         break;
     }
   }

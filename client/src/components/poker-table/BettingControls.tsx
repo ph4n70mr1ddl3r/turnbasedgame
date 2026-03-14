@@ -39,7 +39,7 @@ function BettingControlsInner({
   }, [minBet]);
 
   const effectiveRaiseAmount = useMemo(() => {
-    if (!raiseAmountInput || raiseAmountInput.trim() === '') return minBet;
+    if (!raiseAmountInput?.trim()) return minBet;
     const parsed = parseInt(raiseAmountInput, 10);
     if (!Number.isFinite(parsed)) return minBet;
     return Math.max(minBet, Math.min(maxBet, parsed));

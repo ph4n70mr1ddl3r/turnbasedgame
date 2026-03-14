@@ -87,7 +87,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   );
 
   const connect = useCallback(async () => {
-    if (autoConnect !== false && connectingRef.current) {
+    const shouldAutoConnect = autoConnect !== false;
+    if (shouldAutoConnect && connectingRef.current) {
       logError("Connection already in progress via autoConnect");
       return false;
     }
