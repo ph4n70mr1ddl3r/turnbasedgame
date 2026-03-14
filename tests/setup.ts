@@ -47,10 +47,10 @@ global.WebSocket = class WebSocket {
 
   addEventListener() {}
   removeEventListener() {}
-  dispatchEvent() {
+  dispatchEvent(): boolean {
     return true;
   }
-} as any;
+} as unknown as typeof WebSocket;
 
 // Mock matchMedia
 Object.defineProperty(window, 'matchMedia', {

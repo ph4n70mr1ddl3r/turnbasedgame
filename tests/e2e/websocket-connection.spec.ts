@@ -4,7 +4,7 @@ test.describe('Story 1.2: Establish WebSocket Connection', () => {
   test.beforeEach(async ({ page }) => {
     // GIVEN: Application is available
     // Note: This will fail because the application is not running
-    await page.goto('http://localhost:8080');
+    await page.goto('http://localhost:3000');
   });
 
   test('should establish WebSocket connection on application load', async ({ page }) => {

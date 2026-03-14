@@ -28,7 +28,7 @@ export const test = base.extend<WebSocketFixtures>({
    */
   connectedWebSocket: async ({ page }, use) => {
     // Setup: Mock WebSocket connection in browser context
-    await page.route('ws://localhost:8080/ws', async (route) => {
+    await page.route('ws://localhost:3000/ws', async (route) => {
       // In a real test, we would connect to actual WebSocket server
       // For ATDD phase, we mock the connection
       console.log('WebSocket connection attempted to:', route.request().url());
@@ -44,7 +44,7 @@ export const test = base.extend<WebSocketFixtures>({
     }, sessionToken);
 
     // Navigate to application
-    await page.goto('http://localhost:8080');
+    await page.goto('http://localhost:3000');
 
     // Wait for connection status to show "Connected"
     await expect(page.locator('[data-testid="connection-status"]')).toHaveText('Connected', {
@@ -60,10 +60,6 @@ export const test = base.extend<WebSocketFixtures>({
     // Cleanup: Close connection and clear localStorage
     await page.evaluate(() => {
       localStorage.removeItem('session_token');
-      // Close WebSocket if exists
-      if (window.__testWebSocket) {
-        window.__testWebSocket.close();
-      }
     });
   },
 
@@ -72,7 +68,7 @@ export const test = base.extend<WebSocketFixtures>({
    */
   disconnectedWebSocket: async ({ page }, use) => {
     // Setup: Simulate network failure
-    await page.route('ws://localhost:8080/ws', async (route) => {
+    await page.route('ws://localhost:3000/ws', async (route) => {
       // Simulate connection failure
       route.abort('failed');
     });
@@ -82,7 +78,7 @@ export const test = base.extend<WebSocketFixtures>({
       localStorage.setItem('session_token', token);
     }, sessionToken);
 
-    await page.goto('http://localhost:8080');
+    await page.goto('http://localhost:3000');
 
     // Wait for connection status to show "Disconnected"
     await expect(page.locator('[data-testid="connection-status"]')).toHaveText('Disconnected', {
@@ -108,7 +104,7 @@ export const test = base.extend<WebSocketFixtures>({
     const messages: Array<{ type: string; data: any }> = [];
     
     // Setup WebSocket interception
-    await page.route('ws://localhost:8080/ws', async (route) => {
+    await page.route('ws://localhost:3000/ws', async (route) => {
       // Capture WebSocket upgrade request
       const request = route.request();
       console.log('WebSocket connection to:', request.url());
@@ -125,7 +121,7 @@ export const test = base.extend<WebSocketFixtures>({
     });
 
     await use({
-      url: 'ws://localhost:8080/ws',
+      url: 'ws://localhost:3000/ws',
       messages,
     });
 

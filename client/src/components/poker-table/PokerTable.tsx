@@ -21,7 +21,7 @@ export function PokerTable({ children }: PokerTableProps): React.ReactElement {
         
         <div className="absolute top-1/4 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true">
           <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg">
-            <span className="text-black font-bold text-xs">D</span>
+            <span className="text-black font-bold text-xs">DEALER</span>
           </div>
         </div>
         
