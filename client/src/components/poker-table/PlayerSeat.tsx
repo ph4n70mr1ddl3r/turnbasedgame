@@ -12,7 +12,8 @@ interface PlayerSeatProps {
 function PlayerSeatInner({ player, isCurrentPlayer }: PlayerSeatProps): React.ReactElement {
   const timerWidthPercent = useMemo(() => {
     if (!player?.time_remaining) return 0;
-    return (player.time_remaining / Math.max(1, DEFAULT_TURN_TIME_MS)) * 100;
+    if (DEFAULT_TURN_TIME_MS <= 0) return 0;
+    return Math.min(100, (player.time_remaining / DEFAULT_TURN_TIME_MS) * 100);
   }, [player?.time_remaining]);
 
   if (!player) {

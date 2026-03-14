@@ -7,7 +7,7 @@ const ConnectionStatus = dynamic(
   { ssr: false },
 );
 
-export function Header() {
+export function Header(): React.ReactElement {
   return (
     <header className="bg-green-800 border-b border-green-700 p-4">
       <div className="container mx-auto flex justify-between items-center">

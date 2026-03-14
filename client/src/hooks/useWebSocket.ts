@@ -56,6 +56,7 @@ const DISCONNECTED_STATUS = {
 
 export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
   const managerRef = useRef<ConnectionManager | null>(null);
+  const connectingRef = useRef(false);
   const autoConnect = options.autoConnect;
   const url = options.url;
 
@@ -86,6 +87,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   );
 
   const connect = useCallback(async () => {
+    if (autoConnect !== false && connectingRef.current) {
+      logError("Connection already in progress via autoConnect");
+      return false;
+    }
+    
     if (!managerRef.current) {
       const wsUrl = url || process.env.NEXT_PUBLIC_WS_URL || getDefaultWebSocketUrl();
       const manager = new ConnectionManager({
@@ -96,13 +102,16 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     }
 
     try {
+      connectingRef.current = true;
       return await managerRef.current.connect();
     } catch (error) {
       logError("Connection failed:", error);
       useGameStore.getState().setError("Connection failed");
       return false;
+    } finally {
+      connectingRef.current = false;
     }
-  }, [url]);
+  }, [url, autoConnect]);
 
   const disconnect = useCallback(() => {
     if (managerRef.current) {
@@ -151,9 +160,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       });
 
       managerRef.current = manager;
+      connectingRef.current = true;
 
       manager.connect()
         .then((connected) => {
+          connectingRef.current = false;
           if (cancelled) {
             const currentManager = managerRef.current;
             if (currentManager && currentManager === manager) {
@@ -165,6 +176,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
           }
         })
         .catch((err) => {
+          connectingRef.current = false;
           logError("Connection promise rejected:", err);
           if (!cancelled) {
             useGameStore.getState().setError("Connection error occurred");
@@ -174,6 +186,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
     return () => {
       cancelled = true;
+      connectingRef.current = false;
       if (managerRef.current) {
         managerRef.current.disconnect();
         managerRef.current = null;

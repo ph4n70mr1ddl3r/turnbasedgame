@@ -45,7 +45,7 @@ function GameContent(): React.ReactElement {
     return {
       player1: players[0] ?? null,
       player2: players[1] ?? null,
-      myPlayer: playerId ? players.find((p: PlayerState) => p.player_id === playerId) : null,
+      myPlayer: playerId ? players.find((p) => p.player_id === playerId) : null,
       isPlayer1Current: currentPlayerId !== null && players[0]?.player_id === currentPlayerId,
       isPlayer2Current: currentPlayerId !== null && players[1]?.player_id === currentPlayerId,
     };
