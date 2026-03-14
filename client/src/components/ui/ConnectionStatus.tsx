@@ -46,8 +46,10 @@ export function ConnectionStatusIndicator(): React.ReactElement {
       </div>
       
       {latency !== null && (
-        <div className="text-sm bg-green-900 px-2 py-1 rounded" aria-label={`Latency: ${latency} milliseconds, ${latency < 100 ? 'good' : 'warning'}`}>
-          <span aria-hidden="true">{latency < 100 ? "✓" : "⚠"}</span> {latency}ms
+        <div className="text-sm bg-green-900 px-2 py-1 rounded" aria-label={`Latency: ${latency}ms, ${latency < 100 ? 'good' : 'warning'}`}>
+          <span aria-hidden="true">{latency < 100 ? "✓" : "⚠"}</span>
+          <span className="sr-only">{latency < 100 ? "Good" : "Warning"}</span>
+          {" "}{latency}ms
         </div>
       )}
       

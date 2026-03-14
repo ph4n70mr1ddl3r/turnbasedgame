@@ -1,4 +1,4 @@
-import { SESSION_TOKEN_KEY, PLAYER_ID_KEY, SESSION_EXPIRY_KEY, SESSION_INTEGRITY_KEY } from "@/lib/constants/storage";
+import { SESSION_TOKEN_KEY, PLAYER_ID_KEY, SESSION_EXPIRY_KEY } from "@/lib/constants/storage";
 import { SESSION_DURATION_MS } from "@/lib/constants/game";
 import { logError } from "@/lib/utils/logger";
 
@@ -7,8 +7,6 @@ export interface SessionData {
   playerId: string;
   expiry: number;
 }
-
-const INTEGRITY_SECRET_KEY = 'poker-game-session-integrity-v1';
 
 /**
  * SECURITY NOTE: Session tokens are stored in localStorage for persistence across
@@ -19,32 +17,16 @@ const INTEGRITY_SECRET_KEY = 'poker-game-session-integrity-v1';
  *   2. Short session durations with automatic refresh
  *   3. Token rotation on each reconnection
  * - Ensure CSP headers are properly configured to mitigate XSS risks
- * 
- * The integrity hash provides tamper detection for client-side session data.
- * For server validation, the token should be verified against server-side sessions.
+ *
+ * Token validation relies on:
+ * 1. UUID format validation (cryptographically generated)
+ * 2. Server-side token verification on each message
+ * 3. Session expiry checking
+ *
+ * Note: Client-side integrity hashing was removed as it provides false security
+ * when the algorithm is visible in client-side code.
  */
 export class SessionManager {
-  private static generateIntegrityHash(token: string, playerId: string): string {
-    const data = `${token}:${playerId}:${SESSION_DURATION_MS}:${INTEGRITY_SECRET_KEY}`;
-    let hash1 = 0;
-    let hash2 = 0;
-    
-    for (let i = 0; i < data.length; i++) {
-      const char = data.charCodeAt(i);
-      hash1 = ((hash1 << 5) - hash1) + char;
-      hash1 = hash1 & hash1;
-      hash2 = ((hash2 << 7) - hash2) + char;
-      hash2 = hash2 & hash2;
-    }
-    
-    const combined = Math.abs(hash1).toString(36) + Math.abs(hash2).toString(36);
-    return combined.padEnd(32, '0').slice(0, 32);
-  }
-
-  private static validateIntegrityHash(token: string, playerId: string, storedHash: string): boolean {
-    const expectedHash = this.generateIntegrityHash(token, playerId);
-    return storedHash === expectedHash;
-  }
 
   private static validateTokenFormat(token: string): boolean {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -60,9 +42,8 @@ export class SessionManager {
       const token = localStorage.getItem(SESSION_TOKEN_KEY);
       const playerId = localStorage.getItem(PLAYER_ID_KEY);
       const expiryStr = localStorage.getItem(SESSION_EXPIRY_KEY);
-      const integrityHash = localStorage.getItem(SESSION_INTEGRITY_KEY);
-      
-      if (!token || !playerId || !expiryStr || !integrityHash) {
+
+      if (!token || !playerId || !expiryStr) {
         return null;
       }
 
@@ -72,21 +53,21 @@ export class SessionManager {
         return null;
       }
 
-      if (!this.validateIntegrityHash(token, playerId, integrityHash)) {
-        logError("Session integrity check failed, clearing session");
+      const expiry = parseInt(expiryStr, 10);
+
+      if (!Number.isFinite(expiry) || expiry <= 0) {
+        logError("Invalid session expiry, clearing session");
         this.clearSession();
         return null;
       }
-      
-      const expiry = parseInt(expiryStr, 10);
+
       const now = Date.now();
-      
-      // Check if session is expired
+
       if (now > expiry) {
         this.clearSession();
         return null;
       }
-      
+
       return { token, playerId, expiry };
     } catch (error) {
       logError("Error reading session from localStorage:", error);
@@ -102,7 +83,6 @@ export class SessionManager {
 
     const expiry = Date.now() + SESSION_DURATION_MS;
     const session: SessionData = { token, playerId, expiry };
-    const integrityHash = this.generateIntegrityHash(token, playerId);
 
     if (typeof window === 'undefined') {
       return session;
@@ -112,7 +92,6 @@ export class SessionManager {
       localStorage.setItem(SESSION_TOKEN_KEY, token);
       localStorage.setItem(PLAYER_ID_KEY, playerId);
       localStorage.setItem(SESSION_EXPIRY_KEY, expiry.toString());
-      localStorage.setItem(SESSION_INTEGRITY_KEY, integrityHash);
     } catch (error) {
       logError("Error saving session to localStorage:", error);
       throw new Error("Failed to persist session to localStorage");
@@ -148,7 +127,6 @@ export class SessionManager {
       localStorage.removeItem(SESSION_TOKEN_KEY);
       localStorage.removeItem(PLAYER_ID_KEY);
       localStorage.removeItem(SESSION_EXPIRY_KEY);
-      localStorage.removeItem(SESSION_INTEGRITY_KEY);
     } catch (error) {
       logError("Error clearing session from localStorage:", error);
     }

@@ -130,17 +130,20 @@ export class ConnectionManager {
 
     this.connectionGeneration++;
     const currentGeneration = this.connectionGeneration;
+    this.wasIntentionallyDisconnected = false;
     this.cleanupSocket();
     this.connectionResolved = false;
 
     this.connectionLock = new Promise((resolve) => {
       this.pendingResolve = resolve;
-      
+
       try {
-        this.socket = new WebSocket(this.options.url);
+        const socket = new WebSocket(this.options.url);
+        this.socket = socket;
 
         const handleTimeout = (): void => {
-          if (!this.connectionResolved && this.socket?.readyState !== WebSocket.OPEN) {
+          if (currentGeneration !== this.connectionGeneration) return;
+          if (!this.connectionResolved && socket.readyState !== WebSocket.OPEN) {
             this.connectionResolved = true;
             this.connectionLock = null;
             this.connectionTimeoutId = null;
@@ -153,8 +156,8 @@ export class ConnectionManager {
         this.connectionTimeoutId = setTimeout(handleTimeout, WS_CONNECTION_TIMEOUT_MS);
 
         const handleOpen = (): void => {
-          if (this.connectionGeneration !== currentGeneration) {
-            this.socket?.close();
+          if (currentGeneration !== this.connectionGeneration) {
+            socket.close();
             return;
           }
           if (this.connectionResolved) {
@@ -171,10 +174,22 @@ export class ConnectionManager {
           resolve(true);
         };
 
-        this.socket.onopen = handleOpen;
-        this.socket.onmessage = (event) => this.handleMessage(event);
-        this.socket.onerror = (event) => this.handleError(event);
-        this.socket.onclose = (event) => this.handleClose(event);
+        socket.onopen = handleOpen;
+        socket.onmessage = (event) => {
+          if (currentGeneration === this.connectionGeneration) {
+            this.handleMessage(event);
+          }
+        };
+        socket.onerror = (event) => {
+          if (currentGeneration === this.connectionGeneration) {
+            this.handleError(event);
+          }
+        };
+        socket.onclose = (event) => {
+          if (currentGeneration === this.connectionGeneration) {
+            this.handleClose(event);
+          }
+        };
       } catch (error) {
         logError("Error creating WebSocket:", error);
         this.cleanupSocket();
