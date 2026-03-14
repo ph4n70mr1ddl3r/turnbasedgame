@@ -31,6 +31,7 @@ export class ReconnectHandler {
   private isActive = false;
   private isAttempting = false;
   private connectFn: () => Promise<boolean>;
+  private abortController: AbortController | null = null;
 
   private onStateChange?: (state: ReconnectState) => void;
   private options: Required<ReconnectOptions>;
@@ -51,6 +52,11 @@ export class ReconnectHandler {
   start(): void {
     if (this.isActive) return;
 
+    if (this.abortController) {
+      this.abortController.abort();
+    }
+    this.abortController = new AbortController();
+
     if (this.timeoutId) {
       clearTimeout(this.timeoutId);
       this.timeoutId = null;
@@ -67,6 +73,10 @@ export class ReconnectHandler {
   stop(): void {
     this.isActive = false;
     this.isAttempting = false;
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
     if (this.timeoutId) {
       clearTimeout(this.timeoutId);
       this.timeoutId = null;
@@ -78,6 +88,10 @@ export class ReconnectHandler {
     this.attempts = 0;
     this.currentDelay = this.options.initialDelay;
     this.isActive = false;
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
     if (this.timeoutId) {
       clearTimeout(this.timeoutId);
       this.timeoutId = null;
@@ -120,6 +134,11 @@ export class ReconnectHandler {
   private async attemptReconnect(): Promise<boolean> {
     if (!this.isActive || this.isAttempting) return false;
 
+    if (this.abortController?.signal.aborted) {
+      this.isAttempting = false;
+      return false;
+    }
+
     if (this.timeoutId) {
       clearTimeout(this.timeoutId);
       this.timeoutId = null;
@@ -141,7 +160,7 @@ export class ReconnectHandler {
     try {
       const success = await this.connectFn();
 
-      if (!this.isActive) {
+      if (!this.isActive || this.abortController?.signal.aborted) {
         this.isAttempting = false;
         return false;
       }
@@ -154,6 +173,10 @@ export class ReconnectHandler {
         return false;
       }
     } catch (error) {
+      if (this.abortController?.signal.aborted) {
+        this.isAttempting = false;
+        return false;
+      }
       logError("Reconnection attempt failed:", error);
       if (this.isActive) {
         this.scheduleNextAttempt();

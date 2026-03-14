@@ -86,17 +86,23 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   );
 
   const connect = useCallback(async () => {
-    if (managerRef.current) {
-      try {
-        return await managerRef.current.connect();
-      } catch (error) {
-        logError("Connection failed:", error);
-        useGameStore.getState().setError("Connection failed");
-        return false;
-      }
+    if (!managerRef.current) {
+      const wsUrl = url || process.env.NEXT_PUBLIC_WS_URL || getDefaultWebSocketUrl();
+      const manager = new ConnectionManager({
+        url: wsUrl,
+        autoReconnect: true,
+      });
+      managerRef.current = manager;
     }
-    return false;
-  }, []);
+
+    try {
+      return await managerRef.current.connect();
+    } catch (error) {
+      logError("Connection failed:", error);
+      useGameStore.getState().setError("Connection failed");
+      return false;
+    }
+  }, [url]);
 
   const disconnect = useCallback(() => {
     if (managerRef.current) {

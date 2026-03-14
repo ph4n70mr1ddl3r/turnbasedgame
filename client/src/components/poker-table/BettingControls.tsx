@@ -29,6 +29,7 @@ export function BettingControls({
     return () => {
       if (processingTimeoutRef.current) {
         clearTimeout(processingTimeoutRef.current);
+        processingTimeoutRef.current = null;
       }
     };
   }, []);
@@ -45,10 +46,18 @@ export function BettingControls({
     [availableActions],
   );
 
+  const clearProcessingTimeout = useCallback((): void => {
+    if (processingTimeoutRef.current) {
+      clearTimeout(processingTimeoutRef.current);
+      processingTimeoutRef.current = null;
+    }
+  }, []);
+
   const handleRaise = useCallback((): void => {
     const now = Date.now();
     if (now - lastActionTimeRef.current < UI_ACTION_COOLDOWN_MS) return;
     lastActionTimeRef.current = now;
+    clearProcessingTimeout();
     setIsProcessing(true);
     try {
       onBetAction("raise", effectiveRaiseAmount);
@@ -57,13 +66,14 @@ export function BettingControls({
     } finally {
       processingTimeoutRef.current = setTimeout(() => setIsProcessing(false), UI_ACTION_PROCESSING_DELAY_MS);
     }
-  }, [effectiveRaiseAmount, minBet, onBetAction]);
+  }, [effectiveRaiseAmount, minBet, onBetAction, clearProcessingTimeout]);
 
   const handleAction = useCallback((action: string): void => {
     const now = Date.now();
     if (now - lastActionTimeRef.current < UI_ACTION_COOLDOWN_MS) return;
     lastActionTimeRef.current = now;
     if (isValidBetAction(action)) {
+      clearProcessingTimeout();
       setIsProcessing(true);
       try {
         onBetAction(action);
@@ -71,7 +81,7 @@ export function BettingControls({
         processingTimeoutRef.current = setTimeout(() => setIsProcessing(false), UI_ACTION_PROCESSING_DELAY_MS);
       }
     }
-  }, [onBetAction]);
+  }, [onBetAction, clearProcessingTimeout]);
 
   const handleRaiseAmountChange = useCallback((value: string): void => {
     if (value === "") {

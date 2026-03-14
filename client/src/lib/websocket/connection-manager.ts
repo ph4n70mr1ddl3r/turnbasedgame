@@ -346,10 +346,17 @@ export class ConnectionManager {
   }
 
   private handleError(event: Event): void {
-    const errorEvent = event as ErrorEvent;
-    const errorDetails = errorEvent.message 
-      ? `${errorEvent.message}${errorEvent.filename ? ` (${errorEvent.filename}:${errorEvent.lineno}:${errorEvent.colno})` : ''}`
-      : 'Unknown WebSocket error';
+    let errorDetails = 'Unknown WebSocket error';
+    
+    if (event instanceof ErrorEvent) {
+      const parts: string[] = [];
+      if (event.message) parts.push(event.message);
+      if (event.filename) parts.push(`(${event.filename}:${event.lineno}:${event.colno})`);
+      errorDetails = parts.length > 0 ? parts.join(' ') : 'Unknown ErrorEvent';
+    } else if (event.type === 'error') {
+      errorDetails = 'WebSocket error event';
+    }
+    
     logError("WebSocket error:", errorDetails);
     this.connectionLock = null;
     useGameStore.getState().setError("Connection error");
