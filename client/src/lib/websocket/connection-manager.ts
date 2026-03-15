@@ -198,6 +198,14 @@ export class ConnectionManager {
     return this.connectionLock;
   }
 
+  private performCleanup(): void {
+    this.cleanupHeartbeat();
+    this.cleanupConnectionTimeout();
+    this.cleanupSocket();
+    this.pendingHeartbeatTimestamps.clear();
+    this.lastMessageTime = 0;
+  }
+
   private resetConnectionState(): void {
     if (this.pendingResolve) {
       this.pendingResolve(false);
@@ -205,10 +213,9 @@ export class ConnectionManager {
     }
     
     this.wasIntentionallyDisconnected = false;
-    this.cleanupSocket();
+    this.performCleanup();
     this.connectionResolved = false;
     this.connectionLock = null;
-    this.cleanupConnectionTimeout();
   }
 
   disconnect(): void {
@@ -216,11 +223,7 @@ export class ConnectionManager {
     this.connectionLock = null;
     this.connectionResolved = true;
     this.reconnectHandler?.stop();
-    this.cleanupHeartbeat();
-    this.cleanupConnectionTimeout();
-    this.cleanupSocket();
-    this.pendingHeartbeatTimestamps.clear();
-    this.lastMessageTime = 0;
+    this.performCleanup();
     this.connectionGeneration = 0;
     if (this.pendingResolve) {
       this.pendingResolve(false);
@@ -376,6 +379,8 @@ export class ConnectionManager {
     logError("WebSocket error:", errorDetails);
     this.connectionResolved = true;
     this.connectionLock = null;
+    this.performCleanup();
+    useConnectionStore.getState().setConnected(false);
     useGameStore.getState().setError("Connection error");
   }
   

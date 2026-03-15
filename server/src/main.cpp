@@ -89,6 +89,10 @@ public:
     
     Session* get_session(const std::string& token) {
         std::lock_guard<std::mutex> lock(mutex_);
+        return get_session_internal(token);
+    }
+    
+    Session* get_session_internal(const std::string& token) {
         auto it = sessions_.find(token);
         if (it == sessions_.end()) return nullptr;
         
@@ -109,7 +113,7 @@ public:
         auto it = connection_to_token_.find(channel->peeraddr());
         if (it == connection_to_token_.end()) return nullptr;
         
-        return get_session(it->second);
+        return get_session_internal(it->second);
     }
     
     void remove_session(const std::string& token) {
@@ -408,7 +412,21 @@ void broadcast_game_state() {
     }
 }
 
+constexpr size_t MAX_MESSAGE_SIZE = 64 * 1024;
+
 void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const std::string& msg) {
+    if (msg.size() > MAX_MESSAGE_SIZE) {
+        json error = {
+            {"type", "error"},
+            {"data", {
+                {"code", "message_too_large"},
+                {"message", "Message exceeds maximum size limit"}
+            }}
+        };
+        channel->send(error.dump());
+        return;
+    }
+
     try {
         json message = json::parse(msg);
         
@@ -570,11 +588,12 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
         };
         channel->send(error.dump());
     } catch (const std::exception& e) {
+        std::cerr << "Internal server error: " << e.what() << std::endl;
         json error = {
             {"type", "error"},
             {"data", {
                 {"code", "server_error"},
-                {"message", "Internal server error: " + std::string(e.what())}
+                {"message", "An internal error occurred"}
             }}
         };
         channel->send(error.dump());

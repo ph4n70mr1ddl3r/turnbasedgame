@@ -195,3 +195,7 @@ export function initializeGameStore(): void {
     useGameStore.getState().setCachedPlayerId(playerId);
   });
 }
+
+export function resetGameStoreInitialization(): void {
+  isInitialized = false;
+}

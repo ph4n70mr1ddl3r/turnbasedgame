@@ -133,6 +133,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     }
 
     const wsUrl = url || process.env.NEXT_PUBLIC_WS_URL || getDefaultWebSocketUrl();
+    if (!wsUrl) {
+      logError("No WebSocket URL configured");
+      useGameStore.getState().setError("No WebSocket URL configured");
+      return false;
+    }
     const manager = managerRef.current || createManager(wsUrl);
     return performConnection(manager);
   }, [url, createManager, performConnection]);
@@ -173,8 +178,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
     if (autoConnect !== false) {
       const wsUrl = url || process.env.NEXT_PUBLIC_WS_URL || getDefaultWebSocketUrl();
-      const manager = createManager(wsUrl);
-      performConnection(manager, abortController.signal);
+      if (wsUrl) {
+        const manager = createManager(wsUrl);
+        performConnection(manager, abortController.signal);
+      } else {
+        useGameStore.getState().setError("No WebSocket URL configured");
+      }
     }
 
     return () => {

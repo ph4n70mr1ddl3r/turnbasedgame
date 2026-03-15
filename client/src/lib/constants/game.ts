@@ -12,7 +12,8 @@ export function getDefaultWebSocketUrl(): string {
   }
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const host = window.location.hostname;
-  const port = window.location.port ? `:${window.location.port}` : "";
+  const envPort = process.env.NEXT_PUBLIC_WS_PORT;
+  const port = envPort ? `:${envPort}` : (window.location.port ? `:${window.location.port}` : "");
   return `${protocol}//${host}${port}`;
 }
 

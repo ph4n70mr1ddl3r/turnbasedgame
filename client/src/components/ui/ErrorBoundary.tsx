@@ -6,6 +6,8 @@ import { reloadPage } from "@/lib/utils/browser-utils";
 import { useConnectionStore } from "@/lib/stores/connection-store";
 import { useGameStore } from "@/lib/stores/game-store";
 
+const IS_DEV = process.env.NODE_ENV === "development";
+
 interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
@@ -51,7 +53,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             <p className="text-red-200 mb-4">
               An unexpected error occurred. Please try again or reload the page.
             </p>
-            {process.env.NODE_ENV === "development" && this.state.error && (
+            {IS_DEV && this.state.error && (
               <pre className="bg-red-950 p-2 rounded text-xs text-red-300 overflow-auto mb-4">
                 {this.state.error.message}
               </pre>

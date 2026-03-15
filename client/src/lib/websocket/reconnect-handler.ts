@@ -12,14 +12,16 @@ export interface ReconnectOptions {
   maxDelay?: number;
   backoffFactor?: number;
   jitter?: boolean;
+  onError?: (error: unknown) => void;
 }
 
-const DEFAULT_OPTIONS: Required<ReconnectOptions> = {
+const DEFAULT_OPTIONS: Required<Omit<ReconnectOptions, 'onError'>> & { onError: undefined } = {
   maxAttempts: RECONNECT_MAX_ATTEMPTS,
   initialDelay: RECONNECT_INITIAL_DELAY_MS,
   maxDelay: RECONNECT_MAX_DELAY_MS,
   backoffFactor: RECONNECT_BACKOFF_FACTOR,
   jitter: true,
+  onError: undefined,
 };
 
 export type ReconnectState = "connected" | "disconnected" | "stopped" | "failed" | `attempt_${number}` | `waiting_${number}s`;
@@ -36,7 +38,8 @@ export class ReconnectHandler {
   private abortController: AbortController | null = null;
 
   private onStateChange?: (state: ReconnectState) => void;
-  private options: Required<ReconnectOptions>;
+  private onError?: (error: unknown) => void;
+  private options: Required<Omit<ReconnectOptions, 'onError'>> & Pick<ReconnectOptions, 'onError'>;
   
   constructor(
     getConnectFn: () => ConnectFunction,
@@ -46,9 +49,10 @@ export class ReconnectHandler {
   ) {
     this.getConnectFn = getConnectFn;
     this.onStateChange = onStateChange;
-    const opts = { ...DEFAULT_OPTIONS, ...options };
-    this.options = opts;
-    this.currentDelay = opts.initialDelay;
+    this.onError = options.onError;
+    const { onError: _, ...restOptions } = options;
+    this.options = { ...DEFAULT_OPTIONS, ...restOptions, onError: options.onError };
+    this.currentDelay = this.options.initialDelay;
   }
 
   start(): void {
@@ -181,6 +185,7 @@ export class ReconnectHandler {
         return false;
       }
       logError("Reconnection attempt failed:", error);
+      this.onError?.(error);
       if (this.isActive) {
         this.scheduleNextAttempt();
       }
