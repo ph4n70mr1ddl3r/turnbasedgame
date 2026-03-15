@@ -13,6 +13,7 @@ import { BetAction } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
 import { reloadPage } from "@/lib/utils/browser-utils";
 import { formatTimeRemaining } from "@/lib/utils/format-utils";
+import { useGameStore } from "@/lib/stores/game-store";
 
 function GameContent(): React.ReactElement {
   const {
@@ -30,12 +31,14 @@ function GameContent(): React.ReactElement {
 
   const handleBetAction = useCallback((action: BetAction, amount?: number): void => {
     if (!isConnected) {
-      logError("Cannot send bet action: not connected");
+      logError('Cannot send bet action: not connected');
+      useGameStore.getState().setError('Cannot send action: not connected to server');
       return;
     }
     const success = sendBetAction(action, amount);
     if (!success) {
-      logError("Failed to send bet action");
+      logError('Failed to send bet action');
+      useGameStore.getState().setError('Failed to send action. Please try again.');
     }
   }, [isConnected, sendBetAction]);
 

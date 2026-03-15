@@ -17,6 +17,8 @@ import { BetAction } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
 import { getDefaultWebSocketUrl } from "@/lib/constants/game";
 
+import { PlayerState } from '@/types/game-types';
+
 export interface UseWebSocketOptions {
   autoConnect?: boolean;
   url?: string;
@@ -28,13 +30,13 @@ export interface UseWebSocketReturn {
   sendBetAction: (action: BetAction, amount?: number) => boolean;
   getStatus: () => {
     isConnected: boolean;
-    status: "connected" | "disconnected" | "reconnecting";
+    status: 'connected' | 'disconnected' | 'reconnecting';
     latency: number | null;
     sessionToken: string | null;
     playerId: string | null;
   };
   isConnected: boolean;
-  connectionStatus: "connected" | "disconnected" | "reconnecting";
+  connectionStatus: 'connected' | 'disconnected' | 'reconnecting';
   latency: number | null;
   sessionToken: string | null;
   playerId: string | null;
@@ -42,8 +44,8 @@ export interface UseWebSocketReturn {
   isMyTurn: boolean;
   availableActions: BetAction[];
   lastError: string | null;
-  getMyPlayer: () => ReturnType<typeof useGameStore.getState>["getMyPlayer"] extends () => infer R ? R : never;
-  getOpponentPlayer: () => ReturnType<typeof useGameStore.getState>["getOpponentPlayer"] extends () => infer R ? R : never;
+  getMyPlayer: () => PlayerState | null;
+  getOpponentPlayer: () => PlayerState | null;
   clearError: () => void;
 }
 

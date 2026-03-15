@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo, useMemo } from "react";
+import { memo, useMemo } from "react";
 import { CHIP_VISUAL_DIVISOR, MAX_CHIP_STACK_DISPLAY } from "@/lib/constants/game";
 
 interface PotDisplayProps {

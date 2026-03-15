@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect, memo } from "react";
 import { BetAction, isValidBetAction } from "@/types/game-types";
 import { MAX_QUICK_RAISE_OPTIONS, UI_ACTION_COOLDOWN_MS, UI_ACTION_PROCESSING_DELAY_MS, UI_MAX_BET_INPUT_LENGTH } from "@/lib/constants/game";
 
@@ -269,4 +269,4 @@ function BettingControlsInner({
   );
 }
 
-export const BettingControls = React.memo(BettingControlsInner);
+export const BettingControls = memo(BettingControlsInner);

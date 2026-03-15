@@ -188,13 +188,20 @@ export const cachedPlayerIdSelector = (state: GameStore): string | null =>
 let isInitialized = false;
 let unregisterCallback: (() => void) | null = null;
 
-export function initializeGameStore(): void {
-  if (isInitialized || typeof window === 'undefined') return;
+export function initializeGameStore(): () => void {
+  if (typeof window === 'undefined') return () => {};
+  
+  if (isInitialized && unregisterCallback) {
+    return unregisterCallback;
+  }
+  
   isInitialized = true;
   
   unregisterCallback = registerPlayerIdCallback((playerId) => {
     useGameStore.getState().setCachedPlayerId(playerId);
   });
+  
+  return unregisterCallback;
 }
 
 export function resetGameStoreInitialization(): void {

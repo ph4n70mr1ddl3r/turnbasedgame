@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import React, { memo } from "react";
-import { Card } from "@/types/game-types";
+import { memo } from 'react';
+import { Card } from '@/types/game-types';
 
 interface CommunityCardsProps {
   cards: Card[];
 }
 
-const CARD_POSITIONS = ["Flop 1", "Flop 2", "Flop 3", "Turn", "River"] as const;
+const CARD_POSITIONS = ['Flop 1', 'Flop 2', 'Flop 3', 'Turn', 'River'] as const;
 
 function CommunityCardsInner({ cards }: CommunityCardsProps): React.ReactElement {
   return (
@@ -40,7 +40,7 @@ function CommunityCardsInner({ cards }: CommunityCardsProps): React.ReactElement
                   <span className="text-green-600 text-xs">?</span>
                 </div>
                 <div className="text-xs text-green-700">
-                  {CARD_POSITIONS[cards.length + index] ?? "Coming"}
+                  {CARD_POSITIONS[cards.length + index] ?? 'Coming'}
                 </div>
               </div>
             ))}
@@ -50,11 +50,11 @@ function CommunityCardsInner({ cards }: CommunityCardsProps): React.ReactElement
       
       <div className="mt-4 text-center">
         <div className="inline-block bg-green-800 px-3 py-1 rounded text-sm">
-          {cards.length === 0 && "Pre-flop"}
-          {cards.length === 3 && "Flop"}
-          {cards.length === 4 && "Turn"}
-          {cards.length === 5 && "River"}
-          {cards.length > 0 && cards.length < 3 && "Deal in progress"}
+          {cards.length === 0 && 'Pre-flop'}
+          {cards.length === 3 && 'Flop'}
+          {cards.length === 4 && 'Turn'}
+          {cards.length === 5 && 'River'}
+          {cards.length > 0 && cards.length < 3 && 'Deal in progress'}
         </div>
       </div>
     </div>
