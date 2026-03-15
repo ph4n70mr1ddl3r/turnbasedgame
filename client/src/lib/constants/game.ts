@@ -5,6 +5,7 @@ export const WS_MAX_PENDING_HEARTBEATS = 10;
 
 export const UI_ACTION_COOLDOWN_MS = 300;
 export const UI_ACTION_PROCESSING_DELAY_MS = 100;
+export const UI_MAX_BET_INPUT_LENGTH = 10;
 
 export function getDefaultWebSocketUrl(): string {
   if (typeof window === "undefined") {

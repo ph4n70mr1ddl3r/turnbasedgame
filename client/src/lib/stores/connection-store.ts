@@ -7,6 +7,10 @@ type PlayerIdCallback = (playerId: string | null) => void;
 
 const playerIdCallbacks: Set<PlayerIdCallback> = new Set();
 
+export function clearAllPlayerIdCallbacks(): void {
+  playerIdCallbacks.clear();
+}
+
 export function registerPlayerIdCallback(callback: PlayerIdCallback): () => void {
   playerIdCallbacks.add(callback);
   return () => playerIdCallbacks.delete(callback);

@@ -56,16 +56,22 @@ export class ReconnectHandler {
   }
 
   start(): void {
-    if (this.isActive) return;
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
 
     if (this.abortController) {
       this.abortController.abort();
     }
     this.abortController = new AbortController();
 
-    if (this.timeoutId) {
-      clearTimeout(this.timeoutId);
-      this.timeoutId = null;
+    if (this.isActive) {
+      this.attempts = 0;
+      this.currentDelay = this.options.initialDelay;
+      this.onStateChange?.("disconnected");
+      this.attemptReconnect();
+      return;
     }
 
     this.isActive = true;

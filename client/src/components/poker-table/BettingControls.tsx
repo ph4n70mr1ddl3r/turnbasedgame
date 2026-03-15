@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { BetAction, isValidBetAction } from "@/types/game-types";
-import { MAX_QUICK_RAISE_OPTIONS, UI_ACTION_COOLDOWN_MS, UI_ACTION_PROCESSING_DELAY_MS } from "@/lib/constants/game";
+import { MAX_QUICK_RAISE_OPTIONS, UI_ACTION_COOLDOWN_MS, UI_ACTION_PROCESSING_DELAY_MS, UI_MAX_BET_INPUT_LENGTH } from "@/lib/constants/game";
 
 interface BettingControlsProps {
   isMyTurn: boolean;
@@ -90,9 +90,9 @@ function BettingControlsInner({
       return;
     }
     const sanitized = value.replace(/^0+/, "") || "0";
-    if (/^\d+$/.test(sanitized)) {
+    if (/^\d+$/.test(sanitized) && sanitized.length <= UI_MAX_BET_INPUT_LENGTH) {
       const parsed = parseInt(sanitized, 10);
-      if (Number.isFinite(parsed) && parsed >= 0 && parsed <= maxBet && sanitized.length <= 10) {
+      if (Number.isFinite(parsed) && parsed >= 0 && parsed <= maxBet) {
         setRaiseAmountInput(sanitized);
       }
     }
