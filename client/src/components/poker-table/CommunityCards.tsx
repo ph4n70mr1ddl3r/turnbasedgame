@@ -1,6 +1,6 @@
 'use client';
 
-import { memo } from 'react';
+import React, { memo } from 'react';
 import { Card } from '@/types/game-types';
 
 interface CommunityCardsProps {
