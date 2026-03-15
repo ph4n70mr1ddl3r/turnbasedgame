@@ -3,6 +3,8 @@
 import { Component, ReactNode, ErrorInfo } from "react";
 import { logError } from "@/lib/utils/logger";
 import { reloadPage } from "@/lib/utils/browser-utils";
+import { useConnectionStore } from "@/lib/stores/connection-store";
+import { useGameStore } from "@/lib/stores/game-store";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -27,9 +29,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     logError("ErrorBoundary caught an error:", { error, errorInfo });
+    useGameStore.getState().reset();
+    useConnectionStore.getState().reset();
   }
 
   private handleRetry = (): void => {
+    useGameStore.getState().reset();
+    useConnectionStore.getState().reset();
     this.setState((prev) => ({ hasError: false, error: null, retryKey: prev.retryKey + 1 }));
   };
 

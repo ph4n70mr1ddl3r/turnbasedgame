@@ -8,6 +8,12 @@ export interface SessionData {
   expiry: number;
 }
 
+const VALID_PLAYER_IDS: readonly string[] = ["p1", "p2"];
+
+function isValidPlayerId(playerId: string): boolean {
+  return VALID_PLAYER_IDS.includes(playerId);
+}
+
 /**
  * SECURITY NOTE: Session tokens are stored in localStorage for persistence across
  * page reloads. This is a trade-off between UX and security:
@@ -53,6 +59,12 @@ export class SessionManager {
         return null;
       }
 
+      if (!isValidPlayerId(playerId)) {
+        logError("Invalid playerId format detected, clearing session");
+        this.clearSession();
+        return null;
+      }
+
       const expiry = parseInt(expiryStr, 10);
 
       if (!Number.isFinite(expiry) || expiry <= 0) {
@@ -79,6 +91,11 @@ export class SessionManager {
     if (!this.validateTokenFormat(token)) {
       logError("Attempted to create session with invalid token format");
       throw new Error("Invalid token format");
+    }
+
+    if (!isValidPlayerId(playerId)) {
+      logError("Attempted to create session with invalid playerId format");
+      throw new Error("Invalid playerId format");
     }
 
     const expiry = Date.now() + SESSION_DURATION_MS;

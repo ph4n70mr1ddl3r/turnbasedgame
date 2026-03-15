@@ -439,25 +439,27 @@ export class ConnectionManager {
   
   private handleConnectionStatus(message: ConnectionStatusMessage): void {
     useConnectionStore.getState().setStatus(message.data.status);
-    if (message.data.player_id) {
-      const currentToken = useConnectionStore.getState().sessionToken;
-      if (currentToken) {
-        useConnectionStore.getState().setSession(currentToken, message.data.player_id);
-      } else if (SessionManager.isValidSession()) {
-        const existingSession = SessionManager.getSession();
-        if (existingSession) {
-          useConnectionStore.getState().setSession(existingSession.token, message.data.player_id);
-        }
-      } else {
-        try {
-          const token = SessionManager.generateToken();
-          useConnectionStore.getState().setSession(token, message.data.player_id);
-        } catch (error) {
-          logError("Failed to generate session token:", error);
-          useGameStore.getState().setError("Failed to establish session. Please refresh the page.");
-        }
+    if (!message.data.player_id) return;
+
+    const currentToken = useConnectionStore.getState().sessionToken;
+    let token = currentToken;
+
+    if (!token) {
+      const existingSession = SessionManager.getSession();
+      token = existingSession?.token ?? null;
+    }
+
+    if (!token) {
+      try {
+        token = SessionManager.generateToken();
+      } catch (error) {
+        logError("Failed to generate session token:", error);
+        useGameStore.getState().setError("Failed to establish session. Please refresh the page.");
+        return;
       }
     }
+
+    useConnectionStore.getState().setSession(token, message.data.player_id);
   }
   
   private startHeartbeat(): void {

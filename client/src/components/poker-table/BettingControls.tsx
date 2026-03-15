@@ -92,10 +92,11 @@ function BettingControlsInner({
       setRaiseAmountInput("");
       return;
     }
-    if (/^\d+$/.test(value)) {
-      const parsed = parseInt(value, 10);
-      if (Number.isFinite(parsed) && parsed >= 0 && parsed <= maxBet) {
-        setRaiseAmountInput(value);
+    const sanitized = value.replace(/^0+/, "") || "0";
+    if (/^\d+$/.test(sanitized)) {
+      const parsed = parseInt(sanitized, 10);
+      if (Number.isFinite(parsed) && parsed >= 0 && parsed <= maxBet && sanitized.length <= 10) {
+        setRaiseAmountInput(sanitized);
       }
     }
   }, [maxBet]);
