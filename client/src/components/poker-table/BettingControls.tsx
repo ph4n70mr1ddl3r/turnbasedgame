@@ -108,13 +108,11 @@ function BettingControlsInner({
   }, [raiseAmountInput, minBet, maxBet]);
 
   const handleQuickRaise = useCallback((amount: number): void => {
-    const now = Date.now();
-    if (now - lastActionTimeRef.current < UI_ACTION_COOLDOWN_MS) return;
-    lastActionTimeRef.current = now;
-    const clamped = Math.max(minBet, Math.min(maxBet, amount));
-    onBetAction("raise", clamped);
-    setShowRaiseInput(false);
-  }, [minBet, maxBet, onBetAction]);
+    executeWithCooldown(() => {
+      const clamped = Math.max(minBet, Math.min(maxBet, amount));
+      onBetAction("raise", clamped);
+    }, true);
+  }, [minBet, maxBet, onBetAction, executeWithCooldown]);
 
   const handleCancelRaise = useCallback((): void => {
     setShowRaiseInput(false);

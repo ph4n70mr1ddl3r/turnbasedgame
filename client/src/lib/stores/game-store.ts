@@ -185,7 +185,12 @@ export const lastErrorSelector = (state: GameStore): string | null => state.last
 export const cachedPlayerIdSelector = (state: GameStore): string | null =>
   state.cachedPlayerId;
 
-if (typeof window !== "undefined") {
+let isInitialized = false;
+
+export function initializeGameStore(): void {
+  if (isInitialized || typeof window === 'undefined') return;
+  isInitialized = true;
+  
   registerPlayerIdCallback((playerId) => {
     useGameStore.getState().setCachedPlayerId(playerId);
   });

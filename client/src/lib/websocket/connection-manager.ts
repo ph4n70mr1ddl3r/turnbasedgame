@@ -374,6 +374,7 @@ export class ConnectionManager {
     }
     
     logError("WebSocket error:", errorDetails);
+    this.connectionResolved = true;
     this.connectionLock = null;
     useGameStore.getState().setError("Connection error");
   }

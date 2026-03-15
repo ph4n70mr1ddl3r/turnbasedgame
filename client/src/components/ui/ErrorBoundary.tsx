@@ -14,17 +14,16 @@ interface ErrorBoundaryProps {
 interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
-  retryKey: number;
 }
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null, retryKey: 0 };
+    this.state = { hasError: false, error: null };
   }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error, retryKey: 0 };
+    return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
@@ -36,7 +35,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   private handleRetry = (): void => {
     useGameStore.getState().reset();
     useConnectionStore.getState().reset();
-    this.setState((prev) => ({ hasError: false, error: null, retryKey: prev.retryKey + 1 }));
+    this.setState({ hasError: false, error: null });
   };
 
   render(): ReactNode {
@@ -76,6 +75,6 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       );
     }
 
-    return <div key={this.state.retryKey}>{this.props.children}</div>;
+    return this.props.children;
   }
 }

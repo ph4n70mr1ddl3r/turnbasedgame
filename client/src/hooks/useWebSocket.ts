@@ -11,6 +11,7 @@ import {
   isMyTurnSelector,
   availableActionsSelector,
   lastErrorSelector,
+  initializeGameStore,
 } from "@/lib/stores/game-store";
 import { BetAction } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
@@ -168,6 +169,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     const abortController = new AbortController();
 
     initializeConnectionStore();
+    initializeGameStore();
 
     if (autoConnect !== false) {
       const wsUrl = url || process.env.NEXT_PUBLIC_WS_URL || getDefaultWebSocketUrl();
