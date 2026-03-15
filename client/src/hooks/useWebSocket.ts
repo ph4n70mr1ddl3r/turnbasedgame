@@ -86,33 +86,55 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     [],
   );
 
-  const connect = useCallback(async () => {
-    const shouldAutoConnect = autoConnect !== false;
-    if (shouldAutoConnect && connectingRef.current) {
-      logError("Connection already in progress via autoConnect");
-      return false;
+  const createManager = useCallback((wsUrl: string): ConnectionManager => {
+    if (managerRef.current) {
+      managerRef.current.disconnect();
     }
-    
-    if (!managerRef.current) {
-      const wsUrl = url || process.env.NEXT_PUBLIC_WS_URL || getDefaultWebSocketUrl();
-      const manager = new ConnectionManager({
-        url: wsUrl,
-        autoReconnect: true,
-      });
-      managerRef.current = manager;
-    }
+    const manager = new ConnectionManager({
+      url: wsUrl,
+      autoReconnect: true,
+    });
+    managerRef.current = manager;
+    return manager;
+  }, []);
 
+  const performConnection = useCallback(async (
+    manager: ConnectionManager,
+    signal?: AbortSignal
+  ): Promise<boolean> => {
+    connectingRef.current = true;
     try {
-      connectingRef.current = true;
-      return await managerRef.current.connect();
+      const connected = await manager.connect();
+      if (signal?.aborted) {
+        manager.disconnect();
+        return false;
+      }
+      if (!connected) {
+        useGameStore.getState().setError("Failed to connect to game server");
+      }
+      return connected;
     } catch (error) {
+      if (signal?.aborted) {
+        return false;
+      }
       logError("Connection failed:", error);
       useGameStore.getState().setError("Connection failed");
       return false;
     } finally {
       connectingRef.current = false;
     }
-  }, [url, autoConnect]);
+  }, []);
+
+  const connect = useCallback(async (): Promise<boolean> => {
+    if (connectingRef.current) {
+      logError("Connection already in progress");
+      return false;
+    }
+
+    const wsUrl = url || process.env.NEXT_PUBLIC_WS_URL || getDefaultWebSocketUrl();
+    const manager = managerRef.current || createManager(wsUrl);
+    return performConnection(manager);
+  }, [url, createManager, performConnection]);
 
   const disconnect = useCallback(() => {
     if (managerRef.current) {
@@ -143,57 +165,25 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    let manager: ConnectionManager | null = null;
+    const abortController = new AbortController();
 
     initializeConnectionStore();
 
     if (autoConnect !== false) {
-      if (managerRef.current) {
-        managerRef.current.disconnect();
-        managerRef.current = null;
-      }
-
       const wsUrl = url || process.env.NEXT_PUBLIC_WS_URL || getDefaultWebSocketUrl();
-      manager = new ConnectionManager({
-        url: wsUrl,
-        autoReconnect: true,
-      });
-
-      managerRef.current = manager;
-      connectingRef.current = true;
-
-      manager.connect()
-        .then((connected) => {
-          connectingRef.current = false;
-          if (cancelled) {
-            const currentManager = managerRef.current;
-            if (currentManager && currentManager === manager) {
-              currentManager.disconnect();
-              managerRef.current = null;
-            }
-          } else if (!connected) {
-            useGameStore.getState().setError("Failed to connect to game server");
-          }
-        })
-        .catch((err) => {
-          connectingRef.current = false;
-          logError("Connection promise rejected:", err);
-          if (!cancelled) {
-            useGameStore.getState().setError("Connection error occurred");
-          }
-        });
+      const manager = createManager(wsUrl);
+      performConnection(manager, abortController.signal);
     }
 
     return () => {
-      cancelled = true;
+      abortController.abort();
       connectingRef.current = false;
       if (managerRef.current) {
         managerRef.current.disconnect();
         managerRef.current = null;
       }
     };
-  }, [autoConnect, url]);
+  }, [autoConnect, url, createManager, performConnection]);
 
   return {
     connect,

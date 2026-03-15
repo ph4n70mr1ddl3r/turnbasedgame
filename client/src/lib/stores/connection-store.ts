@@ -1,8 +1,26 @@
 import { create } from "zustand";
 import { ConnectionStatus } from "@/types/game-types";
 import { SessionManager } from "@/lib/websocket/session-manager";
-import { useGameStore } from "@/lib/stores/game-store";
 import { logError } from "@/lib/utils/logger";
+
+type PlayerIdCallback = (playerId: string | null) => void;
+
+const playerIdCallbacks: Set<PlayerIdCallback> = new Set();
+
+export function registerPlayerIdCallback(callback: PlayerIdCallback): () => void {
+  playerIdCallbacks.add(callback);
+  return () => playerIdCallbacks.delete(callback);
+}
+
+function notifyPlayerIdChange(playerId: string | null): void {
+  playerIdCallbacks.forEach(callback => {
+    try {
+      callback(playerId);
+    } catch (error) {
+      logError("Error in playerId callback:", error);
+    }
+  });
+}
 
 interface ConnectionStore {
   status: ConnectionStatus;
@@ -34,7 +52,7 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
     if (typeof window === "undefined") return;
     const session = SessionManager.getSession();
     if (session) {
-      useGameStore.getState().setCachedPlayerId(session.playerId);
+      notifyPlayerIdChange(session.playerId);
       set({ sessionToken: session.token, playerId: session.playerId });
     }
   },
@@ -61,10 +79,11 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
   setSession: (token: string, playerId: string): void => {
     try {
       SessionManager.createSession(token, playerId);
-      useGameStore.getState().setCachedPlayerId(playerId);
+      notifyPlayerIdChange(playerId);
       set({ sessionToken: token, playerId });
     } catch (error) {
       logError("Failed to persist session:", error);
+      notifyPlayerIdChange(playerId);
       set({ sessionToken: token, playerId });
     }
   },
@@ -75,7 +94,7 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
     } catch (error) {
       logError("Failed to clear session:", error);
     }
-    useGameStore.getState().setCachedPlayerId(null);
+    notifyPlayerIdChange(null);
     set({ sessionToken: null, playerId: null });
   },
 
@@ -85,7 +104,7 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
     } catch (error) {
       logError("Failed to clear session during reset:", error);
     }
-    useGameStore.getState().setCachedPlayerId(null);
+    notifyPlayerIdChange(null);
     set({
       status: "disconnected",
       isConnected: false,
@@ -100,16 +119,8 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
 export const connectionStatusSelector = (
   state: ConnectionStore,
 ): ConnectionStatus => state.status;
-export const isConnectedSelector = (state: ConnectionStore): boolean =>
-  state.isConnected;
-export const sessionTokenSelector = (state: ConnectionStore): string | null =>
-  state.sessionToken;
-export const playerIdSelector = (state: ConnectionStore): string | null =>
-  state.playerId;
 export const latencySelector = (state: ConnectionStore): number | null =>
   state.latency;
-export const lastHeartbeatSelector = (state: ConnectionStore): number | null =>
-  state.lastHeartbeat;
 
 export interface ConnectionSelectorState {
   isConnected: boolean;

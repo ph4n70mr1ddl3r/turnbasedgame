@@ -24,25 +24,27 @@ const DEFAULT_OPTIONS: Required<ReconnectOptions> = {
 
 export type ReconnectState = "connected" | "disconnected" | "stopped" | "failed" | `attempt_${number}` | `waiting_${number}s`;
 
+export type ConnectFunction = () => Promise<boolean>;
+
 export class ReconnectHandler {
   private attempts = 0;
   private currentDelay: number;
   private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private isActive = false;
   private isAttempting = false;
-  private connectFn: () => Promise<boolean>;
+  private getConnectFn: () => ConnectFunction;
   private abortController: AbortController | null = null;
 
   private onStateChange?: (state: ReconnectState) => void;
   private options: Required<ReconnectOptions>;
   
   constructor(
-    connectFn: () => Promise<boolean>,
+    getConnectFn: () => ConnectFunction,
 
     onStateChange?: (state: ReconnectState) => void,
     options: ReconnectOptions = {}
   ) {
-    this.connectFn = connectFn;
+    this.getConnectFn = getConnectFn;
     this.onStateChange = onStateChange;
     const opts = { ...DEFAULT_OPTIONS, ...options };
     this.options = opts;
@@ -158,7 +160,8 @@ export class ReconnectHandler {
     this.onStateChange?.(`attempt_${this.attempts}`);
 
     try {
-      const success = await this.connectFn();
+      const connectFn = this.getConnectFn();
+      const success = await connectFn();
 
       if (!this.isActive || this.abortController?.signal.aborted) {
         this.isAttempting = false;

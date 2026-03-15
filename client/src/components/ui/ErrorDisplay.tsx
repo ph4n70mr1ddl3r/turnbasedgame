@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useMemo } from "react";
+import React, { useEffect, useRef, useMemo, memo } from "react";
 import { reloadPage } from "@/lib/utils/browser-utils";
 
 const MAX_ERROR_LENGTH = 500;
@@ -17,7 +17,7 @@ interface ErrorDisplayProps {
   onClose: () => void;
 }
 
-export function ErrorDisplay({ error, onClose }: ErrorDisplayProps): React.ReactElement | null {
+export const ErrorDisplay = memo(function ErrorDisplay({ error, onClose }: ErrorDisplayProps): React.ReactElement | null {
   const errorRef = useRef<HTMLDivElement>(null);
   const truncatedError = useMemo(() => truncateErrorMessage(error), [error]);
 
@@ -74,4 +74,4 @@ export function ErrorDisplay({ error, onClose }: ErrorDisplayProps): React.React
       </div>
     </div>
   );
-}
+});

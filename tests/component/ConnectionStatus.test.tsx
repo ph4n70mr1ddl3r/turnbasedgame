@@ -6,10 +6,7 @@ import { ConnectionStatus as ConnectionStatusType } from '@/types/game-types';
 jest.mock('@/lib/stores/connection-store', () => ({
   useConnectionStore: jest.fn(),
   connectionStatusSelector: jest.fn((s) => s.status),
-  isConnectedSelector: jest.fn((s) => s.isConnected),
   latencySelector: jest.fn((s) => s.latency),
-  sessionTokenSelector: jest.fn((s) => s.sessionToken),
-  playerIdSelector: jest.fn((s) => s.playerId),
 }));
 
 import { useConnectionStore } from '@/lib/stores/connection-store';

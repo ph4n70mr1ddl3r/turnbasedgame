@@ -60,7 +60,7 @@ export class ConnectionManager {
 
     if (this.options.autoReconnect) {
       this.reconnectHandler = new ReconnectHandler(
-        () => this.connect(),
+        () => () => this.connect(),
         (state: ReconnectState) => {
           let connectionStatus: ConnectionStatus;
 
@@ -123,16 +123,10 @@ export class ConnectionManager {
       return this.connectionLock;
     }
 
-    if (this.pendingResolve) {
-      this.pendingResolve(false);
-      this.pendingResolve = null;
-    }
-
     this.connectionGeneration++;
     const currentGeneration = this.connectionGeneration;
-    this.wasIntentionallyDisconnected = false;
-    this.cleanupSocket();
-    this.connectionResolved = false;
+
+    this.resetConnectionState();
 
     this.connectionLock = new Promise((resolve) => {
       this.pendingResolve = resolve;
@@ -141,16 +135,23 @@ export class ConnectionManager {
         const socket = new WebSocket(this.options.url);
         this.socket = socket;
 
+        const cleanupAndResolve = (result: boolean): void => {
+          if (currentGeneration !== this.connectionGeneration) return;
+          if (this.connectionResolved) return;
+          
+          this.connectionResolved = true;
+          this.connectionLock = null;
+          this.pendingResolve = null;
+          this.cleanupConnectionTimeout();
+          resolve(result);
+        };
+
         const handleTimeout = (): void => {
           if (currentGeneration !== this.connectionGeneration) return;
-          if (!this.connectionResolved && socket.readyState !== WebSocket.OPEN) {
-            this.connectionResolved = true;
-            this.connectionLock = null;
-            this.connectionTimeoutId = null;
-            this.pendingResolve = null;
-            this.handleConnectionTimeout();
-            resolve(false);
-          }
+          if (this.connectionResolved) return;
+          
+          this.handleConnectionTimeout();
+          cleanupAndResolve(false);
         };
 
         this.connectionTimeoutId = setTimeout(handleTimeout, WS_CONNECTION_TIMEOUT_MS);
@@ -160,18 +161,10 @@ export class ConnectionManager {
             socket.close();
             return;
           }
-          if (this.connectionResolved) {
-            return;
-          }
-          this.connectionResolved = true;
-          this.connectionLock = null;
-          this.pendingResolve = null;
-          if (this.connectionTimeoutId !== null) {
-            clearTimeout(this.connectionTimeoutId);
-            this.connectionTimeoutId = null;
-          }
+          if (this.connectionResolved) return;
+          
           this.handleOpen();
-          resolve(true);
+          cleanupAndResolve(true);
         };
 
         socket.onopen = handleOpen;
@@ -203,6 +196,19 @@ export class ConnectionManager {
     });
 
     return this.connectionLock;
+  }
+
+  private resetConnectionState(): void {
+    if (this.pendingResolve) {
+      this.pendingResolve(false);
+      this.pendingResolve = null;
+    }
+    
+    this.wasIntentionallyDisconnected = false;
+    this.cleanupSocket();
+    this.connectionResolved = false;
+    this.connectionLock = null;
+    this.cleanupConnectionTimeout();
   }
 
   disconnect(): void {

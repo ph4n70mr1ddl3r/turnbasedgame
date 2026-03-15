@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { GameState, PlayerState, BetAction } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
+import { registerPlayerIdCallback } from "@/lib/stores/connection-store";
 
 const MAX_CHIP_VALUE = Number.MAX_SAFE_INTEGER;
 
@@ -183,3 +184,9 @@ export const availableActionsSelector = (state: GameStore): BetAction[] =>
 export const lastErrorSelector = (state: GameStore): string | null => state.lastError;
 export const cachedPlayerIdSelector = (state: GameStore): string | null =>
   state.cachedPlayerId;
+
+if (typeof window !== "undefined") {
+  registerPlayerIdCallback((playerId) => {
+    useGameStore.getState().setCachedPlayerId(playerId);
+  });
+}
