@@ -60,7 +60,7 @@ export class ConnectionManager {
 
     if (this.options.autoReconnect) {
       this.reconnectHandler = new ReconnectHandler(
-        () => () => this.connect(),
+        () => this.connect.bind(this),
         (state: ReconnectState) => {
           let connectionStatus: ConnectionStatus;
 

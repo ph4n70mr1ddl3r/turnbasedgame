@@ -214,7 +214,7 @@ export class MessageParser {
       validatedCommunityCards.push(card as Card);
     }
 
-    if (data.current_player !== null && data.current_player !== undefined && !isString(data.current_player)) {
+    if (data.current_player != null && !isString(data.current_player)) {
       logError("Invalid game_state_update: invalid current_player", data);
       return null;
     }
@@ -224,12 +224,12 @@ export class MessageParser {
       return null;
     }
 
-    if (data.last_winner !== undefined && data.last_winner !== null && !isString(data.last_winner)) {
+    if (data.last_winner != null && !isString(data.last_winner)) {
       logError("Invalid game_state_update: invalid last_winner", data);
       return null;
     }
 
-    if (data.winning_hand !== undefined && data.winning_hand !== null && !isString(data.winning_hand)) {
+    if (data.winning_hand != null && !isString(data.winning_hand)) {
       logError("Invalid game_state_update: invalid winning_hand", data);
       return null;
     }

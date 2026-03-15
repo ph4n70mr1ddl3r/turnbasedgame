@@ -57,35 +57,32 @@ function BettingControlsInner({
     }
   }, []);
 
-  const handleRaise = useCallback((): void => {
+  const executeWithCooldown = useCallback((action: () => void, resetRaiseInput?: boolean): void => {
     const now = Date.now();
     if (now - lastActionTimeRef.current < UI_ACTION_COOLDOWN_MS) return;
     lastActionTimeRef.current = now;
     clearProcessingTimeout();
     setIsProcessing(true);
     try {
-      onBetAction("raise", effectiveRaiseAmount);
-      setShowRaiseInput(false);
-      setRaiseAmountInput(String(minBet));
+      action();
+      if (resetRaiseInput) {
+        setShowRaiseInput(false);
+        setRaiseAmountInput(String(minBet));
+      }
     } finally {
       processingTimeoutRef.current = setTimeout(() => setIsProcessing(false), UI_ACTION_PROCESSING_DELAY_MS);
     }
-  }, [effectiveRaiseAmount, minBet, onBetAction, clearProcessingTimeout]);
+  }, [clearProcessingTimeout, minBet]);
+
+  const handleRaise = useCallback((): void => {
+    executeWithCooldown(() => onBetAction("raise", effectiveRaiseAmount), true);
+  }, [effectiveRaiseAmount, onBetAction, executeWithCooldown]);
 
   const handleAction = useCallback((action: string): void => {
-    const now = Date.now();
-    if (now - lastActionTimeRef.current < UI_ACTION_COOLDOWN_MS) return;
-    lastActionTimeRef.current = now;
     if (isValidBetAction(action)) {
-      clearProcessingTimeout();
-      setIsProcessing(true);
-      try {
-        onBetAction(action);
-      } finally {
-        processingTimeoutRef.current = setTimeout(() => setIsProcessing(false), UI_ACTION_PROCESSING_DELAY_MS);
-      }
+      executeWithCooldown(() => onBetAction(action));
     }
-  }, [onBetAction, clearProcessingTimeout]);
+  }, [onBetAction, executeWithCooldown]);
 
   const handleRaiseAmountChange = useCallback((value: string): void => {
     if (value === "") {
