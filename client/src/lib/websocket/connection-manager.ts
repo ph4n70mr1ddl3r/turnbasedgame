@@ -51,8 +51,11 @@ export class ConnectionManager {
   private lastMessageTime = 0;
   private pendingResolve: ((value: boolean) => void) | null = null;
   
+  private boundConnect: () => Promise<boolean>;
+
   constructor(options: ConnectionOptions = {}) {
     this.options = { ...DEFAULT_OPTIONS, ...options };
+    this.boundConnect = () => this.connect();
 
     if (!this.validateWebSocketUrl(this.options.url)) {
       throw new Error(`Invalid WebSocket URL: ${this.options.url}`);
@@ -60,7 +63,7 @@ export class ConnectionManager {
 
     if (this.options.autoReconnect) {
       this.reconnectHandler = new ReconnectHandler(
-        () => this.connect.bind(this),
+        () => this.boundConnect,
         (state: ReconnectState) => {
           let connectionStatus: ConnectionStatus;
 

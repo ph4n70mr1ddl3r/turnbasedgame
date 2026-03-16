@@ -154,7 +154,7 @@ function GameContent(): React.ReactElement {
             {myPlayer?.hole_cards?.length ? (
               <div className="flex space-x-2">
                 {myPlayer.hole_cards.map((card, idx) => (
-                  <div key={idx} className="bg-white text-black w-12 h-16 rounded flex items-center justify-center font-bold">
+                  <div key={`hole-${idx}-${card}`} className="bg-white text-black w-12 h-16 rounded flex items-center justify-center font-bold">
                     {card}
                   </div>
                 ))}
