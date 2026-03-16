@@ -164,6 +164,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       return false;
     }
 
+    if (typeof action !== 'string') {
+      logError("sendBetAction: invalid action type");
+      return false;
+    }
+
     return managerRef.current.sendBetAction(action, amount);
   }, [isConnected]);
 

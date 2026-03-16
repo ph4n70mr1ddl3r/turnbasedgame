@@ -325,8 +325,13 @@ export class MessageParser {
 
     const data = msg.data;
 
-    if (!isNumber(data.timestamp)) {
+    if (!isNumber(data.timestamp) || !Number.isFinite(data.timestamp)) {
       logError("Invalid heartbeat: invalid timestamp", data);
+      return null;
+    }
+
+    if (data.timestamp < 0) {
+      logError("Invalid heartbeat: negative timestamp", data);
       return null;
     }
 

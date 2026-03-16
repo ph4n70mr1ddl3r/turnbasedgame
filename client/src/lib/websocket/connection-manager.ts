@@ -464,11 +464,20 @@ export class ConnectionManager {
   }
   
   private handleGameStateUpdate(message: GameStateUpdateMessage): void {
+    if (!message?.data) {
+      logError("handleGameStateUpdate: Invalid message structure");
+      return;
+    }
     useGameStore.getState().setGameState(message.data);
     SessionManager.updateSessionExpiry();
   }
   
   private handleErrorMessage(message: ErrorMessage): void {
+    if (!message?.data?.message) {
+      logError("handleErrorMessage: Invalid error message structure");
+      return;
+    }
+    
     logError("Server error:", message.data);
     useGameStore.getState().setError(message.data.message);
 
@@ -479,6 +488,8 @@ export class ConnectionManager {
         break;
       case "game_not_active":
         break;
+      default:
+        logError("Unhandled error code:", message.data.code);
     }
   }
   

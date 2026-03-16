@@ -6,7 +6,23 @@ import { registerPlayerIdCallback } from "@/lib/stores/connection-store";
 const MAX_CHIP_VALUE = 1_000_000_000;
 
 function isValidChipValue(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= MAX_CHIP_VALUE;
+  return typeof value === 'number' && 
+         Number.isFinite(value) && 
+         value >= 0 && 
+         value <= MAX_CHIP_VALUE;
+}
+
+function isValidGameState(gameState: unknown): gameState is GameState {
+  if (!gameState || typeof gameState !== 'object') return false;
+  const state = gameState as Partial<GameState>;
+  
+  return (
+    Array.isArray(state.players) &&
+    state.players.length > 0 &&
+    typeof state.pot === 'number' &&
+    typeof state.round === 'string' &&
+    typeof state.game_status === 'string'
+  );
 }
 
 function deriveAvailableActions(
@@ -76,6 +92,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   setGameState: (gameState: GameState): void => {
+    if (!isValidGameState(gameState)) {
+      logError('setGameState: Invalid game state received', gameState);
+      return;
+    }
+    
     const { cachedPlayerId } = get();
     const isMyTurn = cachedPlayerId !== null && gameState.current_player === cachedPlayerId;
     const availableActions = deriveAvailableActions(gameState, cachedPlayerId);
