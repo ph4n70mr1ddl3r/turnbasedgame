@@ -60,6 +60,7 @@ const DISCONNECTED_STATUS = {
 export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
   const managerRef = useRef<ConnectionManager | null>(null);
   const connectingRef = useRef(false);
+  const urlRef = useRef<string | null>(null);
   const autoConnect = options.autoConnect;
   const url = options.url;
 
@@ -89,7 +90,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     [],
   );
 
-  const createManager = useCallback((wsUrl: string): ConnectionManager => {
+  const getOrCreateManager = useCallback((wsUrl: string): ConnectionManager => {
+    if (managerRef.current && urlRef.current === wsUrl) {
+      return managerRef.current;
+    }
     if (managerRef.current) {
       managerRef.current.disconnect();
     }
@@ -98,6 +102,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       autoReconnect: true,
     });
     managerRef.current = manager;
+    urlRef.current = wsUrl;
     return manager;
   }, []);
 
@@ -140,9 +145,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       useGameStore.getState().setError("No WebSocket URL configured");
       return false;
     }
-    const manager = managerRef.current || createManager(wsUrl);
+    const manager = getOrCreateManager(wsUrl);
     return performConnection(manager);
-  }, [url, createManager, performConnection]);
+  }, [url, getOrCreateManager, performConnection]);
 
   const disconnect = useCallback(() => {
     if (managerRef.current) {
@@ -181,7 +186,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     if (autoConnect !== false) {
       const wsUrl = url || process.env.NEXT_PUBLIC_WS_URL || getDefaultWebSocketUrl();
       if (wsUrl) {
-        const manager = createManager(wsUrl);
+        const manager = getOrCreateManager(wsUrl);
         performConnection(manager, abortController.signal);
       } else {
         useGameStore.getState().setError("No WebSocket URL configured");
@@ -194,9 +199,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       if (managerRef.current) {
         managerRef.current.disconnect();
         managerRef.current = null;
+        urlRef.current = null;
       }
     };
-  }, [autoConnect, url, createManager, performConnection]);
+  }, [autoConnect, url, getOrCreateManager, performConnection]);
 
   return {
     connect,

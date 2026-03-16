@@ -148,6 +148,7 @@ export class ReconnectHandler {
 
     if (this.abortController?.signal.aborted) {
       this.isAttempting = false;
+      this.isActive = false;
       return false;
     }
 
@@ -158,6 +159,7 @@ export class ReconnectHandler {
 
     this.isAttempting = true;
     const { maxAttempts } = this.options;
+    const currentAbortController = this.abortController;
 
     if (maxAttempts > 0 && this.attempts >= maxAttempts) {
       this.onStateChange?.("failed");
@@ -173,7 +175,12 @@ export class ReconnectHandler {
       const connectFn = this.getConnectFn();
       const success = await connectFn();
 
-      if (!this.isActive || this.abortController?.signal.aborted) {
+      if (currentAbortController?.signal.aborted) {
+        this.isAttempting = false;
+        return false;
+      }
+
+      if (!this.isActive) {
         this.isAttempting = false;
         return false;
       }
@@ -186,7 +193,7 @@ export class ReconnectHandler {
         return false;
       }
     } catch (error) {
-      if (this.abortController?.signal.aborted) {
+      if (currentAbortController?.signal.aborted) {
         this.isAttempting = false;
         return false;
       }

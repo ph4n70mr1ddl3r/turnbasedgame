@@ -37,20 +37,23 @@ const DEFAULT_OPTIONS: Required<ConnectionOptions> = {
   heartbeatInterval: WS_HEARTBEAT_INTERVAL_MS,
 };
 
+export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'disconnecting';
+
 export class ConnectionManager {
   private socket: WebSocket | null = null;
   private options: Required<ConnectionOptions>;
   private reconnectHandler: ReconnectHandler | null = null;
   private heartbeatIntervalId: ReturnType<typeof setInterval> | null = null;
   private connectionTimeoutId: ReturnType<typeof setTimeout> | null = null;
-  private connectionResolved = false;
+  private connectionState: ConnectionState = 'idle';
   private connectionLock: Promise<boolean> | null = null;
   private wasIntentionallyDisconnected = false;
   private connectionGeneration = 0;
   private pendingHeartbeatTimestamps: Map<number, number> = new Map();
   private lastMessageTime = 0;
   private pendingResolve: ((value: boolean) => void) | null = null;
-  
+  private abortController: AbortController | null = null;
+
   private boundConnect: () => Promise<boolean>;
 
   constructor(options: ConnectionOptions = {}) {
@@ -122,17 +125,31 @@ export class ConnectionManager {
   }
 
   async connect(): Promise<boolean> {
-    if (this.connectionLock) {
+    if (this.connectionLock && this.connectionState === 'connecting') {
       return this.connectionLock;
     }
+
+    if (this.abortController) {
+      this.abortController.abort();
+    }
+    this.abortController = new AbortController();
+    const signal = this.abortController.signal;
 
     this.connectionGeneration++;
     const currentGeneration = this.connectionGeneration;
 
     this.resetConnectionState();
+    this.connectionState = 'connecting';
 
     this.connectionLock = new Promise((resolve) => {
       this.pendingResolve = resolve;
+
+      if (signal.aborted) {
+        this.connectionState = 'idle';
+        this.connectionLock = null;
+        resolve(false);
+        return;
+      }
 
       try {
         const socket = new WebSocket(this.options.url);
@@ -140,9 +157,9 @@ export class ConnectionManager {
 
         const cleanupAndResolve = (result: boolean): void => {
           if (currentGeneration !== this.connectionGeneration) return;
-          if (this.connectionResolved) return;
-          
-          this.connectionResolved = true;
+          if (this.connectionState === 'idle') return;
+
+          this.connectionState = result ? 'connected' : 'idle';
           this.connectionLock = null;
           this.pendingResolve = null;
           this.cleanupConnectionTimeout();
@@ -151,8 +168,8 @@ export class ConnectionManager {
 
         const handleTimeout = (): void => {
           if (currentGeneration !== this.connectionGeneration) return;
-          if (this.connectionResolved) return;
-          
+          if (this.connectionState === 'idle') return;
+
           this.handleConnectionTimeout();
           cleanupAndResolve(false);
         };
@@ -164,25 +181,29 @@ export class ConnectionManager {
             socket.close();
             return;
           }
-          if (this.connectionResolved) return;
-          
+          if (signal.aborted) {
+            socket.close();
+            return;
+          }
+          if (this.connectionState === 'idle') return;
+
           this.handleOpen();
           cleanupAndResolve(true);
         };
 
         socket.onopen = handleOpen;
         socket.onmessage = (event) => {
-          if (currentGeneration === this.connectionGeneration) {
+          if (currentGeneration === this.connectionGeneration && !signal.aborted) {
             this.handleMessage(event);
           }
         };
         socket.onerror = (event) => {
-          if (currentGeneration === this.connectionGeneration) {
+          if (currentGeneration === this.connectionGeneration && !signal.aborted) {
             this.handleError(event);
           }
         };
         socket.onclose = (event) => {
-          if (currentGeneration === this.connectionGeneration) {
+          if (currentGeneration === this.connectionGeneration && !signal.aborted) {
             this.handleClose(event);
           }
         };
@@ -191,7 +212,7 @@ export class ConnectionManager {
         this.cleanupSocket();
         useConnectionStore.getState().setConnected(false);
         useGameStore.getState().setError("Failed to create WebSocket connection");
-        this.connectionResolved = true;
+        this.connectionState = 'idle';
         this.connectionLock = null;
         this.pendingResolve = null;
         resolve(false);
@@ -214,20 +235,28 @@ export class ConnectionManager {
       this.pendingResolve(false);
       this.pendingResolve = null;
     }
-    
+
     this.wasIntentionallyDisconnected = false;
     this.performCleanup();
-    this.connectionResolved = false;
+    this.connectionState = 'idle';
     this.connectionLock = null;
   }
 
   disconnect(): void {
     this.wasIntentionallyDisconnected = true;
+    this.connectionState = 'disconnecting';
     this.connectionLock = null;
-    this.connectionResolved = true;
+
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+
     this.reconnectHandler?.stop();
     this.performCleanup();
     this.connectionGeneration = 0;
+    this.connectionState = 'idle';
+
     if (this.pendingResolve) {
       this.pendingResolve(false);
       this.pendingResolve = null;
@@ -317,6 +346,10 @@ export class ConnectionManager {
     };
   }
 
+  getState(): ConnectionState {
+    return this.connectionState;
+  }
+
   private handleOpen(): void {
     this.wasIntentionallyDisconnected = false;
     useConnectionStore.getState().setConnected(true);
@@ -369,7 +402,7 @@ export class ConnectionManager {
 
   private handleError(event: Event): void {
     let errorDetails = 'Unknown WebSocket error';
-    
+
     if (event instanceof ErrorEvent) {
       const parts: string[] = [];
       if (event.message) parts.push(event.message);
@@ -378,9 +411,9 @@ export class ConnectionManager {
     } else if (event.type === 'error') {
       errorDetails = 'WebSocket error event';
     }
-    
+
     logError("WebSocket error:", errorDetails);
-    this.connectionResolved = true;
+    this.connectionState = 'idle';
     this.connectionLock = null;
     this.performCleanup();
     useConnectionStore.getState().setConnected(false);
@@ -388,14 +421,14 @@ export class ConnectionManager {
   }
   
   private handleClose(event: CloseEvent): void {
-    const wasConnecting = this.connectionLock !== null;
+    const wasConnecting = this.connectionState === 'connecting';
+    this.connectionState = 'idle';
     useConnectionStore.getState().setConnected(false);
     this.connectionLock = null;
     this.cleanupHeartbeat();
     this.cleanupConnectionTimeout();
 
     if (wasConnecting && this.pendingResolve) {
-      this.connectionResolved = true;
       this.pendingResolve(false);
       this.pendingResolve = null;
     }
@@ -409,8 +442,8 @@ export class ConnectionManager {
   
   private handleConnectionTimeout(): void {
     logError("WebSocket connection timeout");
+    this.connectionState = 'idle';
     this.connectionLock = null;
-    this.connectionResolved = true;
     this.cleanupHeartbeat();
     this.cleanupConnectionTimeout();
     this.cleanupSocket();

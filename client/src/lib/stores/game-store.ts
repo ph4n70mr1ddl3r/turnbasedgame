@@ -86,6 +86,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set((state) => {
       if (!state.gameState) return state;
 
+      const playerExists = state.gameState.players.some(
+        (player) => player.player_id === playerId
+      );
+      if (!playerExists) {
+        logError('updatePlayer: player not found:', playerId);
+        return state;
+      }
+
       if (updates.chip_stack !== undefined && !isValidChipValue(updates.chip_stack)) {
         logError('Invalid chip_stack value:', updates.chip_stack);
         return state;
