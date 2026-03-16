@@ -1,17 +1,12 @@
 import { SESSION_TOKEN_KEY, PLAYER_ID_KEY, SESSION_EXPIRY_KEY } from "@/lib/constants/storage";
 import { SESSION_DURATION_MS } from "@/lib/constants/game";
 import { logError } from "@/lib/utils/logger";
+import { isValidPlayerId } from "@/types/game-types";
 
 export interface SessionData {
   token: string;
   playerId: string;
   expiry: number;
-}
-
-const VALID_PLAYER_IDS: readonly string[] = ["p1", "p2"];
-
-function isValidPlayerId(playerId: string): boolean {
-  return VALID_PLAYER_IDS.includes(playerId);
 }
 
 /**
@@ -28,9 +23,6 @@ function isValidPlayerId(playerId: string): boolean {
  * 1. UUID format validation (cryptographically generated)
  * 2. Server-side token verification on each message
  * 3. Session expiry checking
- *
- * Note: Client-side integrity hashing was removed as it provides false security
- * when the algorithm is visible in client-side code.
  */
 export class SessionManager {
 

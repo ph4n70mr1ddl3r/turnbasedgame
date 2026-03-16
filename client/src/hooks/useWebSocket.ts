@@ -13,11 +13,9 @@ import {
   lastErrorSelector,
   initializeGameStore,
 } from "@/lib/stores/game-store";
-import { BetAction } from "@/types/game-types";
+import { BetAction, PlayerState } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
 import { getDefaultWebSocketUrl } from "@/lib/constants/game";
-
-import { PlayerState } from '@/types/game-types';
 
 export interface UseWebSocketOptions {
   autoConnect?: boolean;
