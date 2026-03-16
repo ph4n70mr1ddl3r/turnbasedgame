@@ -451,11 +451,7 @@ export class ConnectionManager {
     logError("WebSocket connection timeout");
     this.connectionState = 'idle';
     this.connectionLock = null;
-    this.cleanupHeartbeat();
-    this.cleanupConnectionTimeout();
-    this.cleanupSocket();
-    this.pendingHeartbeatTimestamps.clear();
-    this.lastMessageTime = 0;
+    this.performCleanup();
     if (this.pendingResolve) {
       this.pendingResolve(false);
       this.pendingResolve = null;

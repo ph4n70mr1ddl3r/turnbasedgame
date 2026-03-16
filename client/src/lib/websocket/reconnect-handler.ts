@@ -6,6 +6,23 @@ import {
   RECONNECT_BACKOFF_FACTOR,
 } from "@/lib/constants/game";
 
+const NON_RECONNECTABLE_WS_CODES: readonly number[] = [
+  1000, 1001,
+  1002, 1003, 1007, 1008, 1010, 1011,
+];
+
+const RECONNECTABLE_ERROR_PATTERNS: readonly RegExp[] = [
+  /network/i,
+  /fetch/i,
+  /websocket.*not.*open/i,
+  /connection.*refused/i,
+  /connection.*reset/i,
+  /timeout/i,
+  /ECONNREFUSED/,
+  /ECONNRESET/,
+  /ENOTFOUND/,
+];
+
 export interface ReconnectOptions {
   maxAttempts?: number;
   initialDelay?: number;
@@ -233,12 +250,7 @@ export class ReconnectHandler {
   // Static helper to determine if reconnection should be attempted
   static shouldReconnect(error: CloseEvent | Error | unknown): boolean {
     if (error instanceof CloseEvent) {
-      const nonReconnectableCodes: readonly number[] = [
-        1000, 1001,
-        1002, 1003, 1007, 1008, 1010, 1011,
-      ];
-      
-      if (nonReconnectableCodes.includes(error.code)) {
+      if (NON_RECONNECTABLE_WS_CODES.includes(error.code)) {
         return false;
       }
       if (error.code >= 4000 && error.code <= 4999) {
@@ -249,19 +261,8 @@ export class ReconnectHandler {
     }
     
     if (error instanceof Error) {
-      const reconnectablePatterns: readonly RegExp[] = [
-        /network/i,
-        /fetch/i,
-        /websocket.*not.*open/i,
-        /connection.*refused/i,
-        /connection.*reset/i,
-        /timeout/i,
-        /ECONNREFUSED/,
-        /ECONNRESET/,
-        /ENOTFOUND/,
-      ];
       const errorMessage = error.message.toLowerCase();
-      return reconnectablePatterns.some(pattern => pattern.test(errorMessage));
+      return RECONNECTABLE_ERROR_PATTERNS.some(pattern => pattern.test(errorMessage));
     }
     
     return true;
