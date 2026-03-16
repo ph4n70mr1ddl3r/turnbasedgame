@@ -123,7 +123,7 @@ function BettingControlsInner({
     () => {
       const amounts = [minBet, minBet * 2, minBet * 3, maxBet]
         .map((amount) => Math.min(amount, maxBet))
-        .filter((amount) => amount > 0 && amount >= minBet);
+        .filter((amount) => amount > 0 && amount >= minBet && Number.isFinite(amount));
       const uniqueAmounts = [...new Set(amounts)];
       return uniqueAmounts.slice(0, MAX_QUICK_RAISE_OPTIONS);
     },

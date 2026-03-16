@@ -3,7 +3,7 @@ import { GameState, PlayerState, BetAction } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
 import { registerPlayerIdCallback } from "@/lib/stores/connection-store";
 
-const MAX_CHIP_VALUE = Number.MAX_SAFE_INTEGER;
+const MAX_CHIP_VALUE = 1_000_000_000;
 
 function isValidChipValue(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= MAX_CHIP_VALUE;
@@ -22,7 +22,7 @@ function deriveAvailableActions(
 
   const actions: BetAction[] = [];
   const bets = gameState.players.map((p) => p.current_bet);
-  const highestBet = bets.length > 0 ? Math.max(...bets) : 0;
+  const highestBet = bets.length > 0 ? Math.max(0, ...bets) : 0;
   const myBet = myPlayer.current_bet;
   const toCall = highestBet - myBet;
 

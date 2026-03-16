@@ -15,9 +15,19 @@ function PlayerSeatInner({ player, isCurrentPlayer }: PlayerSeatProps): React.Re
   const timerWidthPercent = useMemo((): number => {
     if (!player?.time_remaining) return 0;
     if (player.time_remaining <= 0) return 0;
-    if (DEFAULT_TURN_TIME_MS <= 0) return 0;
-    return Math.min(100, Math.max(0, (player.time_remaining / DEFAULT_TURN_TIME_MS) * 100));
+    if (!DEFAULT_TURN_TIME_MS || DEFAULT_TURN_TIME_MS <= 0) return 0;
+    const ratio = player.time_remaining / DEFAULT_TURN_TIME_MS;
+    if (!Number.isFinite(ratio)) return 0;
+    return Math.min(100, Math.max(0, ratio * 100));
   }, [player?.time_remaining]);
+
+  const is_folded = player?.is_folded ?? false;
+
+  const seatClasses = useMemo(() => [
+    "p-4 rounded-lg min-w-48 transition-all duration-300",
+    isCurrentPlayer ? "ring-4 ring-yellow-400 bg-green-900" : "bg-green-950/80",
+    is_folded ? "opacity-60" : "",
+  ].join(" "), [isCurrentPlayer, is_folded]);
 
   if (!player) {
     return (
@@ -30,14 +40,7 @@ function PlayerSeatInner({ player, isCurrentPlayer }: PlayerSeatProps): React.Re
     );
   }
   
-  const { player_id, chip_stack, hole_cards, current_bet, is_folded, is_all_in, time_remaining } = player;
-  
-  // Determine seat styling based on position and state
-  const seatClasses = [
-    "p-4 rounded-lg min-w-48 transition-all duration-300",
-    isCurrentPlayer ? "ring-4 ring-yellow-400 bg-green-900" : "bg-green-950/80",
-    is_folded ? "opacity-60" : "",
-  ].join(" ");
+  const { player_id, chip_stack, hole_cards, current_bet, is_all_in, time_remaining } = player;
   
   return (
     <div
@@ -76,7 +79,7 @@ function PlayerSeatInner({ player, isCurrentPlayer }: PlayerSeatProps): React.Re
           {hole_cards && hole_cards.length > 0 ? (
             hole_cards.map((card, index) => (
               <div
-                key={`hole-card-${index}-${card}`}
+                key={`hole-card-${card}-${index}`}
                 className="w-10 h-14 bg-white text-black rounded flex items-center justify-center font-bold shadow-md"
               >
                 {card}

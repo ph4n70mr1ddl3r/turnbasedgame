@@ -196,10 +196,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     return () => {
       abortController.abort();
       connectingRef.current = false;
-      if (managerRef.current) {
-        managerRef.current.disconnect();
-        managerRef.current = null;
-        urlRef.current = null;
+      const manager = managerRef.current;
+      managerRef.current = null;
+      urlRef.current = null;
+      if (manager) {
+        manager.disconnect();
       }
     };
   }, [autoConnect, url, getOrCreateManager, performConnection]);
