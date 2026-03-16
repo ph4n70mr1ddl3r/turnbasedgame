@@ -87,11 +87,18 @@ export class ConnectionManager {
 
   private enforceHeartbeatBounds(): void {
     const now = Date.now();
+    const entriesToDelete: number[] = [];
+    
     for (const [id, timestamp] of this.pendingHeartbeatTimestamps) {
       if (now - timestamp > WS_HEARTBEAT_TIMEOUT_MS) {
-        this.pendingHeartbeatTimestamps.delete(id);
+        entriesToDelete.push(id);
       }
     }
+    
+    for (const id of entriesToDelete) {
+      this.pendingHeartbeatTimestamps.delete(id);
+    }
+    
     while (this.pendingHeartbeatTimestamps.size > WS_MAX_PENDING_HEARTBEATS) {
       const oldestKey = this.pendingHeartbeatTimestamps.keys().next().value;
       if (oldestKey !== undefined) {

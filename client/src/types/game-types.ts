@@ -162,14 +162,17 @@ export function isValidPlayerPosition(value: string): value is PlayerPosition {
 }
 
 export function isValidCard(card: string): boolean {
+  if (typeof card !== 'string') return false;
   return /^[2-9TJQKA][cdhs]$/.test(card);
 }
 
 export function isValidPlayerId(id: string): boolean {
+  if (typeof id !== 'string') return false;
   return id === "p1" || id === "p2";
 }
 
 export function isValidBetAction(action: string): action is BetAction {
+  if (typeof action !== 'string') return false;
   return ["check", "call", "raise", "fold"].includes(action);
 }
 

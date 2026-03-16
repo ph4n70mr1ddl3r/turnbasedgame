@@ -4,16 +4,19 @@ import React, { memo, useMemo } from "react";
 import { PlayerState } from "@/types/game-types";
 import { DEFAULT_TURN_TIME_MS } from "@/lib/constants/game";
 
+const TIMER_TRANSITION_DURATION_MS = 1000;
+
 interface PlayerSeatProps {
   player?: PlayerState;
   isCurrentPlayer: boolean;
 }
 
 function PlayerSeatInner({ player, isCurrentPlayer }: PlayerSeatProps): React.ReactElement {
-  const timerWidthPercent = useMemo(() => {
+  const timerWidthPercent = useMemo((): number => {
     if (!player?.time_remaining) return 0;
+    if (player.time_remaining <= 0) return 0;
     if (DEFAULT_TURN_TIME_MS <= 0) return 0;
-    return Math.min(100, (player.time_remaining / DEFAULT_TURN_TIME_MS) * 100);
+    return Math.min(100, Math.max(0, (player.time_remaining / DEFAULT_TURN_TIME_MS) * 100));
   }, [player?.time_remaining]);
 
   if (!player) {
@@ -102,8 +105,8 @@ function PlayerSeatInner({ player, isCurrentPlayer }: PlayerSeatProps): React.Re
           <div className="text-xs text-green-300 mb-1">Time remaining</div>
           <div className="w-full bg-green-900 h-2 rounded-full overflow-hidden">
             <div
-              className="bg-yellow-500 h-full transition-all duration-1000"
-              style={{ width: `${timerWidthPercent}%` }}
+              className="bg-yellow-500 h-full transition-all"
+              style={{ width: `${timerWidthPercent}%`, transitionDuration: `${TIMER_TRANSITION_DURATION_MS}ms` }}
             />
           </div>
           <div className="text-xs text-right mt-1">

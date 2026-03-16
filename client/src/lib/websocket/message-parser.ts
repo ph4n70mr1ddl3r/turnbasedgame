@@ -24,10 +24,15 @@ import {
 import { logError } from "@/lib/utils/logger";
 
 const MAX_MESSAGE_SIZE_BYTES = 64 * 1024;
+const MIN_MESSAGE_SIZE_BYTES = 2;
 
 export class MessageParser {
   static parseMessage(data: string): WebSocketMessage | null {
     if (!data || typeof data !== 'string') {
+      return null;
+    }
+
+    if (data.length < MIN_MESSAGE_SIZE_BYTES) {
       return null;
     }
 
