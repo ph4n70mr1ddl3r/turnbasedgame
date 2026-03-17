@@ -93,9 +93,19 @@ export class SessionManager {
     const session: SessionData = { token, playerId, expiry };
 
     const storage = safeLocalStorage();
-    storage.setItem(SESSION_TOKEN_KEY, token);
-    storage.setItem(PLAYER_ID_KEY, playerId);
-    storage.setItem(SESSION_EXPIRY_KEY, expiry.toString());
+    const results = [
+      storage.setItem(SESSION_TOKEN_KEY, token),
+      storage.setItem(PLAYER_ID_KEY, playerId),
+      storage.setItem(SESSION_EXPIRY_KEY, expiry.toString()),
+    ];
+
+    const failedWrites = results.filter(r => !r.success);
+    if (failedWrites.length > 0) {
+      logError("Failed to save session to localStorage", {
+        quotaExceeded: failedWrites.some(r => r.quotaExceeded),
+      });
+      throw new Error("Failed to save session: storage unavailable");
+    }
 
     return session;
   }
@@ -106,7 +116,13 @@ export class SessionManager {
     
     const newExpiry = Date.now() + SESSION_DURATION_MS;
     const storage = safeLocalStorage();
-    storage.setItem(SESSION_EXPIRY_KEY, newExpiry.toString());
+    const result = storage.setItem(SESSION_EXPIRY_KEY, newExpiry.toString());
+    
+    if (!result.success) {
+      logError("Failed to update session expiry", { quotaExceeded: result.quotaExceeded });
+      return false;
+    }
+    
     return true;
   }
 
@@ -149,6 +165,13 @@ export class SessionManager {
       } catch (error) {
         logError("Failed to generate UUID using getRandomValues:", error);
       }
+    }
+
+    if (typeof window === 'undefined') {
+      logError("SSR environment detected without crypto support - generating fallback token");
+      const timestamp = Date.now().toString(16).padStart(12, '0');
+      const random = Math.random().toString(16).slice(2, 14).padEnd(12, '0');
+      return `${timestamp.slice(0, 8)}-${timestamp.slice(8, 12)}-4${random.slice(0, 3)}-8${random.slice(3, 6)}-${random.slice(6, 12)}${timestamp.slice(0, 6)}`;
     }
 
     throw new Error("No cryptographically secure random number generator available");

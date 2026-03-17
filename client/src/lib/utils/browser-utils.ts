@@ -10,24 +10,37 @@ export function isBrowser(): boolean {
   return typeof window !== 'undefined';
 }
 
+export interface StorageSetResult {
+  success: boolean;
+  quotaExceeded?: boolean;
+}
+
 interface SafeLocalStorage {
   getItem: (key: string) => string | null;
-  setItem: (key: string, value: string) => void;
-  removeItem: (key: string) => void;
-  clear: () => void;
+  setItem: (key: string, value: string) => StorageSetResult;
+  removeItem: (key: string) => boolean;
+  clear: () => boolean;
 }
 
 const NOOP_STORAGE: SafeLocalStorage = {
   getItem: () => null,
-  setItem: () => {},
-  removeItem: () => {},
-  clear: () => {},
+  setItem: () => ({ success: false }),
+  removeItem: () => false,
+  clear: () => false,
 };
 
 let cachedStorage: SafeLocalStorage | null = null;
 
 export function clearStorageCache(): void {
   cachedStorage = null;
+}
+
+function isQuotaExceededError(error: unknown): boolean {
+  return (
+    error instanceof DOMException &&
+    (error.name === 'QuotaExceededError' ||
+      error.name === 'NS_ERROR_DOM_QUOTA_REACHED')
+  );
 }
 
 export function safeLocalStorage(): SafeLocalStorage {
@@ -53,31 +66,40 @@ export function safeLocalStorage(): SafeLocalStorage {
         return null;
       }
     },
-    setItem: (key: string, value: string): void => {
+    setItem: (key: string, value: string): StorageSetResult => {
       try {
         localStorage.setItem(key, value);
+        return { success: true };
       } catch (error) {
         if (IS_DEV) {
           console.warn("[WARN] localStorage.setItem failed:", error);
         }
+        return { 
+          success: false, 
+          quotaExceeded: isQuotaExceededError(error) 
+        };
       }
     },
-    removeItem: (key: string): void => {
+    removeItem: (key: string): boolean => {
       try {
         localStorage.removeItem(key);
+        return true;
       } catch (error) {
         if (IS_DEV) {
           console.warn("[WARN] localStorage.removeItem failed:", error);
         }
+        return false;
       }
     },
-    clear: (): void => {
+    clear: (): boolean => {
       try {
         localStorage.clear();
+        return true;
       } catch (error) {
         if (IS_DEV) {
           console.warn("[WARN] localStorage.clear failed:", error);
         }
+        return false;
       }
     },
   };

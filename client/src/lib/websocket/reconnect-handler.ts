@@ -269,7 +269,7 @@ export class ReconnectHandler {
   }
   
   // Static helper to determine if reconnection should be attempted
-  static shouldReconnect(error: CloseEvent | Error | unknown): boolean {
+  static shouldReconnect(error: CloseEvent | Error | DOMException | unknown): boolean {
     if (error instanceof CloseEvent) {
       if (NON_RECONNECTABLE_WS_CODES.includes(error.code)) {
         return false;
@@ -279,6 +279,19 @@ export class ReconnectHandler {
       }
       
       return true;
+    }
+    
+    if (error instanceof DOMException) {
+      const errorName = error.name.toLowerCase();
+      const errorMessage = error.message.toLowerCase();
+      
+      if (errorName === 'aborterror' || errorName === 'notallowederror') {
+        return false;
+      }
+      
+      return RECONNECTABLE_ERROR_PATTERNS.some(pattern => 
+        pattern.test(errorMessage) || pattern.test(errorName)
+      );
     }
     
     if (error instanceof Error) {

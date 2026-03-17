@@ -15,6 +15,7 @@ import {
   RECONNECT_MAX_DELAY_MS,
   RECONNECT_BACKOFF_FACTOR,
   WS_MAX_PENDING_HEARTBEATS,
+  WS_MAX_MESSAGE_SIZE,
 } from "@/lib/constants/game";
 
 export interface ConnectionOptions {
@@ -307,6 +308,12 @@ export class ConnectionManager {
 
     try {
       const messageStr = MessageParser.stringifyMessage(message);
+      
+      if (messageStr.length > WS_MAX_MESSAGE_SIZE) {
+        logError(`Message too large: ${messageStr.length} bytes (max: ${WS_MAX_MESSAGE_SIZE})`);
+        return false;
+      }
+      
       this.socket.send(messageStr);
       return true;
     } catch (error) {
@@ -415,7 +422,7 @@ export class ConnectionManager {
     }
   }
 
-  private handleError(event: Event): void {
+  private handleError(event: Event | ErrorEvent): void {
     let errorDetails = 'Unknown WebSocket error';
 
     if (event instanceof ErrorEvent) {
@@ -423,8 +430,17 @@ export class ConnectionManager {
       if (event.message) parts.push(event.message);
       if (event.filename) parts.push(`(${event.filename}:${event.lineno}:${event.colno})`);
       errorDetails = parts.length > 0 ? parts.join(' ') : 'Unknown ErrorEvent';
+    } else if (event instanceof DOMException) {
+      errorDetails = `DOMException: ${event.name} - ${event.message}`;
     } else if (event.type === 'error') {
-      errorDetails = 'WebSocket error event';
+      const target = event.target;
+      if (target instanceof WebSocket) {
+        const url = target.url || 'unknown';
+        const readyState = target.readyState;
+        errorDetails = `WebSocket error event (url: ${url}, readyState: ${readyState})`;
+      } else {
+        errorDetails = 'WebSocket error event';
+      }
     }
 
     logError("WebSocket error:", errorDetails);
@@ -534,23 +550,28 @@ export class ConnectionManager {
     this.lastMessageTime = Date.now();
 
     const sendHeartbeat = (): void => {
-      if (this.socket?.readyState === WebSocket.OPEN) {
-        this.enforceHeartbeatBounds();
-        
-        const clientTimestamp = Date.now();
-        this.heartbeatCounter = (this.heartbeatCounter + 1) & 0xFFFF;
-        const heartbeatId = (clientTimestamp * 0x10000) + this.heartbeatCounter;
-        this.pendingHeartbeatTimestamps.set(heartbeatId, clientTimestamp);
-        const heartbeat = {
-          type: "heartbeat" as const,
-          data: { timestamp: heartbeatId },
-        };
-        this.sendMessage(heartbeat);
+      if (this.connectionState !== 'connected') {
+        return;
+      }
+      if (this.socket?.readyState !== WebSocket.OPEN) {
+        return;
+      }
+      
+      this.enforceHeartbeatBounds();
+      
+      const clientTimestamp = Date.now();
+      this.heartbeatCounter = (this.heartbeatCounter + 1) & 0xFFFF;
+      const heartbeatId = (clientTimestamp * 0x10000) + this.heartbeatCounter;
+      this.pendingHeartbeatTimestamps.set(heartbeatId, clientTimestamp);
+      const heartbeat = {
+        type: "heartbeat" as const,
+        data: { timestamp: heartbeatId },
+      };
+      this.sendMessage(heartbeat);
 
-        if (Date.now() - this.lastMessageTime > WS_HEARTBEAT_TIMEOUT_MS) {
-          logError("Connection stale - no message received recently");
-          this.handleConnectionTimeout();
-        }
+      if (Date.now() - this.lastMessageTime > WS_HEARTBEAT_TIMEOUT_MS) {
+        logError("Connection stale - no message received recently");
+        this.handleConnectionTimeout();
       }
     };
 

@@ -22,8 +22,8 @@ import {
   isArray,
 } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
+import { WS_MAX_MESSAGE_SIZE } from "@/lib/constants/game";
 
-const MAX_MESSAGE_SIZE_BYTES = 64 * 1024;
 const MIN_MESSAGE_SIZE_BYTES = 2;
 
 export class MessageParser {
@@ -36,8 +36,8 @@ export class MessageParser {
       return null;
     }
 
-    if (data.length > MAX_MESSAGE_SIZE_BYTES) {
-      logError(`Message too large: ${data.length} bytes (max: ${MAX_MESSAGE_SIZE_BYTES})`);
+    if (data.length > WS_MAX_MESSAGE_SIZE) {
+      logError(`Message too large: ${data.length} bytes (max: ${WS_MAX_MESSAGE_SIZE})`);
       return null;
     }
     
