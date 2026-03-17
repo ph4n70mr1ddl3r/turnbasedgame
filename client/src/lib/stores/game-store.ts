@@ -12,18 +12,33 @@ function isValidChipValue(value: unknown): value is number {
          value <= MAX_CHIP_VALUE;
 }
 
-function isValidGameState(gameState: unknown): gameState is GameState {
-  if (!gameState || typeof gameState !== 'object') return false;
-  const state = gameState as Partial<GameState>;
-  
-  return (
+ return (
     Array.isArray(state.players) &&
-    state.players.length > 0 &&
-    typeof state.pot === 'number' &&
-    typeof state.round === 'string' &&
-    typeof state.game_status === 'string'
-  );
-}
+      state.players.length > 0 &&
+      typeof state.pot !== 'number' ||
+      typeof state.round !== 'string' ||
+      typeof state.game_status !== 'string') {
+        logError('Invalid game state: missing or invalid players/round/pot', gameState);
+      }
+      
+      if (typeof state.min_bet !== 'number' || state.min_bet < 0) {
+        logError('Invalid game state: invalid min_bet', state);
+        return false;
+      }
+      
+      if (typeof state.max_bet !== 'number' || state.max_bet < 0) {
+        logError('Invalid game state: invalid max_bet', state);
+        return false;
+      }
+      
+      if (state.min_bet > state.max_bet) {
+        logError('Invalid game state: min_bet cannot be greater than max_bet');
+        return false;
+      }
+    }
+    
+    return true;
+  }
 
 function deriveAvailableActions(
   gameState: GameState | null,

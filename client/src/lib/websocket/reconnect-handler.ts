@@ -53,6 +53,7 @@ export class ReconnectHandler {
   private isAttempting = false;
   private getConnectFn: () => ConnectFunction;
   private abortController: AbortController | null = null;
+  private boundHandleOnline: () => void;
 
   private onStateChange?: (state: ReconnectState) => void;
   private onError?: (error: unknown) => void;
@@ -60,7 +61,6 @@ export class ReconnectHandler {
   
   constructor(
     getConnectFn: () => ConnectFunction,
-
     onStateChange?: (state: ReconnectState) => void,
     options: ReconnectOptions = {}
   ) {
@@ -70,6 +70,26 @@ export class ReconnectHandler {
     const { onError: _, ...restOptions } = options;
     this.options = { ...DEFAULT_OPTIONS, ...restOptions, onError: options.onError };
     this.currentDelay = this.options.initialDelay;
+    this.boundHandleOnline = () => this.handleOnline();
+    this.setupOnlineListener();
+  }
+
+  private setupOnlineListener(): void {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', this.boundHandleOnline);
+    }
+  }
+
+  private removeOnlineListener(): void {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('online', this.boundHandleOnline);
+    }
+  }
+
+  private handleOnline(): void {
+    if (this.isActive && !this.isAttempting) {
+      this.reconnectNow();
+    }
   }
 
   start(): void {
@@ -102,6 +122,7 @@ export class ReconnectHandler {
   stop(): void {
     this.isActive = false;
     this.isAttempting = false;
+    this.removeOnlineListener();
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;

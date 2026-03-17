@@ -53,6 +53,7 @@ export class ConnectionManager {
   private lastMessageTime = 0;
   private pendingResolve: ((value: boolean) => void) | null = null;
   private abortController: AbortController | null = null;
+  private heartbeatCounter = 0;
 
   private boundConnect: () => Promise<boolean>;
 
@@ -333,6 +334,12 @@ export class ConnectionManager {
         logError("Cannot send bet action: negative amount", amount);
         return false;
       }
+      
+      const gameState = useGameStore.getState().gameState;
+      if (gameState && amount > gameState.max_bet) {
+        logError("Cannot send bet action: amount exceeds max_bet", { amount, maxBet: gameState.max_bet });
+        return false;
+      }
     }
 
     return this.sendMessage({
@@ -530,7 +537,8 @@ export class ConnectionManager {
         this.enforceHeartbeatBounds();
         
         const clientTimestamp = Date.now();
-        const heartbeatId = clientTimestamp;
+        this.heartbeatCounter = (this.heartbeatCounter + 1) & 0xFFFF;
+        const heartbeatId = (clientTimestamp * 0x10000) + this.heartbeatCounter;
         this.pendingHeartbeatTimestamps.set(heartbeatId, clientTimestamp);
         const heartbeat = {
           type: "heartbeat" as const,
