@@ -26,6 +26,10 @@ const NOOP_STORAGE: SafeLocalStorage = {
 
 let cachedStorage: SafeLocalStorage | null = null;
 
+export function clearStorageCache(): void {
+  cachedStorage = null;
+}
+
 export function safeLocalStorage(): SafeLocalStorage {
   if (cachedStorage) {
     return cachedStorage;

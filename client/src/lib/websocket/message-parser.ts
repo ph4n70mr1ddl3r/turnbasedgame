@@ -280,7 +280,7 @@ export class MessageParser {
       data: {
         code: data.code,
         message: data.message,
-        details: isObject(data.details) ? data.details as Record<string, unknown> : undefined,
+        details: isObject(data.details) ? { ...data.details } as Record<string, unknown> : undefined,
       },
     };
   }

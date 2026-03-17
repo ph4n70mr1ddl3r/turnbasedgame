@@ -55,11 +55,8 @@ export class ConnectionManager {
   private abortController: AbortController | null = null;
   private heartbeatCounter = 0;
 
-  private boundConnect: () => Promise<boolean>;
-
   constructor(options: ConnectionOptions = {}) {
     this.options = { ...DEFAULT_OPTIONS, ...options };
-    this.boundConnect = () => this.connect();
 
     if (!this.validateWebSocketUrl(this.options.url)) {
       throw new Error(`Invalid WebSocket URL: ${this.options.url}`);
@@ -67,7 +64,7 @@ export class ConnectionManager {
 
     if (this.options.autoReconnect) {
       this.reconnectHandler = new ReconnectHandler(
-        () => this.boundConnect,
+        () => () => this.connect(),
         (state: ReconnectState) => {
           let connectionStatus: ConnectionStatus;
 
