@@ -2,6 +2,7 @@ import { SESSION_TOKEN_KEY, PLAYER_ID_KEY, SESSION_EXPIRY_KEY } from "@/lib/cons
 import { SESSION_DURATION_MS } from "@/lib/constants/game";
 import { logError } from "@/lib/utils/logger";
 import { isValidPlayerId } from "@/types/game-types";
+import { safeLocalStorage } from "@/lib/utils/browser-utils";
 
 export interface SessionData {
   token: string;
@@ -32,14 +33,12 @@ export class SessionManager {
   }
 
   static getSession(): SessionData | null {
-    if (typeof window === 'undefined') {
-      return null;
-    }
+    const storage = safeLocalStorage();
 
     try {
-      const token = localStorage.getItem(SESSION_TOKEN_KEY);
-      const playerId = localStorage.getItem(PLAYER_ID_KEY);
-      const expiryStr = localStorage.getItem(SESSION_EXPIRY_KEY);
+      const token = storage.getItem(SESSION_TOKEN_KEY);
+      const playerId = storage.getItem(PLAYER_ID_KEY);
+      const expiryStr = storage.getItem(SESSION_EXPIRY_KEY);
 
       if (!token || !playerId || !expiryStr) {
         return null;
@@ -97,14 +96,10 @@ export class SessionManager {
       return session;
     }
 
-    try {
-      localStorage.setItem(SESSION_TOKEN_KEY, token);
-      localStorage.setItem(PLAYER_ID_KEY, playerId);
-      localStorage.setItem(SESSION_EXPIRY_KEY, expiry.toString());
-    } catch (error) {
-      logError("Error saving session to localStorage:", error);
-      throw new Error("Failed to persist session to localStorage");
-    }
+    const storage = safeLocalStorage();
+    storage.setItem(SESSION_TOKEN_KEY, token);
+    storage.setItem(PLAYER_ID_KEY, playerId);
+    storage.setItem(SESSION_EXPIRY_KEY, expiry.toString());
 
     return session;
   }
@@ -114,17 +109,13 @@ export class SessionManager {
       return false;
     }
 
-    try {
-      const session = this.getSession();
-      if (!session) return false;
-      
-      const newExpiry = Date.now() + SESSION_DURATION_MS;
-      localStorage.setItem(SESSION_EXPIRY_KEY, newExpiry.toString());
-      return true;
-    } catch (error) {
-      logError("Error updating session expiry:", error);
-      return false;
-    }
+    const session = this.getSession();
+    if (!session) return false;
+    
+    const newExpiry = Date.now() + SESSION_DURATION_MS;
+    const storage = safeLocalStorage();
+    storage.setItem(SESSION_EXPIRY_KEY, newExpiry.toString());
+    return true;
   }
 
   static clearSession(): void {
@@ -132,13 +123,10 @@ export class SessionManager {
       return;
     }
 
-    try {
-      localStorage.removeItem(SESSION_TOKEN_KEY);
-      localStorage.removeItem(PLAYER_ID_KEY);
-      localStorage.removeItem(SESSION_EXPIRY_KEY);
-    } catch (error) {
-      logError("Error clearing session from localStorage:", error);
-    }
+    const storage = safeLocalStorage();
+    storage.removeItem(SESSION_TOKEN_KEY);
+    storage.removeItem(PLAYER_ID_KEY);
+    storage.removeItem(SESSION_EXPIRY_KEY);
   }
 
   static isValidSession(): boolean {
