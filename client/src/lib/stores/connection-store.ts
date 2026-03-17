@@ -5,6 +5,8 @@ import { logError } from "@/lib/utils/logger";
 
 type PlayerIdCallback = (playerId: string | null) => void;
 
+const MAX_CALLBACKS = 100;
+
 const callbackRegistry = {
   playerIdCallbacks: new Set<PlayerIdCallback>(),
   
@@ -13,6 +15,10 @@ const callbackRegistry = {
   },
   
   register(callback: PlayerIdCallback): () => void {
+    if (this.playerIdCallbacks.size >= MAX_CALLBACKS) {
+      logError("Maximum callback limit reached, clearing oldest callbacks");
+      this.playerIdCallbacks.clear();
+    }
     this.playerIdCallbacks.add(callback);
     return () => this.playerIdCallbacks.delete(callback);
   },

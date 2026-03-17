@@ -34,33 +34,44 @@ export function safeLocalStorage(): SafeLocalStorage {
     return cachedStorage;
   }
 
+  const IS_DEV = typeof process !== "undefined" && process.env?.NODE_ENV === "development";
+  
   cachedStorage = {
     getItem: (key: string): string | null => {
       try {
         return localStorage.getItem(key);
-      } catch {
+      } catch (error) {
+        if (IS_DEV) {
+          console.warn("[WARN] localStorage.getItem failed:", error);
+        }
         return null;
       }
     },
     setItem: (key: string, value: string): void => {
       try {
         localStorage.setItem(key, value);
-      } catch {
-        // Silently fail if localStorage is not available
+      } catch (error) {
+        if (IS_DEV) {
+          console.warn("[WARN] localStorage.setItem failed:", error);
+        }
       }
     },
     removeItem: (key: string): void => {
       try {
         localStorage.removeItem(key);
-      } catch {
-        // Silently fail if localStorage is not available
+      } catch (error) {
+        if (IS_DEV) {
+          console.warn("[WARN] localStorage.removeItem failed:", error);
+        }
       }
     },
     clear: (): void => {
       try {
         localStorage.clear();
-      } catch {
-        // Silently fail if localStorage is not available
+      } catch (error) {
+        if (IS_DEV) {
+          console.warn("[WARN] localStorage.clear failed:", error);
+        }
       }
     },
   };
