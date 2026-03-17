@@ -12,33 +12,51 @@ function isValidChipValue(value: unknown): value is number {
          value <= MAX_CHIP_VALUE;
 }
 
- return (
-    Array.isArray(state.players) &&
-      state.players.length > 0 &&
-      typeof state.pot !== 'number' ||
-      typeof state.round !== 'string' ||
-      typeof state.game_status !== 'string') {
-        logError('Invalid game state: missing or invalid players/round/pot', gameState);
-      }
-      
-      if (typeof state.min_bet !== 'number' || state.min_bet < 0) {
-        logError('Invalid game state: invalid min_bet', state);
-        return false;
-      }
-      
-      if (typeof state.max_bet !== 'number' || state.max_bet < 0) {
-        logError('Invalid game state: invalid max_bet', state);
-        return false;
-      }
-      
-      if (state.min_bet > state.max_bet) {
-        logError('Invalid game state: min_bet cannot be greater than max_bet');
-        return false;
-      }
-    }
-    
-    return true;
+function isValidGameState(state: unknown): state is GameState {
+  if (typeof state !== 'object' || state === null) {
+    logError('Invalid game state: not an object', state);
+    return false;
   }
+  
+  const gameState = state as GameState;
+  
+  if (!Array.isArray(gameState.players) || gameState.players.length === 0) {
+    logError('Invalid game state: missing or invalid players', gameState);
+    return false;
+  }
+  
+  if (typeof gameState.pot !== 'number') {
+    logError('Invalid game state: invalid pot', gameState);
+    return false;
+  }
+  
+  if (typeof gameState.round !== 'string') {
+    logError('Invalid game state: invalid round', gameState);
+    return false;
+  }
+  
+  if (typeof gameState.game_status !== 'string') {
+    logError('Invalid game state: invalid game_status', gameState);
+    return false;
+  }
+  
+  if (typeof gameState.min_bet !== 'number' || gameState.min_bet < 0) {
+    logError('Invalid game state: invalid min_bet', gameState);
+    return false;
+  }
+  
+  if (typeof gameState.max_bet !== 'number' || gameState.max_bet < 0) {
+    logError('Invalid game state: invalid max_bet', gameState);
+    return false;
+  }
+  
+  if (gameState.min_bet > gameState.max_bet) {
+    logError('Invalid game state: min_bet cannot be greater than max_bet');
+    return false;
+  }
+  
+  return true;
+}
 
 function deriveAvailableActions(
   gameState: GameState | null,
