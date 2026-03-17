@@ -92,10 +92,6 @@ export class SessionManager {
     const expiry = Date.now() + SESSION_DURATION_MS;
     const session: SessionData = { token, playerId, expiry };
 
-    if (typeof window === 'undefined') {
-      return session;
-    }
-
     const storage = safeLocalStorage();
     storage.setItem(SESSION_TOKEN_KEY, token);
     storage.setItem(PLAYER_ID_KEY, playerId);
@@ -105,10 +101,6 @@ export class SessionManager {
   }
 
   static updateSessionExpiry(): boolean {
-    if (typeof window === 'undefined') {
-      return false;
-    }
-
     const session = this.getSession();
     if (!session) return false;
     
@@ -119,10 +111,6 @@ export class SessionManager {
   }
 
   static clearSession(): void {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
     const storage = safeLocalStorage();
     storage.removeItem(SESSION_TOKEN_KEY);
     storage.removeItem(PLAYER_ID_KEY);

@@ -5,25 +5,35 @@ import { logError } from "@/lib/utils/logger";
 
 type PlayerIdCallback = (playerId: string | null) => void;
 
-const playerIdCallbacks: Set<PlayerIdCallback> = new Set();
+const callbackRegistry = {
+  playerIdCallbacks: new Set<PlayerIdCallback>(),
+  
+  clear(): void {
+    this.playerIdCallbacks.clear();
+  },
+  
+  register(callback: PlayerIdCallback): () => void {
+    this.playerIdCallbacks.add(callback);
+    return () => this.playerIdCallbacks.delete(callback);
+  },
+  
+  notify(playerId: string | null): void {
+    this.playerIdCallbacks.forEach(callback => {
+      try {
+        callback(playerId);
+      } catch (error) {
+        logError("Error in playerId callback:", error);
+      }
+    });
+  },
+};
 
 export function clearAllPlayerIdCallbacks(): void {
-  playerIdCallbacks.clear();
+  callbackRegistry.clear();
 }
 
 export function registerPlayerIdCallback(callback: PlayerIdCallback): () => void {
-  playerIdCallbacks.add(callback);
-  return () => playerIdCallbacks.delete(callback);
-}
-
-function notifyPlayerIdChange(playerId: string | null): void {
-  playerIdCallbacks.forEach(callback => {
-    try {
-      callback(playerId);
-    } catch (error) {
-      logError("Error in playerId callback:", error);
-    }
-  });
+  return callbackRegistry.register(callback);
 }
 
 interface ConnectionStore {
@@ -56,7 +66,7 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
     if (typeof window === "undefined") return;
     const session = SessionManager.getSession();
     if (session) {
-      notifyPlayerIdChange(session.playerId);
+      callbackRegistry.notify(session.playerId);
       set({ sessionToken: session.token, playerId: session.playerId });
     }
   },
@@ -83,13 +93,11 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
   setSession: (token: string, playerId: string): void => {
     try {
       SessionManager.createSession(token, playerId);
-      notifyPlayerIdChange(playerId);
-      set({ sessionToken: token, playerId });
     } catch (error) {
       logError("Failed to persist session:", error);
-      notifyPlayerIdChange(playerId);
-      set({ sessionToken: token, playerId });
     }
+    callbackRegistry.notify(playerId);
+    set({ sessionToken: token, playerId });
   },
 
   clearSession: (): void => {
@@ -98,7 +106,7 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
     } catch (error) {
       logError("Failed to clear session:", error);
     }
-    notifyPlayerIdChange(null);
+    callbackRegistry.notify(null);
     set({ sessionToken: null, playerId: null });
   },
 
@@ -108,7 +116,7 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
     } catch (error) {
       logError("Failed to clear session during reset:", error);
     }
-    notifyPlayerIdChange(null);
+    callbackRegistry.notify(null);
     set({
       status: "disconnected",
       isConnected: false,

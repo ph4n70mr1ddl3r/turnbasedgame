@@ -214,29 +214,31 @@ export const lastErrorSelector = (state: GameStore): string | null => state.last
 export const cachedPlayerIdSelector = (state: GameStore): string | null =>
   state.cachedPlayerId;
 
-let isInitialized = false;
-let unregisterCallback: (() => void) | null = null;
+const gameStoreInitState = {
+  isInitialized: false,
+  unregisterCallback: null as (() => void) | null,
+};
 
 export function initializeGameStore(): () => void {
   if (typeof window === 'undefined') return () => {};
   
-  if (isInitialized && unregisterCallback) {
-    return unregisterCallback;
+  if (gameStoreInitState.isInitialized && gameStoreInitState.unregisterCallback) {
+    return gameStoreInitState.unregisterCallback;
   }
   
-  isInitialized = true;
+  gameStoreInitState.isInitialized = true;
   
-  unregisterCallback = registerPlayerIdCallback((playerId) => {
+  gameStoreInitState.unregisterCallback = registerPlayerIdCallback((playerId) => {
     useGameStore.getState().setCachedPlayerId(playerId);
   });
   
-  return unregisterCallback;
+  return gameStoreInitState.unregisterCallback;
 }
 
 export function resetGameStoreInitialization(): void {
-  if (unregisterCallback) {
-    unregisterCallback();
-    unregisterCallback = null;
+  if (gameStoreInitState.unregisterCallback) {
+    gameStoreInitState.unregisterCallback();
+    gameStoreInitState.unregisterCallback = null;
   }
-  isInitialized = false;
+  gameStoreInitState.isInitialized = false;
 }
