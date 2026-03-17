@@ -21,13 +21,13 @@ function PlayerSeatInner({ player, isCurrentPlayer }: PlayerSeatProps): React.Re
     return Math.min(100, Math.max(0, ratio * 100));
   }, [player?.time_remaining]);
 
-  const is_folded = player?.is_folded ?? false;
+  const isFolded = player?.is_folded ?? false;
 
   const seatClasses = useMemo(() => [
     "p-4 rounded-lg min-w-48 transition-all duration-300",
     isCurrentPlayer ? "ring-4 ring-yellow-400 bg-green-900" : "bg-green-950/80",
-    is_folded ? "opacity-60" : "",
-  ].join(" "), [isCurrentPlayer, is_folded]);
+    isFolded ? "opacity-60" : "",
+  ].join(" "), [isCurrentPlayer, isFolded]);
 
   if (!player) {
     return (
@@ -55,7 +55,7 @@ function PlayerSeatInner({ player, isCurrentPlayer }: PlayerSeatProps): React.Re
             <div className={`w-3 h-3 rounded-full ${isCurrentPlayer ? "bg-yellow-400 animate-pulse" : "bg-green-500"}`} />
             <h3 className="font-bold text-lg">{player_id === "p1" ? "Player 1" : "Player 2"}</h3>
           </div>
-          {is_folded && (
+          {isFolded && (
             <span className="text-xs bg-red-900 px-2 py-1 rounded">FOLDED</span>
           )}
           {is_all_in && (

@@ -8,22 +8,33 @@ export function isBrowser(): boolean {
   return typeof window !== 'undefined';
 }
 
-export function safeLocalStorage(): {
+interface SafeLocalStorage {
   getItem: (key: string) => string | null;
   setItem: (key: string, value: string) => void;
   removeItem: (key: string) => void;
   clear: () => void;
-} {
-  if (!isBrowser()) {
-    return {
-      getItem: () => null,
-      setItem: () => {},
-      removeItem: () => {},
-      clear: () => {},
-    };
+}
+
+const NOOP_STORAGE: SafeLocalStorage = {
+  getItem: () => null,
+  setItem: () => {},
+  removeItem: () => {},
+  clear: () => {},
+};
+
+let cachedStorage: SafeLocalStorage | null = null;
+
+export function safeLocalStorage(): SafeLocalStorage {
+  if (cachedStorage) {
+    return cachedStorage;
   }
 
-  return {
+  if (!isBrowser()) {
+    cachedStorage = NOOP_STORAGE;
+    return cachedStorage;
+  }
+
+  cachedStorage = {
     getItem: (key: string): string | null => {
       try {
         return localStorage.getItem(key);
@@ -53,4 +64,6 @@ export function safeLocalStorage(): {
       }
     },
   };
+
+  return cachedStorage;
 }

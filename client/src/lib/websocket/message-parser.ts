@@ -88,7 +88,7 @@ export class MessageParser {
 
     const data = msg.data;
 
-    if (!isArray(data.players) || data.players.length !== MAX_PLAYERS) {
+    if (!isArray(data.players) || data.players.length === 0 || data.players.length > MAX_PLAYERS) {
       logError("Invalid game_state_update: players array invalid", data);
       return null;
     }

@@ -247,9 +247,14 @@ export const lastErrorSelector = (state: GameStore): string | null => state.last
 export const cachedPlayerIdSelector = (state: GameStore): string | null =>
   state.cachedPlayerId;
 
-const gameStoreInitState = {
+interface GameStoreInitState {
+  isInitialized: boolean;
+  unregisterCallback: (() => void) | null;
+}
+
+const gameStoreInitState: GameStoreInitState = {
   isInitialized: false,
-  unregisterCallback: null as (() => void) | null,
+  unregisterCallback: null,
 };
 
 export function initializeGameStore(): () => void {
