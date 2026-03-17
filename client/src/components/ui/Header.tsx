@@ -5,7 +5,10 @@ import dynamic from "next/dynamic";
 
 const ConnectionStatus = dynamic(
   () => import("@/components/ui/ConnectionStatus").then(mod => mod.ConnectionStatus),
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => <div className="w-32 h-6 bg-green-700 animate-pulse rounded" />,
+  },
 );
 
 export function Header(): React.ReactElement {

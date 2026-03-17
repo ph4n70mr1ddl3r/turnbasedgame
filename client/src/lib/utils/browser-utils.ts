@@ -1,3 +1,5 @@
+import { isDevelopment } from "./logger";
+
 export function reloadPage(): void {
   if (typeof window !== 'undefined') {
     window.location.reload();
@@ -34,7 +36,7 @@ export function safeLocalStorage(): SafeLocalStorage {
     return cachedStorage;
   }
 
-  const IS_DEV = typeof process !== "undefined" && process.env?.NODE_ENV === "development";
+  const IS_DEV = isDevelopment();
   
   cachedStorage = {
     getItem: (key: string): string | null => {

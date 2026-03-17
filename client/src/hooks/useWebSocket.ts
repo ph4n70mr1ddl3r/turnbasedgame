@@ -200,9 +200,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       abortController.abort();
       connectingRef.current = false;
       const manager = managerRef.current;
-      managerRef.current = null;
-      urlRef.current = null;
       if (manager) {
+        managerRef.current = null;
+        urlRef.current = null;
         manager.disconnect();
       }
     };

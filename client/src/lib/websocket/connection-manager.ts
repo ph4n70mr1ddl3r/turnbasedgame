@@ -330,6 +330,10 @@ export class ConnectionManager {
         logError("Cannot send bet action: invalid amount type", amount);
         return false;
       }
+      if (!Number.isInteger(amount)) {
+        logError("Cannot send bet action: amount must be an integer", amount);
+        return false;
+      }
       if (amount < 0) {
         logError("Cannot send bet action: negative amount", amount);
         return false;

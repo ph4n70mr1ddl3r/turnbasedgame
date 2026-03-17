@@ -2,7 +2,11 @@ type ErrorHandler = (message: string, error?: unknown) => void;
 
 let globalErrorHandler: ErrorHandler | null = null;
 
-const IS_DEV = typeof process !== "undefined" && process.env?.NODE_ENV === "development";
+export function isDevelopment(): boolean {
+  return typeof process !== "undefined" && process.env?.NODE_ENV === "development";
+}
+
+const IS_DEV = isDevelopment();
 
 export function setErrorHandler(handler: ErrorHandler | null): void {
   globalErrorHandler = handler;
