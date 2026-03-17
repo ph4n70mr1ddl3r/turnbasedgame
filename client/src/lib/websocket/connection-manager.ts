@@ -116,7 +116,7 @@ export class ConnectionManager {
         return false;
       }
       if (process.env.NODE_ENV === 'production' && parsed.protocol !== 'wss:') {
-        logError('WebSocket must use wss:// in production');
+        logError('Security: WebSocket must use wss:// protocol in production. Configure NEXT_PUBLIC_WS_URL environment variable.');
         return false;
       }
       const localhostHosts = ['localhost', '127.0.0.1', '::1', '[::1]'];

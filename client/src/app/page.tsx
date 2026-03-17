@@ -121,7 +121,7 @@ function GameContent(): React.ReactElement {
         <div className="mt-8">
           <BettingControls
             isMyTurn={isMyTurn}
-            availableActions={availableActions}
+            availableActions={availableActions ?? []}
             onBetAction={handleBetAction}
             minBet={gameState?.min_bet ?? 0}
             maxBet={gameState?.max_bet ?? 0}
