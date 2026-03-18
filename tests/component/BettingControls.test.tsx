@@ -111,11 +111,11 @@ describe('BettingControls Component', () => {
       render(<BettingControls {...defaultProps} />);
 
       fireEvent.click(screen.getByRole('button', { name: /open raise amount input/i }));
-      expect(screen.getByRole('spinbutton')).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: /raise amount/i })).toBeInTheDocument();
 
       fireEvent.click(screen.getByRole('button', { name: /cancel raise/i }));
 
-      expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
+      expect(screen.queryByRole('textbox', { name: /raise amount/i })).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: /open raise amount input/i })).toBeInTheDocument();
     });
 
@@ -157,12 +157,12 @@ describe('BettingControls Component', () => {
       render(<BettingControls {...defaultProps} />);
 
       fireEvent.click(screen.getByRole('button', { name: /open raise amount input/i }));
-      expect(screen.getByRole('spinbutton')).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: /raise amount/i })).toBeInTheDocument();
 
-      const input = screen.getByRole('spinbutton');
+      const input = screen.getByRole('textbox', { name: /raise amount/i });
       fireEvent.keyDown(input, { key: 'Escape' });
 
-      expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
+      expect(screen.queryByRole('textbox', { name: /raise amount/i })).not.toBeInTheDocument();
     });
   });
 

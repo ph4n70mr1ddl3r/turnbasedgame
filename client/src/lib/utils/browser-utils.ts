@@ -29,12 +29,6 @@ const NOOP_STORAGE: SafeLocalStorage = {
   clear: () => false,
 };
 
-let cachedStorage: SafeLocalStorage | null = null;
-
-export function clearStorageCache(): void {
-  cachedStorage = null;
-}
-
 function isQuotaExceededError(error: unknown): boolean {
   return (
     error instanceof DOMException &&
@@ -44,18 +38,13 @@ function isQuotaExceededError(error: unknown): boolean {
 }
 
 export function safeLocalStorage(): SafeLocalStorage {
-  if (cachedStorage) {
-    return cachedStorage;
-  }
-
   if (!isBrowser()) {
-    cachedStorage = NOOP_STORAGE;
-    return cachedStorage;
+    return NOOP_STORAGE;
   }
 
   const IS_DEV = isDevelopment();
   
-  cachedStorage = {
+  return {
     getItem: (key: string): string | null => {
       try {
         return localStorage.getItem(key);
@@ -103,6 +92,4 @@ export function safeLocalStorage(): SafeLocalStorage {
       }
     },
   };
-
-  return cachedStorage;
 }

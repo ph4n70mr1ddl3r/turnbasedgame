@@ -4,6 +4,7 @@ import { logError } from "@/lib/utils/logger";
 import { registerPlayerIdCallback } from "@/lib/stores/connection-store";
 
 const MAX_CHIP_VALUE = 1_000_000_000;
+const MAX_TIME_REMAINING_MS = 24 * 60 * 60 * 1000;
 
 function isValidChipValue(value: unknown): value is number {
   return typeof value === 'number' && 
@@ -159,7 +160,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         return state;
       }
 
-      if (updates.time_remaining !== undefined && (typeof updates.time_remaining !== 'number' || !Number.isFinite(updates.time_remaining) || updates.time_remaining < 0)) {
+      if (updates.time_remaining !== undefined && (typeof updates.time_remaining !== 'number' || !Number.isFinite(updates.time_remaining) || updates.time_remaining < 0 || updates.time_remaining > MAX_TIME_REMAINING_MS)) {
         logError('Invalid time_remaining value:', updates.time_remaining);
         return state;
       }
@@ -248,36 +249,37 @@ export const lastErrorSelector = (state: GameStore): string | null => state.last
 export const cachedPlayerIdSelector = (state: GameStore): string | null =>
   state.cachedPlayerId;
 
-interface GameStoreInitState {
-  isInitialized: boolean;
-  unregisterCallback: (() => void) | null;
+interface GameStoreWindowState {
+  __gameStoreInitialized?: boolean;
+  __gameStoreCleanup?: () => void;
 }
-
-const gameStoreInitState: GameStoreInitState = {
-  isInitialized: false,
-  unregisterCallback: null,
-};
 
 export function initializeGameStore(): () => void {
   if (typeof window === 'undefined') return () => {};
   
-  if (gameStoreInitState.isInitialized && gameStoreInitState.unregisterCallback) {
-    return gameStoreInitState.unregisterCallback;
+  const win = window as unknown as GameStoreWindowState;
+  
+  if (win.__gameStoreInitialized && win.__gameStoreCleanup) {
+    return win.__gameStoreCleanup;
   }
   
-  gameStoreInitState.isInitialized = true;
+  win.__gameStoreInitialized = true;
   
-  gameStoreInitState.unregisterCallback = registerPlayerIdCallback((playerId) => {
+  win.__gameStoreCleanup = registerPlayerIdCallback((playerId) => {
     useGameStore.getState().setCachedPlayerId(playerId);
   });
   
-  return gameStoreInitState.unregisterCallback;
+  return win.__gameStoreCleanup;
 }
 
 export function resetGameStoreInitialization(): void {
-  if (gameStoreInitState.unregisterCallback) {
-    gameStoreInitState.unregisterCallback();
-    gameStoreInitState.unregisterCallback = null;
+  if (typeof window === 'undefined') return;
+  
+  const win = window as unknown as GameStoreWindowState;
+  
+  if (win.__gameStoreCleanup) {
+    win.__gameStoreCleanup();
+    win.__gameStoreCleanup = undefined;
   }
-  gameStoreInitState.isInitialized = false;
+  win.__gameStoreInitialized = false;
 }

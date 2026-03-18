@@ -146,6 +146,10 @@ export class ConnectionManager {
       return this.connectionLock;
     }
 
+    if (this.socket) {
+      this.cleanupSocket();
+    }
+
     if (this.abortController) {
       this.abortController.abort();
     }
@@ -353,6 +357,10 @@ export class ConnectionManager {
       }
       if (amount < 0) {
         logError("Cannot send bet action: negative amount", amount);
+        return false;
+      }
+      if (amount > Number.MAX_SAFE_INTEGER) {
+        logError("Cannot send bet action: amount exceeds safe integer range", amount);
         return false;
       }
       

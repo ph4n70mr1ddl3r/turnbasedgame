@@ -12,47 +12,87 @@ interface CallbackEntry {
   id: number;
 }
 
-const callbackRegistry = {
-  entries: [] as CallbackEntry[],
-  nextId: 0,
-  
-  clear(): void {
-    this.entries = [];
-    this.nextId = 0;
-  },
-  
-  register(callback: PlayerIdCallback): () => void {
-    if (this.entries.length >= MAX_CALLBACKS) {
-      this.entries.shift();
-      logError("Maximum callback limit reached, removing oldest callback");
-    }
-    const id = this.nextId++;
-    this.entries.push({ callback, id });
-    return () => {
-      const index = this.entries.findIndex(e => e.id === id);
-      if (index !== -1) {
-        this.entries.splice(index, 1);
+interface CallbackRegistryState {
+  entries: CallbackEntry[];
+  nextId: number;
+}
+
+function createCallbackRegistry(): {
+  clear: () => void;
+  register: (callback: PlayerIdCallback) => () => void;
+  notify: (playerId: string | null) => void;
+} {
+  const state: CallbackRegistryState = {
+    entries: [],
+    nextId: 0,
+  };
+
+  return {
+    clear(): void {
+      state.entries = [];
+      state.nextId = 0;
+    },
+
+    register(callback: PlayerIdCallback): () => void {
+      if (state.entries.length >= MAX_CALLBACKS) {
+        const removed = state.entries.shift();
+        if (removed) {
+          try {
+            removed.callback(null);
+          } catch {
+            // Ignore cleanup errors
+          }
+        }
+        console.error('[CONNECTION] Callback registry overflow - oldest callback removed. Check for memory leaks.');
       }
+      const id = state.nextId++;
+      state.entries.push({ callback, id });
+      return () => {
+        const index = state.entries.findIndex((e) => e.id === id);
+        if (index !== -1) {
+          state.entries.splice(index, 1);
+        }
+      };
+    },
+
+    notify(playerId: string | null): void {
+      state.entries.forEach(({ callback }) => {
+        try {
+          callback(playerId);
+        } catch (error) {
+          logError("Error in playerId callback:", error);
+        }
+      });
+    },
+  };
+}
+
+interface ConnectionWindowState {
+  __callbackRegistry?: ReturnType<typeof createCallbackRegistry>;
+}
+
+function getCallbackRegistry(): ReturnType<typeof createCallbackRegistry> {
+  if (typeof window === 'undefined') {
+    return {
+      clear: () => {},
+      register: () => () => {},
+      notify: () => {},
     };
-  },
-  
-  notify(playerId: string | null): void {
-    this.entries.forEach(({ callback }) => {
-      try {
-        callback(playerId);
-      } catch (error) {
-        logError("Error in playerId callback:", error);
-      }
-    });
-  },
-};
+  }
+
+  const win = window as unknown as ConnectionWindowState;
+  if (!win.__callbackRegistry) {
+    win.__callbackRegistry = createCallbackRegistry();
+  }
+  return win.__callbackRegistry;
+}
 
 export function clearAllPlayerIdCallbacks(): void {
-  callbackRegistry.clear();
+  getCallbackRegistry().clear();
 }
 
 export function registerPlayerIdCallback(callback: PlayerIdCallback): () => void {
-  return callbackRegistry.register(callback);
+  return getCallbackRegistry().register(callback);
 }
 
 interface ConnectionStore {
@@ -85,7 +125,7 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
     if (typeof window === "undefined") return;
     const session = SessionManager.getSession();
     if (session) {
-      callbackRegistry.notify(session.playerId);
+      getCallbackRegistry().notify(session.playerId);
       set({ sessionToken: session.token, playerId: session.playerId });
     }
   },
@@ -115,7 +155,7 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
     } catch (error) {
       logError("Failed to persist session:", error);
     }
-    callbackRegistry.notify(playerId);
+    getCallbackRegistry().notify(playerId);
     set({ sessionToken: token, playerId });
   },
 
@@ -125,7 +165,7 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
     } catch (error) {
       logError("Failed to clear session:", error);
     }
-    callbackRegistry.notify(null);
+    getCallbackRegistry().notify(null);
     set({ sessionToken: null, playerId: null });
   },
 
@@ -135,7 +175,7 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
     } catch (error) {
       logError("Failed to clear session during reset:", error);
     }
-    callbackRegistry.notify(null);
+    getCallbackRegistry().notify(null);
     set({
       status: "disconnected",
       isConnected: false,

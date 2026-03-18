@@ -92,11 +92,13 @@ function BettingControlsInner({
       setRaiseAmountInput("");
       return;
     }
-    const sanitized = value.replace(/[^0-9]/g, "").replace(/^0+/, "") || "0";
-    if (sanitized.length <= UI_MAX_BET_INPUT_LENGTH) {
-      const parsed = parseInt(sanitized, 10);
+    if (!/^\d+$/.test(value)) {
+      return;
+    }
+    if (value.length <= UI_MAX_BET_INPUT_LENGTH) {
+      const parsed = parseInt(value, 10);
       if (Number.isFinite(parsed) && parsed >= 0 && parsed <= validMaxBet) {
-        setRaiseAmountInput(sanitized);
+        setRaiseAmountInput(value);
       }
     }
   }, [validMaxBet]);
@@ -189,7 +191,9 @@ function BettingControlsInner({
               ) : (
                 <div className="flex items-center space-x-2">
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     min={validMinBet}
                     max={validMaxBet}
                     value={raiseAmountInput}
