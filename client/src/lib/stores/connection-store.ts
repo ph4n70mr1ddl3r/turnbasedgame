@@ -43,7 +43,7 @@ function createCallbackRegistry(): {
             // Ignore cleanup errors
           }
         }
-        console.error('[CONNECTION] Callback registry overflow - oldest callback removed. Check for memory leaks.');
+        logError('[CONNECTION] Callback registry overflow - oldest callback removed. Check for memory leaks.');
       }
       const id = state.nextId++;
       state.entries.push({ callback, id });

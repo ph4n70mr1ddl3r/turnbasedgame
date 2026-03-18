@@ -194,16 +194,27 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   useEffect(() => {
     const abortController = new AbortController();
 
-    initializeConnectionStore();
-    initializeGameStore();
+    try {
+      initializeConnectionStore();
+      initializeGameStore();
+    } catch (error) {
+      logError("Failed to initialize stores:", error);
+      useGameStore.getState().setError("Failed to initialize application. Please refresh the page.");
+      return;
+    }
 
     if (autoConnectRef.current !== false) {
-      const wsUrl = optionsUrlRef.current || process.env.NEXT_PUBLIC_WS_URL || getDefaultWebSocketUrl();
-      if (wsUrl) {
-        const manager = getOrCreateManager(wsUrl);
-        performConnection(manager, abortController.signal);
-      } else {
-        useGameStore.getState().setError("No WebSocket URL configured");
+      try {
+        const wsUrl = optionsUrlRef.current || process.env.NEXT_PUBLIC_WS_URL || getDefaultWebSocketUrl();
+        if (wsUrl) {
+          const manager = getOrCreateManager(wsUrl);
+          performConnection(manager, abortController.signal);
+        } else {
+          useGameStore.getState().setError("No WebSocket URL configured");
+        }
+      } catch (error) {
+        logError("Failed to setup connection:", error);
+        useGameStore.getState().setError("Failed to setup connection. Please refresh the page.");
       }
     }
 

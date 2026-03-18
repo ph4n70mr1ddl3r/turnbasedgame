@@ -54,6 +54,7 @@ export class ReconnectHandler {
   private getConnectFn: () => ConnectFunction;
   private abortController: AbortController | null = null;
   private boundHandleOnline: () => void;
+  private onlineListenerAdded = false;
 
   private onStateChange?: (state: ReconnectState) => void;
   private onError?: (error: unknown) => void;
@@ -74,14 +75,16 @@ export class ReconnectHandler {
   }
 
   private setupOnlineListener(): void {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && !this.onlineListenerAdded) {
       window.addEventListener('online', this.boundHandleOnline);
+      this.onlineListenerAdded = true;
     }
   }
 
   private removeOnlineListener(): void {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && this.onlineListenerAdded) {
       window.removeEventListener('online', this.boundHandleOnline);
+      this.onlineListenerAdded = false;
     }
   }
 

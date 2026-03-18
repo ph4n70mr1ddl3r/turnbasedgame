@@ -146,6 +146,13 @@ export class ConnectionManager {
       return this.connectionLock;
     }
 
+    this.connectionGeneration++;
+    const currentGeneration = this.connectionGeneration;
+
+    if (this.connectionLock) {
+      this.resetConnectionState();
+    }
+
     if (this.socket) {
       this.cleanupSocket();
     }
@@ -156,10 +163,6 @@ export class ConnectionManager {
     this.abortController = new AbortController();
     const signal = this.abortController.signal;
 
-    this.connectionGeneration++;
-    const currentGeneration = this.connectionGeneration;
-
-    this.resetConnectionState();
     this.connectionState = 'connecting';
 
     this.connectionLock = new Promise((resolve) => {
