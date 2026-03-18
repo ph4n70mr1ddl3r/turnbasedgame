@@ -14,7 +14,7 @@ import {
   initializeGameStore,
 } from "@/lib/stores/game-store";
 import { BetAction, PlayerState } from "@/types/game-types";
-import { logError } from "@/lib/utils/logger";
+import { logError, logWarn } from "@/lib/utils/logger";
 import { getDefaultWebSocketUrl } from "@/lib/constants/game";
 
 export interface UseWebSocketOptions {
@@ -146,7 +146,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
   const connect = useCallback(async (): Promise<boolean> => {
     if (connectingRef.current) {
-      logError("Connection already in progress");
+      logWarn("Connection already in progress");
       return false;
     }
 

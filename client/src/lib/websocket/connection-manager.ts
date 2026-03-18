@@ -359,10 +359,6 @@ export class ConnectionManager {
         logError("Cannot send bet action: negative amount", amount);
         return false;
       }
-      if (amount > Number.MAX_SAFE_INTEGER) {
-        logError("Cannot send bet action: amount exceeds safe integer range", amount);
-        return false;
-      }
       
       const gameState = useGameStore.getState().gameState;
       if (gameState && amount > gameState.max_bet) {

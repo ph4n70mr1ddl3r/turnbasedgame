@@ -143,7 +143,7 @@ export function isInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && Number.isInteger(value);
 }
 
-export function isPositiveInteger(value: unknown): value is number {
+export function isNonNegativeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && Number.isInteger(value) && value >= 0;
 }
 

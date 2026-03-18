@@ -67,8 +67,7 @@ export class ReconnectHandler {
     this.getConnectFn = getConnectFn;
     this.onStateChange = onStateChange;
     this.onError = options.onError;
-    const { onError: _, ...restOptions } = options;
-    this.options = { ...DEFAULT_OPTIONS, ...restOptions, onError: options.onError };
+    this.options = { ...DEFAULT_OPTIONS, ...options };
     this.currentDelay = this.options.initialDelay;
     this.boundHandleOnline = () => this.handleOnline();
     this.setupOnlineListener();
