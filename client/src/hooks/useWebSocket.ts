@@ -93,13 +93,21 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     [],
   );
 
+  const cleanupManager = useCallback((): void => {
+    const manager = managerRef.current;
+    if (manager) {
+      managerRef.current = null;
+      urlRef.current = null;
+      connectingRef.current = false;
+      manager.disconnect();
+    }
+  }, []);
+
   const getOrCreateManager = useCallback((wsUrl: string): ConnectionManager => {
     if (managerRef.current && urlRef.current === wsUrl) {
       return managerRef.current;
     }
-    if (managerRef.current) {
-      managerRef.current.disconnect();
-    }
+    cleanupManager();
     const manager = new ConnectionManager({
       url: wsUrl,
       autoReconnect: true,
@@ -107,7 +115,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     managerRef.current = manager;
     urlRef.current = wsUrl;
     return manager;
-  }, []);
+  }, [cleanupManager]);
 
   const performConnection = useCallback(async (
     manager: ConnectionManager,
@@ -153,10 +161,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   }, [getOrCreateManager, performConnection]);
 
   const disconnect = useCallback(() => {
-    if (managerRef.current) {
-      managerRef.current.disconnect();
-    }
-  }, []);
+    cleanupManager();
+  }, [cleanupManager]);
 
   const sendBetAction = useCallback((action: BetAction, amount?: number) => {
     if (!managerRef.current) {
@@ -203,15 +209,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
     return () => {
       abortController.abort();
-      connectingRef.current = false;
-      const manager = managerRef.current;
-      if (manager) {
-        managerRef.current = null;
-        urlRef.current = null;
-        manager.disconnect();
-      }
+      cleanupManager();
     };
-  }, [getOrCreateManager, performConnection]);
+  }, [getOrCreateManager, performConnection, cleanupManager]);
 
   return {
     connect,

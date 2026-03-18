@@ -92,8 +92,8 @@ function BettingControlsInner({
       setRaiseAmountInput("");
       return;
     }
-    const sanitized = value.replace(/^0+/, "") || "0";
-    if (/^\d+$/.test(sanitized) && sanitized.length <= UI_MAX_BET_INPUT_LENGTH) {
+    const sanitized = value.replace(/[^0-9]/g, "").replace(/^0+/, "") || "0";
+    if (sanitized.length <= UI_MAX_BET_INPUT_LENGTH) {
       const parsed = parseInt(sanitized, 10);
       if (Number.isFinite(parsed) && parsed >= 0 && parsed <= validMaxBet) {
         setRaiseAmountInput(sanitized);

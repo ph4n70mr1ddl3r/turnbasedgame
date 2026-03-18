@@ -65,6 +65,7 @@ function deriveAvailableActions(
   if (!gameState || !cachedPlayerId) return [];
   if (gameState.current_player !== cachedPlayerId) return [];
   if (gameState.game_status !== "active") return [];
+  if (!Array.isArray(gameState.players) || gameState.players.length === 0) return [];
 
   const myPlayer = gameState.players.find((p) => p.player_id === cachedPlayerId);
   if (!myPlayer || myPlayer.is_folded || myPlayer.is_all_in) return [];

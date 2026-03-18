@@ -109,12 +109,12 @@ export class ConnectionManager {
   }
 
   private generateHeartbeatId(): number {
-    const clientTimestamp = Date.now();
     this.heartbeatCounter = (this.heartbeatCounter + 1) & 0xFFFF;
-    const id = (clientTimestamp * 0x10000) + this.heartbeatCounter;
+    const clientTimestamp = Date.now();
+    const id = (clientTimestamp % 0xFFFFFFFF) * 0x10000 + this.heartbeatCounter;
     if (this.pendingHeartbeatTimestamps.has(id)) {
       this.heartbeatCounter = (this.heartbeatCounter + 1) & 0xFFFF;
-      return (Date.now() * 0x10000) + this.heartbeatCounter;
+      return ((Date.now() % 0xFFFFFFFF) * 0x10000) + this.heartbeatCounter;
     }
     return id;
   }
@@ -457,11 +457,19 @@ export class ConnectionManager {
     }
 
     logError("WebSocket error:", errorDetails);
+    
+    if (this.connectionState === 'idle') {
+      return;
+    }
+    
     this.connectionState = 'idle';
     this.connectionLock = null;
     this.pendingHeartbeatTimestamps.clear();
     this.heartbeatCounter = 0;
-    this.performCleanup();
+    this.cleanupHeartbeat();
+    this.cleanupConnectionTimeout();
+    this.cleanupSocket();
+    
     if (this.pendingResolve) {
       this.pendingResolve(false);
       this.pendingResolve = null;
@@ -471,6 +479,10 @@ export class ConnectionManager {
   }
   
   private handleClose(event: CloseEvent): void {
+    if (this.connectionState === 'idle') {
+      return;
+    }
+    
     this.connectionState = 'idle';
     useConnectionStore.getState().setConnected(false);
     this.connectionLock = null;
@@ -490,12 +502,19 @@ export class ConnectionManager {
   }
   
   private handleConnectionTimeout(): void {
+    if (this.connectionState === 'idle') {
+      return;
+    }
+    
     logError("WebSocket connection timeout");
     this.connectionState = 'idle';
     this.connectionLock = null;
     this.pendingHeartbeatTimestamps.clear();
     this.heartbeatCounter = 0;
-    this.performCleanup();
+    this.cleanupHeartbeat();
+    this.cleanupConnectionTimeout();
+    this.cleanupSocket();
+    
     if (this.pendingResolve) {
       this.pendingResolve(false);
       this.pendingResolve = null;
