@@ -275,12 +275,21 @@ export class MessageParser {
       return null;
     }
 
+    let details: Record<string, unknown> | undefined;
+    if (isObject(data.details)) {
+      try {
+        details = JSON.parse(JSON.stringify(data.details));
+      } catch {
+        details = { ...data.details };
+      }
+    }
+
     return {
       type: "error",
       data: {
         code: data.code,
         message: data.message,
-        details: isObject(data.details) ? { ...data.details } as Record<string, unknown> : undefined,
+        details,
       },
     };
   }

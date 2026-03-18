@@ -168,12 +168,9 @@ export class SessionManager {
     }
 
     if (typeof window === 'undefined') {
-      logError("SSR environment detected without crypto support - generating fallback token (NOT cryptographically secure)");
-      const timestamp = Date.now().toString(16).padStart(12, '0');
-      const random = Math.random().toString(16).slice(2, 14).padEnd(12, '0');
-      const fallbackToken = `${timestamp.slice(0, 8)}-${timestamp.slice(8, 12)}-4${random.slice(0, 3)}-8${random.slice(3, 6)}-${random.slice(6, 12)}${timestamp.slice(0, 6)}`;
-      logError("WARNING: Fallback token should only be used during SSR. Server must validate/replace this token.");
-      return fallbackToken;
+      logError("CRITICAL: SSR environment detected without crypto support");
+      logError("Session tokens MUST be generated client-side or provided by server");
+      throw new Error("Cannot generate secure session token during SSR. Ensure crypto API is available or provide a server-generated token.");
     }
 
     throw new Error("No cryptographically secure random number generator available");

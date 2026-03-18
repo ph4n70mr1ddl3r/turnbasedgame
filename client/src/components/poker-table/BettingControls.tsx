@@ -124,9 +124,11 @@ function BettingControlsInner({
 
   const quickRaiseAmounts = useMemo(
     () => {
-      const amounts = [validMinBet, validMinBet * 2, validMinBet * 3, validMaxBet]
+      if (validMinBet <= 0 || validMaxBet <= 0) return [];
+      const baseAmount = Math.max(1, validMinBet);
+      const amounts = [baseAmount, baseAmount * 2, baseAmount * 3, validMaxBet]
         .map((amount) => Math.min(amount, validMaxBet))
-        .filter((amount) => amount > 0 && amount >= validMinBet && Number.isFinite(amount));
+        .filter((amount) => amount >= baseAmount && Number.isFinite(amount));
       const uniqueAmounts = [...new Set(amounts)];
       return uniqueAmounts.slice(0, MAX_QUICK_RAISE_OPTIONS);
     },
