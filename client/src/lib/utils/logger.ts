@@ -36,7 +36,7 @@ export function logWarn(message: string, error?: unknown): void {
 
 export function logInfo(message: string, data?: unknown): void {
   if (IS_DEV) {
-    console.info(`${LOG_PREFIX_INFO} ${message}`, data ?? '');
+    console.warn(`${LOG_PREFIX_INFO} ${message}`, data ?? '');
   }
 }
 
