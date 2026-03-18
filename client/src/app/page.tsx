@@ -85,9 +85,11 @@ function GameContent(): React.ReactElement {
               {gameState ? `Game: ${gameState.round.toUpperCase()}` : "Waiting for game..."}
             </h2>
             <p className="text-green-300">
-              {gameState?.game_status === "active"
+              {!gameState
+                ? "Connecting..."
+                : gameState.game_status === "active"
                 ? "Hand in progress"
-                : gameState?.game_status === "waiting"
+                : gameState.game_status === "waiting"
                 ? "Waiting for players"
                 : "Hand finished"}
             </p>

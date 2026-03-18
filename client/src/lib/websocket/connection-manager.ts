@@ -260,6 +260,11 @@ export class ConnectionManager {
       this.pendingResolve = null;
     }
 
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+
     this.wasIntentionallyDisconnected = false;
     this.performCleanup();
     this.connectionState = 'idle';

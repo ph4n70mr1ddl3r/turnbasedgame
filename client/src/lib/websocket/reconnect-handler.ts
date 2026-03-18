@@ -137,6 +137,7 @@ export class ReconnectHandler {
   }
 
   destroy(): void {
+    this.removeOnlineListener();
     this.stop();
   }
 

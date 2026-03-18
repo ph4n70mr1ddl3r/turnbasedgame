@@ -33,6 +33,12 @@ function isValidPlayer(player: unknown): player is PlayerState {
     return false;
   }
   
+  for (const card of p.hole_cards) {
+    if (card !== null && card !== undefined && card !== '' && typeof card !== 'string') {
+      return false;
+    }
+  }
+  
   if (typeof p.position !== 'string' || !['button', 'small_blind', 'big_blind', 'none'].includes(p.position)) {
     return false;
   }
