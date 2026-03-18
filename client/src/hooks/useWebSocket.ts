@@ -61,6 +61,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   const urlRef = useRef<string | null>(null);
   const autoConnect = options.autoConnect;
   const url = options.url;
+  const autoConnectRef = useRef(autoConnect);
+  const optionsUrlRef = useRef(url);
+
+  autoConnectRef.current = autoConnect;
+  optionsUrlRef.current = url;
 
   const {
     isConnected,
@@ -137,7 +142,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       return false;
     }
 
-    const wsUrl = url || process.env.NEXT_PUBLIC_WS_URL || getDefaultWebSocketUrl();
+    const wsUrl = optionsUrlRef.current || process.env.NEXT_PUBLIC_WS_URL || getDefaultWebSocketUrl();
     if (!wsUrl) {
       logError("No WebSocket URL configured");
       useGameStore.getState().setError("No WebSocket URL configured");
@@ -145,7 +150,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     }
     const manager = getOrCreateManager(wsUrl);
     return performConnection(manager);
-  }, [url, getOrCreateManager, performConnection]);
+  }, [getOrCreateManager, performConnection]);
 
   const disconnect = useCallback(() => {
     if (managerRef.current) {
@@ -186,8 +191,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     initializeConnectionStore();
     initializeGameStore();
 
-    if (autoConnect !== false) {
-      const wsUrl = url || process.env.NEXT_PUBLIC_WS_URL || getDefaultWebSocketUrl();
+    if (autoConnectRef.current !== false) {
+      const wsUrl = optionsUrlRef.current || process.env.NEXT_PUBLIC_WS_URL || getDefaultWebSocketUrl();
       if (wsUrl) {
         const manager = getOrCreateManager(wsUrl);
         performConnection(manager, abortController.signal);
@@ -206,7 +211,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
         manager.disconnect();
       }
     };
-  }, [autoConnect, url, getOrCreateManager, performConnection]);
+  }, [getOrCreateManager, performConnection]);
 
   return {
     connect,

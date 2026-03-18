@@ -446,6 +446,8 @@ export class ConnectionManager {
     logError("WebSocket error:", errorDetails);
     this.connectionState = 'idle';
     this.connectionLock = null;
+    this.pendingHeartbeatTimestamps.clear();
+    this.heartbeatCounter = 0;
     this.performCleanup();
     useConnectionStore.getState().setConnected(false);
     useGameStore.getState().setError("Connection error");
@@ -475,6 +477,8 @@ export class ConnectionManager {
     logError("WebSocket connection timeout");
     this.connectionState = 'idle';
     this.connectionLock = null;
+    this.pendingHeartbeatTimestamps.clear();
+    this.heartbeatCounter = 0;
     this.performCleanup();
     if (this.pendingResolve) {
       this.pendingResolve(false);

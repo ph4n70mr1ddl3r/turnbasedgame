@@ -19,7 +19,10 @@ function BettingControlsInner({
   minBet,
   maxBet,
 }: BettingControlsProps): React.ReactElement {
-  const [raiseAmountInput, setRaiseAmountInput] = useState(String(minBet));
+  const validMinBet = Math.max(0, Number.isFinite(minBet) ? minBet : 0);
+  const validMaxBet = Math.max(validMinBet, Number.isFinite(maxBet) ? maxBet : validMinBet);
+  
+  const [raiseAmountInput, setRaiseAmountInput] = useState(String(validMinBet));
   const [showRaiseInput, setShowRaiseInput] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const lastActionTimeRef = useRef<number>(0);
@@ -35,15 +38,15 @@ function BettingControlsInner({
   }, []);
 
   useEffect(() => {
-    setRaiseAmountInput(String(minBet));
-  }, [minBet]);
+    setRaiseAmountInput(String(validMinBet));
+  }, [validMinBet]);
 
   const effectiveRaiseAmount = useMemo(() => {
-    if (!raiseAmountInput?.trim()) return minBet;
+    if (!raiseAmountInput?.trim()) return validMinBet;
     const parsed = parseInt(raiseAmountInput, 10);
-    if (!Number.isFinite(parsed)) return minBet;
-    return Math.max(minBet, Math.min(maxBet, parsed));
-  }, [raiseAmountInput, minBet, maxBet]);
+    if (!Number.isFinite(parsed)) return validMinBet;
+    return Math.max(validMinBet, Math.min(validMaxBet, parsed));
+  }, [raiseAmountInput, validMinBet, validMaxBet]);
 
   const validatedActions = useMemo(
     () => (availableActions ?? []).filter(isValidBetAction),
@@ -67,12 +70,12 @@ function BettingControlsInner({
       action();
       if (resetRaiseInput) {
         setShowRaiseInput(false);
-        setRaiseAmountInput(String(minBet));
+        setRaiseAmountInput(String(validMinBet));
       }
     } finally {
       processingTimeoutRef.current = setTimeout(() => setIsProcessing(false), UI_ACTION_PROCESSING_DELAY_MS);
     }
-  }, [clearProcessingTimeout, minBet]);
+  }, [clearProcessingTimeout, validMinBet]);
 
   const handleRaise = useCallback((): void => {
     executeWithCooldown(() => onBetAction("raise", effectiveRaiseAmount), true);
@@ -92,42 +95,42 @@ function BettingControlsInner({
     const sanitized = value.replace(/^0+/, "") || "0";
     if (/^\d+$/.test(sanitized) && sanitized.length <= UI_MAX_BET_INPUT_LENGTH) {
       const parsed = parseInt(sanitized, 10);
-      if (Number.isFinite(parsed) && parsed >= 0 && parsed <= maxBet) {
+      if (Number.isFinite(parsed) && parsed >= 0 && parsed <= validMaxBet) {
         setRaiseAmountInput(sanitized);
       }
     }
-  }, [maxBet]);
+  }, [validMaxBet]);
 
   const handleRaiseAmountBlur = useCallback((): void => {
     const parsed = parseInt(raiseAmountInput, 10);
-    if (isNaN(parsed) || parsed < minBet) {
-      setRaiseAmountInput(String(minBet));
-    } else if (parsed > maxBet) {
-      setRaiseAmountInput(String(maxBet));
+    if (isNaN(parsed) || parsed < validMinBet) {
+      setRaiseAmountInput(String(validMinBet));
+    } else if (parsed > validMaxBet) {
+      setRaiseAmountInput(String(validMaxBet));
     }
-  }, [raiseAmountInput, minBet, maxBet]);
+  }, [raiseAmountInput, validMinBet, validMaxBet]);
 
   const handleQuickRaise = useCallback((amount: number): void => {
     executeWithCooldown(() => {
-      const clamped = Math.max(minBet, Math.min(maxBet, amount));
+      const clamped = Math.max(validMinBet, Math.min(validMaxBet, amount));
       onBetAction("raise", clamped);
     }, true);
-  }, [minBet, maxBet, onBetAction, executeWithCooldown]);
+  }, [validMinBet, validMaxBet, onBetAction, executeWithCooldown]);
 
   const handleCancelRaise = useCallback((): void => {
     setShowRaiseInput(false);
-    setRaiseAmountInput(String(minBet));
-  }, [minBet]);
+    setRaiseAmountInput(String(validMinBet));
+  }, [validMinBet]);
 
   const quickRaiseAmounts = useMemo(
     () => {
-      const amounts = [minBet, minBet * 2, minBet * 3, maxBet]
-        .map((amount) => Math.min(amount, maxBet))
-        .filter((amount) => amount > 0 && amount >= minBet && Number.isFinite(amount));
+      const amounts = [validMinBet, validMinBet * 2, validMinBet * 3, validMaxBet]
+        .map((amount) => Math.min(amount, validMaxBet))
+        .filter((amount) => amount > 0 && amount >= validMinBet && Number.isFinite(amount));
       const uniqueAmounts = [...new Set(amounts)];
       return uniqueAmounts.slice(0, MAX_QUICK_RAISE_OPTIONS);
     },
-    [minBet, maxBet],
+    [validMinBet, validMaxBet],
   );
 
   if (!isMyTurn) {
@@ -185,8 +188,8 @@ function BettingControlsInner({
                 <div className="flex items-center space-x-2">
                   <input
                     type="number"
-                    min={minBet}
-                    max={maxBet}
+                    min={validMinBet}
+                    max={validMaxBet}
                     value={raiseAmountInput}
                     onChange={(e) => handleRaiseAmountChange(e.target.value)}
                     onBlur={handleRaiseAmountBlur}
@@ -232,38 +235,38 @@ function BettingControlsInner({
               Fold
             </button>
           )}
-        </div>
 
-        {showRaiseInput && quickRaiseAmounts.length > 0 && (
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Quick raise options">
-            <span className="text-green-300 mr-2">Quick raise:</span>
-            {quickRaiseAmounts.map((amount) => (
-              <button
-                key={amount}
-                onClick={() => handleQuickRaise(amount)}
-                disabled={isProcessing}
-                aria-label={amount === maxBet ? "Go all-in" : `Raise to ${amount}`}
-                aria-disabled={isProcessing}
-                className="px-3 py-1 bg-green-700 hover:bg-green-600 disabled:bg-green-800 disabled:opacity-50 rounded text-sm"
-              >
-                {amount === maxBet ? "All-in" : amount}
-              </button>
-            ))}
+          {showRaiseInput && quickRaiseAmounts.length > 0 && (
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Quick raise options">
+              <span className="text-green-300 mr-2">Quick raise:</span>
+              {quickRaiseAmounts.map((amount) => (
+                <button
+                  key={amount}
+                  onClick={() => handleQuickRaise(amount)}
+                  disabled={isProcessing}
+                  aria-label={amount === validMaxBet ? 'Go all-in' : `Raise to ${amount}`}
+                  aria-disabled={isProcessing}
+                  className="px-3 py-1 bg-green-700 hover:bg-green-600 disabled:bg-green-800 disabled:opacity-50 rounded text-sm"
+                >
+                  {amount === validMaxBet ? 'All-in' : amount}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="text-sm text-green-300">
+            <div>Min bet: {validMinBet}</div>
+            <div>Max bet: {validMaxBet}</div>
           </div>
-        )}
-
-        <div className="text-sm text-green-300">
-          <div>Min bet: {minBet}</div>
-          <div>Max bet: {maxBet}</div>
         </div>
-      </div>
 
-      <div className="mt-4 text-center text-green-300 text-sm">
-        {validatedActions.length === 0 ? (
-          <p>No actions available. Waiting for game state.</p>
-        ) : (
-          <p>It&apos;s your turn! Choose an action above.</p>
-        )}
+        <div className="mt-4 text-center text-green-300 text-sm">
+          {validatedActions.length === 0 ? (
+            <p>No actions available. Waiting for game state.</p>
+          ) : (
+            <p>It&apos;s your turn! Choose an action above.</p>
+          )}
+        </div>
       </div>
     </div>
   );

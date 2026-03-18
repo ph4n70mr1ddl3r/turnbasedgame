@@ -7,24 +7,37 @@ type PlayerIdCallback = (playerId: string | null) => void;
 
 const MAX_CALLBACKS = 100;
 
+interface CallbackEntry {
+  callback: PlayerIdCallback;
+  id: number;
+}
+
 const callbackRegistry = {
-  playerIdCallbacks: new Set<PlayerIdCallback>(),
+  entries: [] as CallbackEntry[],
+  nextId: 0,
   
   clear(): void {
-    this.playerIdCallbacks.clear();
+    this.entries = [];
+    this.nextId = 0;
   },
   
   register(callback: PlayerIdCallback): () => void {
-    if (this.playerIdCallbacks.size >= MAX_CALLBACKS) {
-      logError("Maximum callback limit reached, clearing oldest callbacks");
-      this.playerIdCallbacks.clear();
+    if (this.entries.length >= MAX_CALLBACKS) {
+      this.entries.shift();
+      logError("Maximum callback limit reached, removing oldest callback");
     }
-    this.playerIdCallbacks.add(callback);
-    return () => this.playerIdCallbacks.delete(callback);
+    const id = this.nextId++;
+    this.entries.push({ callback, id });
+    return () => {
+      const index = this.entries.findIndex(e => e.id === id);
+      if (index !== -1) {
+        this.entries.splice(index, 1);
+      }
+    };
   },
   
   notify(playerId: string | null): void {
-    this.playerIdCallbacks.forEach(callback => {
+    this.entries.forEach(({ callback }) => {
       try {
         callback(playerId);
       } catch (error) {
