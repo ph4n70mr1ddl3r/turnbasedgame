@@ -5,6 +5,7 @@ import { registerPlayerIdCallback } from "@/lib/stores/connection-store";
 
 const MAX_CHIP_VALUE = 1_000_000_000;
 const MAX_TIME_REMAINING_MS = 24 * 60 * 60 * 1000;
+const MAX_PLAYERS = 2;
 
 function isValidChipValue(value: unknown): value is number {
   return typeof value === 'number' && 
@@ -13,46 +14,130 @@ function isValidChipValue(value: unknown): value is number {
          value <= MAX_CHIP_VALUE;
 }
 
+function isValidPlayer(player: unknown): player is PlayerState {
+  if (typeof player !== 'object' || player === null) {
+    return false;
+  }
+  
+  const p = player as Record<string, unknown>;
+  
+  if (typeof p.player_id !== 'string' || !['p1', 'p2'].includes(p.player_id)) {
+    return false;
+  }
+  
+  if (!isValidChipValue(p.chip_stack)) {
+    return false;
+  }
+  
+  if (!Array.isArray(p.hole_cards)) {
+    return false;
+  }
+  
+  if (typeof p.position !== 'string' || !['button', 'small_blind', 'big_blind', 'none'].includes(p.position)) {
+    return false;
+  }
+  
+  if (!isValidChipValue(p.current_bet)) {
+    return false;
+  }
+  
+  if (typeof p.is_active !== 'boolean') {
+    return false;
+  }
+  
+  if (typeof p.is_folded !== 'boolean') {
+    return false;
+  }
+  
+  if (typeof p.is_all_in !== 'boolean') {
+    return false;
+  }
+  
+  if (p.time_remaining !== undefined && 
+      (typeof p.time_remaining !== 'number' || !Number.isFinite(p.time_remaining) || p.time_remaining < 0)) {
+    return false;
+  }
+  
+  if (p.last_action !== undefined && typeof p.last_action !== 'string') {
+    return false;
+  }
+  
+  return true;
+}
+
 function isValidGameState(state: unknown): state is GameState {
   if (typeof state !== 'object' || state === null) {
     logError('Invalid game state: not an object', state);
     return false;
   }
   
-  const gameState = state as GameState;
+  const gameState = state as Record<string, unknown>;
   
-  if (!Array.isArray(gameState.players) || gameState.players.length === 0) {
-    logError('Invalid game state: missing or invalid players', gameState);
+  if (!Array.isArray(gameState.players) || gameState.players.length === 0 || gameState.players.length > MAX_PLAYERS) {
+    logError('Invalid game state: missing or invalid players array', gameState);
     return false;
   }
   
-  if (typeof gameState.pot !== 'number') {
+  for (const player of gameState.players) {
+    if (!isValidPlayer(player)) {
+      logError('Invalid game state: invalid player data', player);
+      return false;
+    }
+  }
+  
+  if (!Array.isArray(gameState.community_cards)) {
+    logError('Invalid game state: community_cards not an array', gameState);
+    return false;
+  }
+  
+  if (typeof gameState.pot !== 'number' || !Number.isFinite(gameState.pot) || gameState.pot < 0) {
     logError('Invalid game state: invalid pot', gameState);
     return false;
   }
   
-  if (typeof gameState.round !== 'string') {
+  if (gameState.current_player !== null && typeof gameState.current_player !== 'string') {
+    logError('Invalid game state: invalid current_player', gameState);
+    return false;
+  }
+  
+  if (typeof gameState.round !== 'string' || !['preflop', 'flop', 'turn', 'river', 'showdown'].includes(gameState.round)) {
     logError('Invalid game state: invalid round', gameState);
     return false;
   }
   
-  if (typeof gameState.game_status !== 'string') {
+  if (typeof gameState.game_status !== 'string' || !['waiting', 'active', 'finished'].includes(gameState.game_status)) {
     logError('Invalid game state: invalid game_status', gameState);
     return false;
   }
   
-  if (typeof gameState.min_bet !== 'number' || gameState.min_bet < 0) {
+  if (typeof gameState.min_bet !== 'number' || !Number.isFinite(gameState.min_bet) || gameState.min_bet < 0) {
     logError('Invalid game state: invalid min_bet', gameState);
     return false;
   }
   
-  if (typeof gameState.max_bet !== 'number' || gameState.max_bet < 0) {
+  if (typeof gameState.max_bet !== 'number' || !Number.isFinite(gameState.max_bet) || gameState.max_bet < 0) {
     logError('Invalid game state: invalid max_bet', gameState);
     return false;
   }
   
   if (gameState.min_bet > gameState.max_bet) {
     logError('Invalid game state: min_bet cannot be greater than max_bet');
+    return false;
+  }
+  
+  if (gameState.time_remaining !== undefined && 
+      (typeof gameState.time_remaining !== 'number' || !Number.isFinite(gameState.time_remaining) || gameState.time_remaining < 0)) {
+    logError('Invalid game state: invalid time_remaining', gameState);
+    return false;
+  }
+  
+  if (gameState.last_winner !== undefined && gameState.last_winner !== null && typeof gameState.last_winner !== 'string') {
+    logError('Invalid game state: invalid last_winner', gameState);
+    return false;
+  }
+  
+  if (gameState.winning_hand !== undefined && gameState.winning_hand !== null && typeof gameState.winning_hand !== 'string') {
+    logError('Invalid game state: invalid winning_hand', gameState);
     return false;
   }
   

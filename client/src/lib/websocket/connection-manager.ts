@@ -439,6 +439,32 @@ export class ConnectionManager {
     }
   }
 
+  private handleConnectionFailure(error: string, shouldReconnect: boolean = false): void {
+    if (this.connectionState === 'idle') {
+      return;
+    }
+    
+    logError(error);
+    
+    this.connectionState = 'idle';
+    this.connectionLock = null;
+    this.pendingHeartbeatTimestamps.clear();
+    this.heartbeatCounter = 0;
+    this.cleanupHeartbeat();
+    this.cleanupConnectionTimeout();
+    this.cleanupSocket();
+    
+    if (this.pendingResolve) {
+      this.pendingResolve(false);
+      this.pendingResolve = null;
+    }
+    useConnectionStore.getState().setConnected(false);
+    
+    if (shouldReconnect && this.options.autoReconnect && this.reconnectHandler) {
+      this.reconnectHandler.start();
+    }
+  }
+
   private handleError(event: Event | ErrorEvent): void {
     let errorDetails = 'Unknown WebSocket error';
 
@@ -460,25 +486,7 @@ export class ConnectionManager {
       }
     }
 
-    logError("WebSocket error:", errorDetails);
-    
-    if (this.connectionState === 'idle') {
-      return;
-    }
-    
-    this.connectionState = 'idle';
-    this.connectionLock = null;
-    this.pendingHeartbeatTimestamps.clear();
-    this.heartbeatCounter = 0;
-    this.cleanupHeartbeat();
-    this.cleanupConnectionTimeout();
-    this.cleanupSocket();
-    
-    if (this.pendingResolve) {
-      this.pendingResolve(false);
-      this.pendingResolve = null;
-    }
-    useConnectionStore.getState().setConnected(false);
+    this.handleConnectionFailure(`WebSocket error: ${errorDetails}`, true);
     useGameStore.getState().setError("Connection error");
   }
   
@@ -487,22 +495,11 @@ export class ConnectionManager {
       return;
     }
     
-    this.connectionState = 'idle';
-    useConnectionStore.getState().setConnected(false);
-    this.connectionLock = null;
-    this.cleanupHeartbeat();
-    this.cleanupConnectionTimeout();
-
-    if (this.pendingResolve) {
-      this.pendingResolve(false);
-      this.pendingResolve = null;
-    }
-
-    if (!this.wasIntentionallyDisconnected && this.options.autoReconnect && this.reconnectHandler) {
-      if (ReconnectHandler.shouldReconnect(event)) {
-        this.reconnectHandler.start();
-      }
-    }
+    const shouldReconnect = !this.wasIntentionallyDisconnected && 
+      this.options.autoReconnect && 
+      ReconnectHandler.shouldReconnect(event);
+    
+    this.handleConnectionFailure("WebSocket closed", shouldReconnect);
   }
   
   private handleConnectionTimeout(): void {
@@ -510,24 +507,7 @@ export class ConnectionManager {
       return;
     }
     
-    logError("WebSocket connection timeout");
-    this.connectionState = 'idle';
-    this.connectionLock = null;
-    this.pendingHeartbeatTimestamps.clear();
-    this.heartbeatCounter = 0;
-    this.cleanupHeartbeat();
-    this.cleanupConnectionTimeout();
-    this.cleanupSocket();
-    
-    if (this.pendingResolve) {
-      this.pendingResolve(false);
-      this.pendingResolve = null;
-    }
-    useConnectionStore.getState().setConnected(false);
-
-    if (this.options.autoReconnect && this.reconnectHandler) {
-      this.reconnectHandler.start();
-    }
+    this.handleConnectionFailure("WebSocket connection timeout", true);
   }
   
   private handleGameStateUpdate(message: GameStateUpdateMessage): void {

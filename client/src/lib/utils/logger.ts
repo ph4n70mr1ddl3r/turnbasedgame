@@ -1,20 +1,19 @@
 type ErrorHandler = (message: string, error?: unknown) => void;
 
+const IS_DEV = process.env.NODE_ENV === 'development';
+const LOG_PREFIX_ERROR = '[ERROR]';
+const LOG_PREFIX_WARN = '[WARN]';
+const LOG_PREFIX_INFO = '[INFO]';
+
 let globalErrorHandler: ErrorHandler | null = null;
 
-export function isDevelopment(): boolean {
-  return typeof process !== "undefined" && process.env?.NODE_ENV === "development";
-}
-
-const IS_DEV = isDevelopment();
-
-export function setErrorHandler(handler: ErrorHandler | null): void {
+export function setGlobalErrorHandler(handler: ErrorHandler | null): void {
   globalErrorHandler = handler;
 }
 
 export function logError(message: string, error?: unknown): void {
   if (IS_DEV) {
-    console.error(`[ERROR] ${message}`, error ?? "");
+    console.error(`${LOG_PREFIX_ERROR} ${message}`, error ?? '');
   }
 
   if (globalErrorHandler) {
@@ -22,29 +21,25 @@ export function logError(message: string, error?: unknown): void {
       globalErrorHandler(message, error);
     } catch (handlerError) {
       if (IS_DEV) {
-        console.error("[ERROR] Error handler failed:", handlerError);
-        console.error(`[ERROR] Original: ${message}`, error ?? "");
+        console.error(`${LOG_PREFIX_ERROR} Error handler failed:`, handlerError);
+        console.error(`${LOG_PREFIX_ERROR} Original: ${message}`, error ?? '');
       }
     }
   }
 }
 
-export function logWarn(message: string, data?: unknown): void {
+export function logWarn(message: string, error?: unknown): void {
   if (IS_DEV) {
-    console.warn(`[WARN] ${message}`, data ?? "");
+    console.warn(`${LOG_PREFIX_WARN} ${message}`, error ?? '');
   }
 }
 
 export function logInfo(message: string, data?: unknown): void {
   if (IS_DEV) {
-    // eslint-disable-next-line no-console
-    console.info(`[INFO] ${message}`, data ?? "");
+    console.info(`${LOG_PREFIX_INFO} ${message}`, data ?? '');
   }
 }
 
-export function logDebug(message: string, data?: unknown): void {
-  if (IS_DEV) {
-    // eslint-disable-next-line no-console
-    console.debug(`[DEBUG] ${message}`, data ?? "");
-  }
+export function isDevelopment(): boolean {
+  return IS_DEV;
 }
