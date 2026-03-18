@@ -134,6 +134,10 @@ export class ReconnectHandler {
     this.onStateChange?.("stopped");
   }
 
+  destroy(): void {
+    this.stop();
+  }
+
   reset(): void {
     this.attempts = 0;
     this.currentDelay = this.options.initialDelay;

@@ -258,7 +258,9 @@ export class ConnectionManager {
       this.abortController = null;
     }
 
-    this.reconnectHandler?.stop();
+    if (this.reconnectHandler) {
+      this.reconnectHandler.destroy();
+    }
     this.performCleanup();
     this.connectionGeneration = 0;
     this.connectionState = 'idle';
@@ -449,19 +451,22 @@ export class ConnectionManager {
     this.pendingHeartbeatTimestamps.clear();
     this.heartbeatCounter = 0;
     this.performCleanup();
+    if (this.pendingResolve) {
+      this.pendingResolve(false);
+      this.pendingResolve = null;
+    }
     useConnectionStore.getState().setConnected(false);
     useGameStore.getState().setError("Connection error");
   }
   
   private handleClose(event: CloseEvent): void {
-    const wasConnecting = this.connectionState === 'connecting';
     this.connectionState = 'idle';
     useConnectionStore.getState().setConnected(false);
     this.connectionLock = null;
     this.cleanupHeartbeat();
     this.cleanupConnectionTimeout();
 
-    if (wasConnecting && this.pendingResolve) {
+    if (this.pendingResolve) {
       this.pendingResolve(false);
       this.pendingResolve = null;
     }
