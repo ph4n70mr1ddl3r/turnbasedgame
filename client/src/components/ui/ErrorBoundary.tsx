@@ -30,8 +30,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     logError("ErrorBoundary caught an error:", { error, errorInfo });
-    useGameStore.getState().reset();
-    useConnectionStore.getState().reset();
+    queueMicrotask(() => {
+      useGameStore.getState().reset();
+      useConnectionStore.getState().reset();
+    });
   }
 
   private handleRetry = (): void => {

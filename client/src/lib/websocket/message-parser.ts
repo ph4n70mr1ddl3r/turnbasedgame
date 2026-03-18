@@ -278,7 +278,7 @@ export class MessageParser {
     let details: Record<string, unknown> | undefined;
     if (isObject(data.details)) {
       try {
-        details = JSON.parse(JSON.stringify(data.details));
+        details = structuredClone(data.details as Record<string, unknown>);
       } catch {
         details = { ...data.details };
       }

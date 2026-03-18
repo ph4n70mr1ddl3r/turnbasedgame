@@ -59,13 +59,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   const managerRef = useRef<ConnectionManager | null>(null);
   const connectingRef = useRef(false);
   const urlRef = useRef<string | null>(null);
-  const autoConnect = options.autoConnect;
-  const url = options.url;
-  const autoConnectRef = useRef(autoConnect);
-  const optionsUrlRef = useRef(url);
-
-  autoConnectRef.current = autoConnect;
-  optionsUrlRef.current = url;
+  const autoConnectRef = useRef(options.autoConnect);
+  const optionsUrlRef = useRef(options.url);
 
   const {
     isConnected,
@@ -190,6 +185,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
     return managerRef.current.getStatus();
   }, []);
+
+  useEffect(() => {
+    autoConnectRef.current = options.autoConnect;
+    optionsUrlRef.current = options.url;
+  }, [options.autoConnect, options.url]);
 
   useEffect(() => {
     const abortController = new AbortController();

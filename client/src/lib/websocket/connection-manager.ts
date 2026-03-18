@@ -3,7 +3,7 @@ import { ReconnectHandler, ReconnectOptions, ReconnectState } from "./reconnect-
 import { SessionManager } from "./session-manager";
 import { useConnectionStore } from "@/lib/stores/connection-store";
 import { useGameStore } from "@/lib/stores/game-store";
-import { WebSocketMessage, GameStateUpdateMessage, ErrorMessage, BetAction, ConnectionStatus, ConnectionStatusInfo, ConnectionStatusMessage } from "@/types/game-types";
+import { WebSocketMessage, GameStateUpdateMessage, ErrorMessage, BetAction, ConnectionStatus, ConnectionStatusInfo, ConnectionStatusMessage, isValidBetAction } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
 import {
   WS_CONNECTION_TIMEOUT_MS,
@@ -354,6 +354,11 @@ export class ConnectionManager {
       return false;
     }
 
+    if (!isValidBetAction(action)) {
+      logError("Cannot send bet action: invalid action", action);
+      return false;
+    }
+
     if (amount !== undefined) {
       if (typeof amount !== 'number' || !Number.isFinite(amount)) {
         logError("Cannot send bet action: invalid amount type", amount);
@@ -601,6 +606,7 @@ export class ConnectionManager {
 
       if (Date.now() - this.lastMessageTime > WS_HEARTBEAT_TIMEOUT_MS) {
         logError("Connection stale - no message received recently");
+        this.cleanupHeartbeat();
         this.handleConnectionTimeout();
       }
     };

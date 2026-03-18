@@ -18,6 +18,11 @@ Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 // Mock WebSocket
 global.WebSocket = class WebSocket {
   url: string;
+  binaryType: BinaryType = 'blob';
+  bufferedAmount = 0;
+  extensions = '';
+  protocol = '';
+
   static readonly CONNECTING = 0;
   static readonly OPEN = 1;
   static readonly CLOSING = 2;
