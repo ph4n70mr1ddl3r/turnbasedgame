@@ -1,11 +1,10 @@
 import { create } from "zustand";
-import { GameState, PlayerState, BetAction } from "@/types/game-types";
+import { GameState, PlayerState, BetAction, MAX_PLAYERS, VALID_PLAYER_IDS } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
 import { registerPlayerIdCallback } from "@/lib/stores/connection-store";
 
 const MAX_CHIP_VALUE = 1_000_000_000;
 const MAX_TIME_REMAINING_MS = 24 * 60 * 60 * 1000;
-const MAX_PLAYERS = 2;
 
 function isValidChipValue(value: unknown): value is number {
   return typeof value === 'number' && 
@@ -21,7 +20,7 @@ function isValidPlayer(player: unknown): player is PlayerState {
   
   const p = player as Record<string, unknown>;
   
-  if (typeof p.player_id !== 'string' || !['p1', 'p2'].includes(p.player_id)) {
+  if (typeof p.player_id !== 'string' || !VALID_PLAYER_IDS.includes(p.player_id as typeof VALID_PLAYER_IDS[number])) {
     return false;
   }
   

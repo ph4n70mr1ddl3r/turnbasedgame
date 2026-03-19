@@ -3,6 +3,7 @@
 
 export const MAX_PLAYERS = 2;
 export const MAX_COMMUNITY_CARDS = 5;
+export const VALID_PLAYER_IDS = ['p1', 'p2'] as const;
 
 // Card representation: <rank><suit> e.g., "Ah", "Kd", "7c"
 export type CardRank = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'T' | 'J' | 'Q' | 'K' | 'A';
@@ -176,7 +177,7 @@ export function isValidCard(card: string): boolean {
 
 export function isValidPlayerId(id: string): boolean {
   if (typeof id !== 'string') return false;
-  return id === "p1" || id === "p2";
+  return VALID_PLAYER_IDS.includes(id as typeof VALID_PLAYER_IDS[number]);
 }
 
 export function isValidBetAction(action: string): action is BetAction {

@@ -53,7 +53,7 @@ export default [
       'react-refresh/only-export-components': 'warn',
       'no-console': [
         'warn',
-        { allow: ['warn', 'error'] },
+        { allow: ['warn', 'error', 'info'] },
       ],
       'prefer-const': 'error',
       'no-var': 'error',
