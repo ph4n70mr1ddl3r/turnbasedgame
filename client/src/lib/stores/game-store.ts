@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { GameState, PlayerState, BetAction } from "@/types/game-types";
+import { GameState, PlayerState, BetAction, isValidBettingRound, isValidPlayerId, MAX_PLAYERS } from "@/types/game-types";
 import { registerPlayerIdCallback } from "@/lib/stores/connection-store";
 
 const MAX_CHIP_VALUE = 1_000_000_000;
@@ -17,6 +17,47 @@ function isValidTimeRemaining(value: unknown): value is number {
          Number.isFinite(value) && 
          value >= 0 && 
          value <= MAX_TIME_REMAINING_MS;
+}
+
+function isValidGameState(state: unknown): state is GameState {
+  if (!state || typeof state !== 'object') return false;
+  
+  const s = state as Record<string, unknown>;
+  
+  if (!Array.isArray(s.players) || s.players.length === 0 || s.players.length > MAX_PLAYERS) {
+    return false;
+  }
+  
+  if (typeof s.pot !== 'number' || !Number.isFinite(s.pot) || s.pot < 0) {
+    return false;
+  }
+  
+  if (typeof s.round !== 'string' || !isValidBettingRound(s.round)) {
+    return false;
+  }
+  
+  if (typeof s.min_bet !== 'number' || typeof s.max_bet !== 'number') {
+    return false;
+  }
+  
+  if (s.min_bet > s.max_bet) {
+    return false;
+  }
+  
+  for (const player of s.players) {
+    if (!player || typeof player !== 'object') return false;
+    const p = player as Record<string, unknown>;
+    
+    if (typeof p.player_id !== 'string' || !isValidPlayerId(p.player_id)) {
+      return false;
+    }
+    
+    if (typeof p.chip_stack !== 'number' || !Number.isFinite(p.chip_stack) || p.chip_stack < 0) {
+      return false;
+    }
+  }
+  
+  return true;
 }
 
 function deriveAvailableActions(
@@ -87,6 +128,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   setGameState: (gameState: GameState): void => {
+    if (!isValidGameState(gameState)) {
+      return;
+    }
     const { cachedPlayerId } = get();
     const isMyTurn = cachedPlayerId !== null && gameState.current_player === cachedPlayerId;
     const availableActions = deriveAvailableActions(gameState, cachedPlayerId);

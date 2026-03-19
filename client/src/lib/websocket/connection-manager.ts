@@ -111,11 +111,19 @@ export class ConnectionManager {
   private generateHeartbeatId(): number {
     this.heartbeatCounter = (this.heartbeatCounter + 1) & 0xFFFF;
     const clientTimestamp = Date.now();
-    const id = (clientTimestamp % 0xFFFFFFFF) * 0x10000 + this.heartbeatCounter;
-    if (this.pendingHeartbeatTimestamps.has(id)) {
+    let id = (clientTimestamp % 0xFFFFFFFF) * 0x10000 + this.heartbeatCounter;
+    
+    let attempts = 0;
+    while (this.pendingHeartbeatTimestamps.has(id) && attempts < 10) {
       this.heartbeatCounter = (this.heartbeatCounter + 1) & 0xFFFF;
-      return ((Date.now() % 0xFFFFFFFF) * 0x10000) + this.heartbeatCounter;
+      id = ((Date.now() % 0xFFFFFFFF) * 0x10000) + this.heartbeatCounter;
+      attempts++;
     }
+    
+    if (attempts >= 10) {
+      this.enforceHeartbeatBounds();
+    }
+    
     return id;
   }
 
@@ -453,12 +461,15 @@ export class ConnectionManager {
   }
 
   private handleConnectionFailure(error: string, shouldReconnect: boolean = false): void {
+    const currentGeneration = this.connectionGeneration;
+    
     if (this.connectionState === 'idle') {
       return;
     }
     
     logError(error);
     
+    const wasConnecting = this.connectionState === 'connecting';
     this.connectionState = 'idle';
     this.connectionLock = null;
     this.pendingHeartbeatTimestamps.clear();
@@ -471,10 +482,13 @@ export class ConnectionManager {
       this.pendingResolve(false);
       this.pendingResolve = null;
     }
-    useConnectionStore.getState().setConnected(false);
     
-    if (shouldReconnect && this.options.autoReconnect && this.reconnectHandler) {
-      this.reconnectHandler.start();
+    if (currentGeneration === this.connectionGeneration) {
+      useConnectionStore.getState().setConnected(false);
+      
+      if (shouldReconnect && this.options.autoReconnect && this.reconnectHandler && !wasConnecting) {
+        this.reconnectHandler.start();
+      }
     }
   }
 

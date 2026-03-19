@@ -53,13 +53,13 @@ export class ReconnectHandler {
   private isAttempting = false;
   private getConnectFn: () => ConnectFunction;
   private abortController: AbortController | null = null;
-  private boundHandleOnline: () => void;
   private onlineListenerAdded = false;
+  private destroyed = false;
 
   private onStateChange?: (state: ReconnectState) => void;
   private onError?: (error: unknown) => void;
   private options: Required<Omit<ReconnectOptions, 'onError'>> & Pick<ReconnectOptions, 'onError'>;
-  
+
   constructor(
     getConnectFn: () => ConnectFunction,
     onStateChange?: (state: ReconnectState) => void,
@@ -70,31 +70,33 @@ export class ReconnectHandler {
     this.onError = options.onError;
     this.options = { ...DEFAULT_OPTIONS, ...options };
     this.currentDelay = this.options.initialDelay;
-    this.boundHandleOnline = () => this.handleOnline();
     this.setupOnlineListener();
   }
 
   private setupOnlineListener(): void {
     if (typeof window !== 'undefined' && !this.onlineListenerAdded) {
-      window.addEventListener('online', this.boundHandleOnline);
+      window.addEventListener('online', this.handleOnline);
       this.onlineListenerAdded = true;
     }
   }
 
   private removeOnlineListener(): void {
     if (typeof window !== 'undefined' && this.onlineListenerAdded) {
-      window.removeEventListener('online', this.boundHandleOnline);
+      window.removeEventListener('online', this.handleOnline);
       this.onlineListenerAdded = false;
     }
   }
 
-  private handleOnline(): void {
+  private handleOnline = (): void => {
+    if (this.destroyed) return;
     if (this.isActive && !this.isAttempting) {
       this.reconnectNow();
     }
-  }
+  };
 
   start(): void {
+    if (this.destroyed) return;
+
     if (this.timeoutId) {
       clearTimeout(this.timeoutId);
       this.timeoutId = null;
@@ -124,7 +126,6 @@ export class ReconnectHandler {
   stop(): void {
     this.isActive = false;
     this.isAttempting = false;
-    this.removeOnlineListener();
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
@@ -137,6 +138,7 @@ export class ReconnectHandler {
   }
 
   destroy(): void {
+    this.destroyed = true;
     this.removeOnlineListener();
     this.stop();
   }
@@ -157,6 +159,8 @@ export class ReconnectHandler {
   }
 
   async reconnectNow(): Promise<boolean> {
+    if (this.destroyed) return false;
+    
     if (this.timeoutId) {
       clearTimeout(this.timeoutId);
       this.timeoutId = null;
@@ -187,24 +191,30 @@ export class ReconnectHandler {
       maxAttempts: this.options.maxAttempts,
     };
   }
-  
-  private async attemptReconnect(): Promise<boolean> {
-    if (!this.isActive || this.isAttempting) return false;
 
-    if (this.abortController?.signal.aborted) {
-      this.isAttempting = false;
-      this.isActive = false;
-      return false;
-    }
+  async attemptReconnect(): Promise<boolean> {
+    if (this.destroyed) return false;
+    if (!this.isActive || this.isAttempting) return false;
 
     if (this.timeoutId) {
       clearTimeout(this.timeoutId);
       this.timeoutId = null;
     }
 
+    if (this.abortController) {
+      this.abortController.abort();
+    }
+    this.abortController = new AbortController();
+    const signal = this.abortController.signal;
+
+    if (signal.aborted) {
+      this.isAttempting = false;
+      this.isActive = false;
+      return false;
+    }
+
     this.isAttempting = true;
     const { maxAttempts } = this.options;
-    const currentAbortController = this.abortController;
 
     if (maxAttempts > 0 && this.attempts >= maxAttempts) {
       this.onStateChange?.("failed");
@@ -220,7 +230,7 @@ export class ReconnectHandler {
       const connectFn = this.getConnectFn();
       const success = await connectFn();
 
-      if (currentAbortController?.signal.aborted) {
+      if (signal.aborted) {
         this.isAttempting = false;
         return false;
       }
@@ -238,7 +248,7 @@ export class ReconnectHandler {
         return false;
       }
     } catch (error) {
-      if (currentAbortController?.signal.aborted) {
+      if (signal.aborted) {
         this.isAttempting = false;
         return false;
       }
@@ -252,7 +262,7 @@ export class ReconnectHandler {
       this.isAttempting = false;
     }
   }
-  
+
   private scheduleNextAttempt(): void {
     if (!this.isActive) return;
 
@@ -274,8 +284,7 @@ export class ReconnectHandler {
 
     this.onStateChange?.(`waiting_${Math.round(delay / 1000)}s`);
   }
-  
-  // Static helper to determine if reconnection should be attempted
+
   static shouldReconnect(error: CloseEvent | Error | DOMException | unknown): boolean {
     if (error instanceof CloseEvent) {
       if (NON_RECONNECTABLE_WS_CODES.includes(error.code)) {
@@ -284,41 +293,40 @@ export class ReconnectHandler {
       if (error.code >= 4000 && error.code <= 4999) {
         return false;
       }
-      
+
       return true;
     }
-    
+
     if (error instanceof DOMException) {
       const errorName = error.name.toLowerCase();
       const errorMessage = error.message.toLowerCase();
-      
+
       if (errorName === 'aborterror' || errorName === 'notallowederror') {
         return false;
       }
-      
-      return RECONNECTABLE_ERROR_PATTERNS.some(pattern => 
+
+      return RECONNECTABLE_ERROR_PATTERNS.some(pattern =>
         pattern.test(errorMessage) || pattern.test(errorName)
       );
     }
-    
+
     if (error instanceof Error) {
       const errorMessage = error.message.toLowerCase();
       return RECONNECTABLE_ERROR_PATTERNS.some(pattern => pattern.test(errorMessage));
     }
-    
+
     return true;
   }
-  
-  // Calculate reconnection delay (for UI display)
+
   static calculateDelay(attempt: number, options: ReconnectOptions = {}): number {
     const opts = { ...DEFAULT_OPTIONS, ...options };
     let delay = opts.initialDelay;
-    
+
     for (let i = 1; i < attempt; i++) {
       delay *= opts.backoffFactor;
       delay = Math.min(delay, opts.maxDelay);
     }
-    
+
     return delay;
   }
 }

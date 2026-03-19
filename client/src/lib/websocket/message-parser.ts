@@ -280,7 +280,7 @@ export class MessageParser {
       try {
         details = structuredClone(data.details as Record<string, unknown>);
       } catch {
-        details = { ...data.details };
+        details = JSON.parse(JSON.stringify(data.details));
       }
     }
 
