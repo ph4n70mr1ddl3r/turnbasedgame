@@ -1,6 +1,5 @@
 import { create } from "zustand";
-import { GameState, PlayerState, BetAction, MAX_PLAYERS, VALID_PLAYER_IDS } from "@/types/game-types";
-import { logError } from "@/lib/utils/logger";
+import { GameState, PlayerState, BetAction } from "@/types/game-types";
 import { registerPlayerIdCallback } from "@/lib/stores/connection-store";
 
 const MAX_CHIP_VALUE = 1_000_000_000;
@@ -13,140 +12,11 @@ function isValidChipValue(value: unknown): value is number {
          value <= MAX_CHIP_VALUE;
 }
 
-function isValidPlayer(player: unknown): player is PlayerState {
-  if (typeof player !== 'object' || player === null) {
-    return false;
-  }
-  
-  const p = player as Record<string, unknown>;
-  
-  if (typeof p.player_id !== 'string' || !VALID_PLAYER_IDS.includes(p.player_id as typeof VALID_PLAYER_IDS[number])) {
-    return false;
-  }
-  
-  if (!isValidChipValue(p.chip_stack)) {
-    return false;
-  }
-  
-  if (!Array.isArray(p.hole_cards)) {
-    return false;
-  }
-  
-  for (const card of p.hole_cards) {
-    if (card !== null && card !== undefined && card !== '' && typeof card !== 'string') {
-      return false;
-    }
-  }
-  
-  if (typeof p.position !== 'string' || !['button', 'small_blind', 'big_blind', 'none'].includes(p.position)) {
-    return false;
-  }
-  
-  if (!isValidChipValue(p.current_bet)) {
-    return false;
-  }
-  
-  if (typeof p.is_active !== 'boolean') {
-    return false;
-  }
-  
-  if (typeof p.is_folded !== 'boolean') {
-    return false;
-  }
-  
-  if (typeof p.is_all_in !== 'boolean') {
-    return false;
-  }
-  
-  if (p.time_remaining !== undefined && 
-      (typeof p.time_remaining !== 'number' || !Number.isFinite(p.time_remaining) || p.time_remaining < 0)) {
-    return false;
-  }
-  
-  if (p.last_action !== undefined && typeof p.last_action !== 'string') {
-    return false;
-  }
-  
-  return true;
-}
-
-function isValidGameState(state: unknown): state is GameState {
-  if (typeof state !== 'object' || state === null) {
-    logError('Invalid game state: not an object', state);
-    return false;
-  }
-  
-  const gameState = state as Record<string, unknown>;
-  
-  if (!Array.isArray(gameState.players) || gameState.players.length === 0 || gameState.players.length > MAX_PLAYERS) {
-    logError('Invalid game state: missing or invalid players array', gameState);
-    return false;
-  }
-  
-  for (const player of gameState.players) {
-    if (!isValidPlayer(player)) {
-      logError('Invalid game state: invalid player data', player);
-      return false;
-    }
-  }
-  
-  if (!Array.isArray(gameState.community_cards)) {
-    logError('Invalid game state: community_cards not an array', gameState);
-    return false;
-  }
-  
-  if (typeof gameState.pot !== 'number' || !Number.isFinite(gameState.pot) || gameState.pot < 0) {
-    logError('Invalid game state: invalid pot', gameState);
-    return false;
-  }
-  
-  if (gameState.current_player !== null && typeof gameState.current_player !== 'string') {
-    logError('Invalid game state: invalid current_player', gameState);
-    return false;
-  }
-  
-  if (typeof gameState.round !== 'string' || !['preflop', 'flop', 'turn', 'river', 'showdown'].includes(gameState.round)) {
-    logError('Invalid game state: invalid round', gameState);
-    return false;
-  }
-  
-  if (typeof gameState.game_status !== 'string' || !['waiting', 'active', 'finished'].includes(gameState.game_status)) {
-    logError('Invalid game state: invalid game_status', gameState);
-    return false;
-  }
-  
-  if (typeof gameState.min_bet !== 'number' || !Number.isFinite(gameState.min_bet) || gameState.min_bet < 0) {
-    logError('Invalid game state: invalid min_bet', gameState);
-    return false;
-  }
-  
-  if (typeof gameState.max_bet !== 'number' || !Number.isFinite(gameState.max_bet) || gameState.max_bet < 0) {
-    logError('Invalid game state: invalid max_bet', gameState);
-    return false;
-  }
-  
-  if (gameState.min_bet > gameState.max_bet) {
-    logError('Invalid game state: min_bet cannot be greater than max_bet');
-    return false;
-  }
-  
-  if (gameState.time_remaining !== undefined && 
-      (typeof gameState.time_remaining !== 'number' || !Number.isFinite(gameState.time_remaining) || gameState.time_remaining < 0)) {
-    logError('Invalid game state: invalid time_remaining', gameState);
-    return false;
-  }
-  
-  if (gameState.last_winner !== undefined && gameState.last_winner !== null && typeof gameState.last_winner !== 'string') {
-    logError('Invalid game state: invalid last_winner', gameState);
-    return false;
-  }
-  
-  if (gameState.winning_hand !== undefined && gameState.winning_hand !== null && typeof gameState.winning_hand !== 'string') {
-    logError('Invalid game state: invalid winning_hand', gameState);
-    return false;
-  }
-  
-  return true;
+function isValidTimeRemaining(value: unknown): value is number {
+  return typeof value === 'number' && 
+         Number.isFinite(value) && 
+         value >= 0 && 
+         value <= MAX_TIME_REMAINING_MS;
 }
 
 function deriveAvailableActions(
@@ -217,11 +87,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   setGameState: (gameState: GameState): void => {
-    if (!isValidGameState(gameState)) {
-      logError('setGameState: Invalid game state received', gameState);
-      return;
-    }
-    
     const { cachedPlayerId } = get();
     const isMyTurn = cachedPlayerId !== null && gameState.current_player === cachedPlayerId;
     const availableActions = deriveAvailableActions(gameState, cachedPlayerId);
@@ -235,23 +100,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const playerExists = state.gameState.players.some(
         (player) => player.player_id === playerId
       );
-      if (!playerExists) {
-        logError('updatePlayer: player not found:', playerId);
-        return state;
-      }
+      if (!playerExists) return state;
 
       if (updates.chip_stack !== undefined && !isValidChipValue(updates.chip_stack)) {
-        logError('Invalid chip_stack value:', updates.chip_stack);
         return state;
       }
 
       if (updates.current_bet !== undefined && !isValidChipValue(updates.current_bet)) {
-        logError('Invalid current_bet value:', updates.current_bet);
         return state;
       }
 
-      if (updates.time_remaining !== undefined && (typeof updates.time_remaining !== 'number' || !Number.isFinite(updates.time_remaining) || updates.time_remaining < 0 || updates.time_remaining > MAX_TIME_REMAINING_MS)) {
-        logError('Invalid time_remaining value:', updates.time_remaining);
+      if (updates.time_remaining !== undefined && !isValidTimeRemaining(updates.time_remaining)) {
         return state;
       }
 

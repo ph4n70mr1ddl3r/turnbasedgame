@@ -84,6 +84,15 @@ export interface ConnectionStatusInfo {
   playerId: string | null;
 }
 
+export const ERROR_CODES = {
+  INVALID_TOKEN: 'invalid_token',
+  GAME_NOT_ACTIVE: 'game_not_active',
+  INVALID_ACTION: 'invalid_action',
+  UNAUTHORIZED: 'unauthorized',
+} as const;
+
+export type ErrorCode = typeof ERROR_CODES[keyof typeof ERROR_CODES];
+
 export interface ErrorMessage {
   type: "error";
   data: {

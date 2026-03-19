@@ -3,7 +3,7 @@ import { ReconnectHandler, ReconnectOptions, ReconnectState } from "./reconnect-
 import { SessionManager } from "./session-manager";
 import { useConnectionStore } from "@/lib/stores/connection-store";
 import { useGameStore } from "@/lib/stores/game-store";
-import { WebSocketMessage, GameStateUpdateMessage, ErrorMessage, BetAction, ConnectionStatus, ConnectionStatusInfo, ConnectionStatusMessage, isValidBetAction } from "@/types/game-types";
+import { WebSocketMessage, GameStateUpdateMessage, ErrorMessage, BetAction, ConnectionStatus, ConnectionStatusInfo, ConnectionStatusMessage, isValidBetAction, ERROR_CODES } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
 import {
   WS_CONNECTION_TIMEOUT_MS,
@@ -542,11 +542,11 @@ export class ConnectionManager {
     useGameStore.getState().setError(message.data.message);
 
     switch (message.data.code) {
-      case "invalid_token":
+      case ERROR_CODES.INVALID_TOKEN:
         SessionManager.clearSession();
         useConnectionStore.getState().clearSession();
         break;
-      case "game_not_active":
+      case ERROR_CODES.GAME_NOT_ACTIVE:
         break;
       default:
         logError("Unhandled error code:", message.data.code);
