@@ -136,22 +136,9 @@ export class ConnectionManager {
   }
 
   private generateHeartbeatId(): number {
+    this.enforceHeartbeatBounds();
     this.heartbeatCounter = (this.heartbeatCounter + 1) & 0xFFFF;
-    const clientTimestamp = Date.now();
-    let id = (clientTimestamp % 0xFFFFFFFF) * 0x10000 + this.heartbeatCounter;
-    
-    let attempts = 0;
-    while (this.pendingHeartbeatTimestamps.has(id) && attempts < 10) {
-      this.heartbeatCounter = (this.heartbeatCounter + 1) & 0xFFFF;
-      id = ((Date.now() % 0xFFFFFFFF) * 0x10000) + this.heartbeatCounter;
-      attempts++;
-    }
-    
-    if (attempts >= 10) {
-      this.enforceHeartbeatBounds();
-    }
-    
-    return id;
+    return (Date.now() & 0xFFFF0000) | this.heartbeatCounter;
   }
 
   private validateWebSocketUrl(url: string): boolean {

@@ -137,7 +137,11 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
   setConnected: (isConnected: boolean): void => {
     set((state) => ({
       isConnected,
-      status: isConnected ? "connected" : (state.status === "reconnecting" ? "reconnecting" : "disconnected"),
+      status: isConnected
+        ? "connected"
+        : state.status === "reconnecting"
+          ? "reconnecting"
+          : "disconnected",
     }));
   },
 
