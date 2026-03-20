@@ -2,13 +2,25 @@ import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === 'development';
 
+function getWebSocketHost(): string {
+  if (isDev) {
+    return 'ws://localhost:8080 wss://localhost:8080';
+  }
+  const wsHost = process.env.NEXT_PUBLIC_WS_HOST;
+  if (!wsHost) {
+    console.error('NEXT_PUBLIC_WS_HOST environment variable is required in production');
+    return "wss://localhost:8080";
+  }
+  return `wss://${wsHost}`;
+}
+
 const cspDirectives = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline'",
+  isDev ? "script-src 'self' 'unsafe-eval' 'unsafe-inline'" : "script-src 'self'",
+  isDev ? "style-src 'self' 'unsafe-inline'" : "style-src 'self'",
   "img-src 'self' data: blob:",
   "font-src 'self'",
-  `connect-src 'self' ${isDev ? 'ws://localhost:8080 wss://localhost:8080' : "wss://${process.env.NEXT_PUBLIC_WS_HOST || 'localhost:8080'}"}`,
+  `connect-src 'self' ${getWebSocketHost()}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

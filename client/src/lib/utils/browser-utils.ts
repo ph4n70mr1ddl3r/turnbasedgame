@@ -1,4 +1,4 @@
-import { isDevelopment } from "./logger";
+import { logWarn } from "./logger";
 
 export function reloadPage(): void {
   if (typeof window !== 'undefined') {
@@ -42,16 +42,12 @@ export function safeLocalStorage(): SafeLocalStorage {
     return NOOP_STORAGE;
   }
 
-  const IS_DEV = isDevelopment();
-  
   return {
     getItem: (key: string): string | null => {
       try {
         return localStorage.getItem(key);
       } catch (error) {
-        if (IS_DEV) {
-          console.warn("[WARN] localStorage.getItem failed:", error);
-        }
+        logWarn('localStorage.getItem failed:', error);
         return null;
       }
     },
@@ -60,9 +56,7 @@ export function safeLocalStorage(): SafeLocalStorage {
         localStorage.setItem(key, value);
         return { success: true };
       } catch (error) {
-        if (IS_DEV) {
-          console.warn("[WARN] localStorage.setItem failed:", error);
-        }
+        logWarn('localStorage.setItem failed:', error);
         return { 
           success: false, 
           quotaExceeded: isQuotaExceededError(error) 
@@ -74,9 +68,7 @@ export function safeLocalStorage(): SafeLocalStorage {
         localStorage.removeItem(key);
         return true;
       } catch (error) {
-        if (IS_DEV) {
-          console.warn("[WARN] localStorage.removeItem failed:", error);
-        }
+        logWarn('localStorage.removeItem failed:', error);
         return false;
       }
     },
@@ -85,9 +77,7 @@ export function safeLocalStorage(): SafeLocalStorage {
         localStorage.clear();
         return true;
       } catch (error) {
-        if (IS_DEV) {
-          console.warn("[WARN] localStorage.clear failed:", error);
-        }
+        logWarn('localStorage.clear failed:', error);
         return false;
       }
     },

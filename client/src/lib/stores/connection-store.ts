@@ -39,8 +39,8 @@ function createCallbackRegistry(): {
         if (removed) {
           try {
             removed.callback(null);
-          } catch {
-            // Ignore cleanup errors
+          } catch (error) {
+            logError('[CONNECTION] Error during callback cleanup:', error);
           }
         }
         logError('[CONNECTION] Callback registry overflow - oldest callback removed. Check for memory leaks.');
