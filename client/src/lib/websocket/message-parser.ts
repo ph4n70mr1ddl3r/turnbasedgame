@@ -278,9 +278,14 @@ export class MessageParser {
     let details: Record<string, unknown> | undefined;
     if (isObject(data.details)) {
       try {
-        details = structuredClone(data.details as Record<string, unknown>);
-      } catch {
-        details = JSON.parse(JSON.stringify(data.details));
+        if (typeof structuredClone === 'function') {
+          details = structuredClone(data.details as Record<string, unknown>);
+        } else {
+          details = JSON.parse(JSON.stringify(data.details));
+        }
+      } catch (cloneError) {
+        logError('Failed to clone error details', cloneError);
+        details = undefined;
       }
     }
 

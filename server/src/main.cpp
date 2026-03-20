@@ -11,6 +11,10 @@
 #include <algorithm>
 #include <sstream>
 #include <iomanip>
+#include <csignal>
+#include <cstring>
+#include <unistd.h>
+#include <sys/random.h>
 #include <nlohmann/json.hpp>
 #include "hv/HttpServer.h"
 #include "hv/WebSocketServer.h"
@@ -18,27 +22,40 @@
 using namespace hv;
 using json = nlohmann::json;
 
+constexpr int SESSION_TIMEOUT_MINUTES = 30;
+constexpr size_t MAX_RATE_LIMITER_ENTRIES = 10000;
+constexpr int MAX_BET_AMOUNT = 1000000;
+constexpr int RATE_LIMITER_CLEANUP_INTERVAL_MINUTES = 5;
+
 // Forward declarations
 class PokerGame;
 class SessionManager;
 
 std::string generate_secure_token() {
-    std::random_device rd;
-    std::mt19937_64 gen(rd());
-    std::uniform_int_distribution<uint64_t> dis;
+    unsigned char buf[16];
+    ssize_t result = getrandom(buf, sizeof(buf), 0);
+    if (result != sizeof(buf)) {
+        std::random_device rd;
+        std::mt19937_64 gen(rd());
+        std::uniform_int_distribution<uint64_t> dis;
+        uint64_t val1 = dis(gen);
+        uint64_t val2 = dis(gen);
+        memcpy(buf, &val1, 8);
+        memcpy(buf + 8, &val2, 8);
+    }
     
     std::stringstream ss;
     ss << std::hex << std::setfill('0');
     
-    ss << std::setw(8) << (dis(gen) & 0xFFFFFFFF);
+    ss << std::setw(8) << (*reinterpret_cast<uint32_t*>(buf) & 0xFFFFFFFF);
     ss << '-';
-    ss << std::setw(4) << (dis(gen) & 0xFFFF);
+    ss << std::setw(4) << (*reinterpret_cast<uint16_t*>(buf + 4) & 0xFFFF);
     ss << '-';
-    ss << std::setw(4) << ((dis(gen) & 0x0FFF) | 0x4000);
+    ss << std::setw(4) << ((*reinterpret_cast<uint16_t*>(buf + 6) & 0x0FFF) | 0x4000);
     ss << '-';
-    ss << std::setw(4) << ((dis(gen) & 0x3FFF) | 0x8000);
+    ss << std::setw(4) << ((*reinterpret_cast<uint16_t*>(buf + 8) & 0x3FFF) | 0x8000);
     ss << '-';
-    ss << std::setw(12) << (dis(gen) & 0xFFFFFFFFFFFF);
+    ss << std::setw(12) << (*reinterpret_cast<uint64_t*>(buf + 10) & 0xFFFFFFFFFFFF);
     
     return ss.str();
 }
@@ -49,13 +66,18 @@ private:
     mutable std::mutex mutex_;
     size_t max_requests_;
     std::chrono::milliseconds window_;
+    size_t max_entries_;
     
 public:
-    RateLimiter(size_t max_requests, std::chrono::milliseconds window)
-        : max_requests_(max_requests), window_(window) {}
+    RateLimiter(size_t max_requests, std::chrono::milliseconds window, size_t max_entries = MAX_RATE_LIMITER_ENTRIES)
+        : max_requests_(max_requests), window_(window), max_entries_(max_entries) {}
     
     bool allow_request(const std::string& client_id) {
         std::lock_guard<std::mutex> lock(mutex_);
+        
+        if (request_times_.size() >= max_entries_) {
+            request_times_.clear();
+        }
         
         auto now = std::chrono::steady_clock::now();
         auto& times = request_times_[client_id];
@@ -77,7 +99,7 @@ public:
     
     void cleanup_stale() {
         std::lock_guard<std::mutex> lock(mutex_);
-        auto cutoff = std::chrono::steady_clock::now() - std::chrono::minutes(5);
+        auto cutoff = std::chrono::steady_clock::now() - std::chrono::minutes(RATE_LIMITER_CLEANUP_INTERVAL_MINUTES);
         for (auto it = request_times_.begin(); it != request_times_.end();) {
             if (it->second.empty() || it->second.back() < cutoff) {
                 it = request_times_.erase(it);
@@ -98,7 +120,7 @@ struct Session {
     bool is_expired() const {
         auto now = std::chrono::steady_clock::now();
         auto inactive_duration = std::chrono::duration_cast<std::chrono::minutes>(now - last_activity);
-        return inactive_duration.count() > 30;
+        return inactive_duration.count() > SESSION_TIMEOUT_MINUTES;
     }
     
     void update_activity() {
@@ -112,7 +134,49 @@ private:
     std::map<std::string, std::string> connection_to_token_;
     mutable std::mutex mutex_;
     
+    std::string determine_available_player_id_locked() {
+        bool p1_exists = false;
+        for (const auto& [token, session] : sessions_) {
+            if (session.player_id == "p1") {
+                p1_exists = true;
+                break;
+            }
+        }
+        return p1_exists ? "p2" : "p1";
+    }
+    
 public:
+    std::pair<Session*, bool> get_or_create_session(std::shared_ptr<WebSocketChannel> channel) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        
+        auto conn_it = connection_to_token_.find(channel->peeraddr());
+        if (conn_it != connection_to_token_.end()) {
+            auto sess_it = sessions_.find(conn_it->second);
+            if (sess_it != sessions_.end()) {
+                if (!sess_it->second.is_expired()) {
+                    sess_it->second.update_activity();
+                    return {&sess_it->second, false};
+                }
+            }
+        }
+        
+        std::string player_id = determine_available_player_id_locked();
+        std::string token = generate_secure_token();
+        
+        Session session{
+            .token = token,
+            .player_id = player_id,
+            .created_at = std::chrono::steady_clock::now(),
+            .last_activity = std::chrono::steady_clock::now(),
+            .connection = channel
+        };
+        
+        sessions_[token] = session;
+        connection_to_token_[channel->peeraddr()] = token;
+        
+        return {&sessions_[token], true};
+    }
+    
     std::string create_session(const std::string& player_id, std::shared_ptr<WebSocketChannel> channel) {
         std::lock_guard<std::mutex> lock(mutex_);
         
@@ -505,26 +569,8 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
         std::string type = message["type"];
         
         if (type == "session_init") {
-            Session* session = session_manager->get_session_by_connection(channel);
-            std::string player_id;
-            
-            if (!session) {
-                bool p1_exists = false;
-                auto connections = session_manager->get_all_connections();
-                for (const auto& conn : connections) {
-                    Session* s = session_manager->get_session_by_connection(conn);
-                    if (s && s->player_id == "p1") {
-                        p1_exists = true;
-                        break;
-                    }
-                }
-                player_id = p1_exists ? "p2" : "p1";
-                
-                std::string token = session_manager->create_session(player_id, channel);
-                session = session_manager->get_session(token);
-            } else {
-                player_id = session->player_id;
-            }
+            auto [session, created] = session_manager->get_or_create_session(channel);
+            std::string player_id = session->player_id;
             
             json response = {
                 {"type", "connection_status"},
@@ -568,6 +614,22 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
             }
             
             auto data = message["data"];
+            
+            if (data.contains("token") && data["token"].is_string()) {
+                std::string message_token = data["token"];
+                if (message_token != session->token) {
+                    json error = {
+                        {"type", "error"},
+                        {"data", {
+                            {"code", "invalid_token"},
+                            {"message", "Token mismatch"}
+                        }}
+                    };
+                    channel->send(error.dump());
+                    return;
+                }
+            }
+            
             if (!data.contains("action") || !data["action"].is_string()) {
                 json error = {
                     {"type", "error"},
@@ -590,6 +652,17 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                         {"data", {
                             {"code", "invalid_amount"},
                             {"message", "Amount must be non-negative"}
+                        }}
+                    };
+                    channel->send(error.dump());
+                    return;
+                }
+                if (amount > MAX_BET_AMOUNT) {
+                    json error = {
+                        {"type", "error"},
+                        {"data", {
+                            {"code", "invalid_amount"},
+                            {"message", "Amount exceeds maximum allowed bet"}
                         }}
                     };
                     channel->send(error.dump());
@@ -664,6 +737,16 @@ int main() {
     session_manager = std::make_unique<SessionManager>();
     poker_game = std::make_unique<PokerGame>(*session_manager);
     rate_limiter = std::make_unique<RateLimiter>(100, std::chrono::milliseconds(60000));
+    
+    std::signal(SIGTERM, [](int) {
+        std::cout << "\nReceived SIGTERM, shutting down gracefully..." << std::endl;
+        server_running = false;
+    });
+    
+    std::signal(SIGINT, [](int) {
+        std::cout << "\nReceived SIGINT, shutting down gracefully..." << std::endl;
+        server_running = false;
+    });
     
     HttpService http;
     WebSocketService ws;

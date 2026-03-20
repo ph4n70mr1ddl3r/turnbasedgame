@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { GameState, PlayerState, BetAction, isValidBettingRound, isValidPlayerId, isValidGameStatus, MAX_PLAYERS } from "@/types/game-types";
 import { registerPlayerIdCallback } from "@/lib/stores/connection-store";
+import { logError } from "@/lib/utils/logger";
 
 const MAX_CHIP_VALUE = 1_000_000_000;
 const MAX_TIME_REMAINING_MS = 24 * 60 * 60 * 1000;
@@ -20,59 +21,78 @@ function isValidTimeRemaining(value: unknown): value is number {
 }
 
 function isValidGameState(state: unknown): state is GameState {
-  if (!state || typeof state !== 'object') return false;
+  if (!state || typeof state !== 'object') {
+    logError('isValidGameState: state is not an object', state);
+    return false;
+  }
   
   const s = state as Record<string, unknown>;
   
   if (!Array.isArray(s.players) || s.players.length === 0 || s.players.length > MAX_PLAYERS) {
+    logError('isValidGameState: invalid players array', { players: s.players, MAX_PLAYERS });
     return false;
   }
   
   if (typeof s.pot !== 'number' || !Number.isFinite(s.pot) || s.pot < 0) {
+    logError('isValidGameState: invalid pot', { pot: s.pot });
     return false;
   }
   
   if (typeof s.round !== 'string' || !isValidBettingRound(s.round)) {
+    logError('isValidGameState: invalid round', { round: s.round });
     return false;
   }
   
   if (typeof s.game_status !== 'string' || !isValidGameStatus(s.game_status)) {
+    logError('isValidGameState: invalid game_status', { game_status: s.game_status });
     return false;
   }
   
   if (typeof s.min_bet !== 'number' || typeof s.max_bet !== 'number') {
+    logError('isValidGameState: min_bet or max_bet not numbers', { min_bet: s.min_bet, max_bet: s.max_bet });
     return false;
   }
   
   if (s.min_bet > s.max_bet) {
+    logError('isValidGameState: min_bet > max_bet', { min_bet: s.min_bet, max_bet: s.max_bet });
     return false;
   }
   
   if (s.current_player !== null && typeof s.current_player !== 'string') {
+    logError('isValidGameState: invalid current_player', { current_player: s.current_player });
     return false;
   }
   
   if (!Array.isArray(s.community_cards)) {
+    logError('isValidGameState: community_cards is not an array');
     return false;
   }
   
   if (s.community_cards.length > 5) {
+    logError('isValidGameState: too many community_cards', { length: s.community_cards.length });
     return false;
   }
   
-  for (const player of s.players) {
-    if (!player || typeof player !== 'object') return false;
+  for (let i = 0; i < s.players.length; i++) {
+    const player = s.players[i];
+    if (!player || typeof player !== 'object') {
+      logError(`isValidGameState: player[${i}] is not an object`);
+      return false;
+    }
     const p = player as Record<string, unknown>;
     
     if (typeof p.player_id !== 'string' || !isValidPlayerId(p.player_id)) {
+      logError(`isValidGameState: player[${i}] has invalid player_id`, { player_id: p.player_id });
       return false;
     }
     
     if (typeof p.chip_stack !== 'number' || !Number.isFinite(p.chip_stack) || p.chip_stack < 0) {
+      logError(`isValidGameState: player[${i}] has invalid chip_stack`, { chip_stack: p.chip_stack });
       return false;
     }
     
     if (!Array.isArray(p.hole_cards) || p.hole_cards.length > 2) {
+      logError(`isValidGameState: player[${i}] has invalid hole_cards`, { hole_cards: p.hole_cards });
       return false;
     }
   }
