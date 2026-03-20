@@ -193,6 +193,7 @@ export class ConnectionManager {
       if (signal.aborted) {
         this.connectionState = 'idle';
         this.connectionLock = null;
+        this.pendingResolve = null;
         resolve(false);
         return;
       }

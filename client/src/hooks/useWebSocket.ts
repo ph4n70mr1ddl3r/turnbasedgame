@@ -116,6 +116,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     manager: ConnectionManager,
     signal?: AbortSignal
   ): Promise<boolean> => {
+    if (connectingRef.current) {
+      logWarn("Connection already in progress, skipping");
+      return false;
+    }
+    
     connectingRef.current = true;
     try {
       const connected = await manager.connect();
@@ -131,8 +136,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       if (signal?.aborted) {
         return false;
       }
+      const errorMessage = error instanceof Error ? error.message : "Connection failed";
       logError("Connection failed:", error);
-      useGameStore.getState().setError("Connection failed");
+      useGameStore.getState().setError(errorMessage);
       return false;
     } finally {
       connectingRef.current = false;

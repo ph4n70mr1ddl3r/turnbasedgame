@@ -124,18 +124,18 @@ function BettingControlsInner({
     setRaiseAmountInput(String(validMinBet));
   }, [validMinBet]);
 
-  const quickRaiseAmounts = useMemo(
-    () => {
-      if (validMinBet <= 0 || validMaxBet <= 0) return [];
-      const baseAmount = Math.max(1, validMinBet);
-      const amounts = [baseAmount, baseAmount * 2, baseAmount * 3, validMaxBet]
-        .map((amount) => Math.min(amount, validMaxBet))
-        .filter((amount) => amount >= baseAmount && Number.isFinite(amount));
-      const uniqueAmounts = [...new Set(amounts)];
-      return uniqueAmounts.slice(0, MAX_QUICK_RAISE_OPTIONS);
-    },
-    [validMinBet, validMaxBet],
-  );
+  const quickRaiseAmounts = useMemo(() => {
+    if (validMinBet <= 0 || validMaxBet <= 0) return [];
+    const baseAmount = Math.max(1, validMinBet);
+    const uniqueAmounts = new Set<number>();
+    [baseAmount, baseAmount * 2, baseAmount * 3, validMaxBet].forEach((amount) => {
+      const clamped = Math.min(amount, validMaxBet);
+      if (clamped >= baseAmount && Number.isFinite(clamped)) {
+        uniqueAmounts.add(clamped);
+      }
+    });
+    return Array.from(uniqueAmounts).slice(0, MAX_QUICK_RAISE_OPTIONS);
+  }, [validMinBet, validMaxBet]);
 
   if (!isMyTurn) {
     return (

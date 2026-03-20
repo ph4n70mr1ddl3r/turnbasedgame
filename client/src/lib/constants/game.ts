@@ -33,3 +33,5 @@ export const DEFAULT_MIN_BET = 50;
 export const CHIP_VISUAL_DIVISOR = 100;
 export const MAX_CHIP_STACK_DISPLAY = 5;
 export const MAX_QUICK_RAISE_OPTIONS = 4;
+export const LATENCY_GOOD_THRESHOLD_MS = 100;
+export const LATENCY_WARNING_THRESHOLD_MS = 300;
