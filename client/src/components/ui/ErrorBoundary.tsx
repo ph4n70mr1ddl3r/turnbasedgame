@@ -56,9 +56,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               An unexpected error occurred. Please try again or reload the page.
             </p>
             {IS_DEV && this.state.error && (
-              <pre className="bg-red-950 p-2 rounded text-xs text-red-300 overflow-auto mb-4">
-                {this.state.error.message}
-              </pre>
+              <div className="bg-red-950 p-3 rounded text-xs text-red-300 overflow-auto mb-4 max-h-48">
+                <p className="font-bold mb-1">{this.state.error.message}</p>
+                {this.state.error.stack && (
+                  <pre className="whitespace-pre-wrap">{this.state.error.stack}</pre>
+                )}
+              </div>
             )}
             <div className="flex space-x-3">
               <button

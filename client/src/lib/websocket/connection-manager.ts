@@ -18,6 +18,32 @@ import {
   WS_MAX_MESSAGE_SIZE,
 } from "@/lib/constants/game";
 
+class RateLimiter {
+  private timestamps: number[] = [];
+  
+  constructor(
+    private readonly maxRequests: number,
+    private readonly windowMs: number
+  ) {}
+  
+  canProceed(): boolean {
+    const now = Date.now();
+    const cutoff = now - this.windowMs;
+    this.timestamps = this.timestamps.filter(t => t > cutoff);
+    
+    if (this.timestamps.length >= this.maxRequests) {
+      return false;
+    }
+    
+    this.timestamps.push(now);
+    return true;
+  }
+  
+  reset(): void {
+    this.timestamps = [];
+  }
+}
+
 export interface ConnectionOptions {
   url?: string;
   autoReconnect?: boolean;
@@ -55,6 +81,7 @@ export class ConnectionManager {
   private pendingResolve: ((value: boolean) => void) | null = null;
   private abortController: AbortController | null = null;
   private heartbeatCounter = 0;
+  private readonly rateLimiter = new RateLimiter(100, 60000);
 
   constructor(options: ConnectionOptions = {}) {
     this.options = { ...DEFAULT_OPTIONS, ...options };
@@ -295,6 +322,7 @@ export class ConnectionManager {
     this.performCleanup();
     this.connectionGeneration = 0;
     this.connectionState = 'idle';
+    this.rateLimiter.reset();
 
     if (this.pendingResolve) {
       this.pendingResolve(false);
@@ -336,6 +364,11 @@ export class ConnectionManager {
   sendMessage(message: WebSocketMessage): boolean {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
       logError("Cannot send message: WebSocket not connected");
+      return false;
+    }
+
+    if (!this.rateLimiter.canProceed()) {
+      logError("Rate limit exceeded - too many messages");
       return false;
     }
 

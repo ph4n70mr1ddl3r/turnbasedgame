@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { GameState, PlayerState, BetAction, isValidBettingRound, isValidPlayerId, MAX_PLAYERS } from "@/types/game-types";
+import { GameState, PlayerState, BetAction, isValidBettingRound, isValidPlayerId, isValidGameStatus, MAX_PLAYERS } from "@/types/game-types";
 import { registerPlayerIdCallback } from "@/lib/stores/connection-store";
 
 const MAX_CHIP_VALUE = 1_000_000_000;
@@ -36,11 +36,27 @@ function isValidGameState(state: unknown): state is GameState {
     return false;
   }
   
+  if (typeof s.game_status !== 'string' || !isValidGameStatus(s.game_status)) {
+    return false;
+  }
+  
   if (typeof s.min_bet !== 'number' || typeof s.max_bet !== 'number') {
     return false;
   }
   
   if (s.min_bet > s.max_bet) {
+    return false;
+  }
+  
+  if (s.current_player !== null && typeof s.current_player !== 'string') {
+    return false;
+  }
+  
+  if (!Array.isArray(s.community_cards)) {
+    return false;
+  }
+  
+  if (s.community_cards.length > 5) {
     return false;
   }
   
@@ -53,6 +69,10 @@ function isValidGameState(state: unknown): state is GameState {
     }
     
     if (typeof p.chip_stack !== 'number' || !Number.isFinite(p.chip_stack) || p.chip_stack < 0) {
+      return false;
+    }
+    
+    if (!Array.isArray(p.hole_cards) || p.hole_cards.length > 2) {
       return false;
     }
   }

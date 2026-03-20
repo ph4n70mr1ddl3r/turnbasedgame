@@ -43,6 +43,51 @@ std::string generate_secure_token() {
     return ss.str();
 }
 
+class RateLimiter {
+private:
+    std::map<std::string, std::vector<std::chrono::steady_clock::time_point>> request_times_;
+    mutable std::mutex mutex_;
+    size_t max_requests_;
+    std::chrono::milliseconds window_;
+    
+public:
+    RateLimiter(size_t max_requests, std::chrono::milliseconds window)
+        : max_requests_(max_requests), window_(window) {}
+    
+    bool allow_request(const std::string& client_id) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        
+        auto now = std::chrono::steady_clock::now();
+        auto& times = request_times_[client_id];
+        
+        auto cutoff = now - window_;
+        times.erase(
+            std::remove_if(times.begin(), times.end(),
+                [cutoff](const auto& t) { return t < cutoff; }),
+            times.end()
+        );
+        
+        if (times.size() >= max_requests_) {
+            return false;
+        }
+        
+        times.push_back(now);
+        return true;
+    }
+    
+    void cleanup_stale() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto cutoff = std::chrono::steady_clock::now() - std::chrono::minutes(5);
+        for (auto it = request_times_.begin(); it != request_times_.end();) {
+            if (it->second.empty() || it->second.back() < cutoff) {
+                it = request_times_.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+};
+
 struct Session {
     std::string token;
     std::string player_id;
@@ -387,6 +432,7 @@ public:
 
 std::unique_ptr<SessionManager> session_manager;
 std::unique_ptr<PokerGame> poker_game;
+std::unique_ptr<RateLimiter> rate_limiter;
 std::atomic<bool> server_running(false);
 
 void cleanup_thread_func() {
@@ -415,6 +461,20 @@ void broadcast_game_state() {
 constexpr size_t MAX_MESSAGE_SIZE = 64 * 1024;
 
 void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const std::string& msg) {
+    std::string client_id = channel->peeraddr();
+    
+    if (!rate_limiter->allow_request(client_id)) {
+        json error = {
+            {"type", "error"},
+            {"data", {
+                {"code", "rate_limited"},
+                {"message", "Too many requests. Please slow down."}
+            }}
+        };
+        channel->send(error.dump());
+        return;
+    }
+    
     if (msg.size() > MAX_MESSAGE_SIZE) {
         json error = {
             {"type", "error"},
@@ -603,6 +663,7 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
 int main() {
     session_manager = std::make_unique<SessionManager>();
     poker_game = std::make_unique<PokerGame>(*session_manager);
+    rate_limiter = std::make_unique<RateLimiter>(100, std::chrono::milliseconds(60000));
     
     HttpService http;
     WebSocketService ws;
