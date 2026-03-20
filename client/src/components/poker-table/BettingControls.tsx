@@ -154,6 +154,7 @@ function BettingControlsInner({
         <div className="flex flex-wrap gap-3">
           {validatedActions.includes("check") && (
             <button
+              type="button"
               onClick={() => handleAction("check")}
               disabled={isProcessing}
               aria-label="Check your hand"
@@ -166,6 +167,7 @@ function BettingControlsInner({
 
           {validatedActions.includes("call") && (
             <button
+              type="button"
               onClick={() => handleAction("call")}
               disabled={isProcessing}
               aria-label="Call the current bet"
@@ -180,6 +182,7 @@ function BettingControlsInner({
             <>
               {!showRaiseInput ? (
                 <button
+                  type="button"
                   onClick={() => setShowRaiseInput(true)}
                   disabled={isProcessing}
                   aria-label="Open raise amount input"
@@ -210,6 +213,7 @@ function BettingControlsInner({
                     className="w-32 px-3 py-2 bg-white text-black rounded"
                   />
                   <button
+                    type="button"
                     onClick={handleRaise}
                     disabled={isProcessing}
                     aria-label={`Raise by ${effectiveRaiseAmount} chips`}
@@ -219,6 +223,7 @@ function BettingControlsInner({
                     Raise {effectiveRaiseAmount}
                   </button>
                   <button
+                    type="button"
                     onClick={handleCancelRaise}
                     aria-label="Cancel raise"
                     className="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded"
@@ -232,6 +237,7 @@ function BettingControlsInner({
 
           {validatedActions.includes("fold") && (
             <button
+              type="button"
               onClick={() => handleAction("fold")}
               disabled={isProcessing}
               aria-label="Fold your hand"
@@ -247,6 +253,7 @@ function BettingControlsInner({
               <span className="text-green-300 mr-2">Quick raise:</span>
               {quickRaiseAmounts.map((amount) => (
                 <button
+                  type="button"
                   key={amount}
                   onClick={() => handleQuickRaise(amount)}
                   disabled={isProcessing}

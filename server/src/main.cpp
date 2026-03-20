@@ -117,13 +117,13 @@ struct Session {
     std::chrono::steady_clock::time_point last_activity;
     std::weak_ptr<WebSocketChannel> connection;
     
-    bool is_expired() const {
+    bool is_expired() const noexcept {
         auto now = std::chrono::steady_clock::now();
         auto inactive_duration = std::chrono::duration_cast<std::chrono::minutes>(now - last_activity);
         return inactive_duration.count() > SESSION_TIMEOUT_MINUTES;
     }
     
-    void update_activity() {
+    void update_activity() noexcept {
         last_activity = std::chrono::steady_clock::now();
     }
 };
@@ -136,13 +136,14 @@ private:
     
     std::string determine_available_player_id_locked() {
         bool p1_exists = false;
+        bool p2_exists = false;
         for (const auto& [token, session] : sessions_) {
-            if (session.player_id == "p1") {
-                p1_exists = true;
-                break;
-            }
+            if (session.player_id == "p1") p1_exists = true;
+            if (session.player_id == "p2") p2_exists = true;
         }
-        return p1_exists ? "p2" : "p1";
+        if (!p1_exists) return "p1";
+        if (!p2_exists) return "p2";
+        return "";
     }
     
 public:
@@ -315,6 +316,7 @@ struct PokerGameState {
         j["min_bet"] = min_bet;
         j["max_bet"] = max_bet;
         j["game_status"] = game_status;
+        j["current_highest_bet"] = current_highest_bet;
         
         return j;
     }
@@ -417,7 +419,26 @@ public:
         
         if (action == "fold") {
             player->is_folded = true;
-            advance_turn();
+            int active_players = 0;
+            std::string winner_id;
+            for (const auto& p : state_.players) {
+                if (!p.is_folded) {
+                    active_players++;
+                    winner_id = p.id;
+                }
+            }
+            if (active_players == 1) {
+                for (auto& p : state_.players) {
+                    if (p.id == winner_id) {
+                        p.chip_stack += state_.pot;
+                        break;
+                    }
+                }
+                state_.pot = 0;
+                state_.game_status = "round_complete";
+            } else {
+                advance_turn();
+            }
         } else if (action == "check") {
             if (to_call > 0) {
                 response.result = ActionResult::InvalidAmount;
@@ -570,6 +591,17 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
         
         if (type == "session_init") {
             auto [session, created] = session_manager->get_or_create_session(channel);
+            if (!session || session->player_id.empty()) {
+                json error = {
+                    {"type", "error"},
+                    {"data", {
+                        {"code", "game_full"},
+                        {"message", "Game is full. Only two players allowed."}
+                    }}
+                };
+                channel->send(error.dump());
+                return;
+            }
             std::string player_id = session->player_id;
             
             json response = {
@@ -644,8 +676,8 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
             
             std::string action = data["action"];
             int amount = 0;
-            if (data.contains("amount") && data["amount"].is_number()) {
-                amount = data["amount"];
+            if (data.contains("amount") && data["amount"].is_number_integer()) {
+                amount = data["amount"].get<int>();
                 if (amount < 0) {
                     json error = {
                         {"type", "error"},

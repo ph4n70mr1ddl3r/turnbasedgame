@@ -214,7 +214,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
         const wsUrl = optionsUrlRef.current || process.env.NEXT_PUBLIC_WS_URL || getDefaultWebSocketUrl();
         if (wsUrl) {
           const manager = getOrCreateManager(wsUrl);
-          performConnection(manager, abortController.signal);
+          performConnection(manager, abortController.signal).catch((error) => {
+            logError("Auto-connect failed:", error);
+          });
         } else {
           useGameStore.getState().setError("No WebSocket URL configured");
         }
