@@ -166,13 +166,16 @@ export class ConnectionManager {
   }
 
   async connect(): Promise<boolean> {
+    // If already connecting, piggyback on the in-flight connection attempt
     if (this.connectionLock && this.connectionState === 'connecting') {
       return this.connectionLock;
     }
 
+    // Bump generation to invalidate any in-flight handlers from prior attempts
     this.connectionGeneration++;
     const currentGeneration = this.connectionGeneration;
 
+    // Tear down any lingering state from a previous connection
     if (this.connectionLock) {
       this.resetConnectionState();
     }
@@ -280,20 +283,24 @@ export class ConnectionManager {
   }
 
   private resetConnectionState(): void {
-    if (this.pendingResolve) {
-      this.pendingResolve(false);
-      this.pendingResolve = null;
-    }
+    // 1. Transition state first so concurrent handlers know we're tearing down
+    this.connectionState = 'idle';
+    this.connectionLock = null;
 
+    // 2. Abort any in-flight connection setup
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
     }
 
+    // 3. Resolve any waiting promise so callers don't hang
+    if (this.pendingResolve) {
+      this.pendingResolve(false);
+      this.pendingResolve = null;
+    }
+
     this.wasIntentionallyDisconnected = false;
     this.performCleanup();
-    this.connectionState = 'idle';
-    this.connectionLock = null;
   }
 
   disconnect(): void {
@@ -403,11 +410,18 @@ export class ConnectionManager {
         logError("Cannot send bet action: negative amount", amount);
         return false;
       }
-      
+
+      // Validate raise amount against game state bounds
       const gameState = useGameStore.getState().gameState;
-      if (gameState && amount > gameState.max_bet) {
-        logError("Cannot send bet action: amount exceeds max_bet", { amount, maxBet: gameState.max_bet });
-        return false;
+      if (gameState) {
+        if (amount > gameState.max_bet) {
+          logError("Cannot send bet action: amount exceeds max_bet", { amount, maxBet: gameState.max_bet });
+          return false;
+        }
+        if (amount < gameState.min_bet) {
+          logError("Cannot send bet action: amount below min_bet", { amount, minBet: gameState.min_bet });
+          return false;
+        }
       }
     }
 

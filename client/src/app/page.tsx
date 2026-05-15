@@ -100,16 +100,14 @@ function GameContent(): ReactElement {
             </h2>
             <p className="text-green-300">
               {!gameState
-                ? "Connecting..."
-                : gameState.game_status === "active"
-                ? "Hand in progress"
-                : gameState.game_status === "waiting"
-                ? "Waiting for players"
-                : gameState.game_status === "finished"
-                ? gameState.last_winner
-                  ? `Hand won by ${gameState.last_winner === 'p1' ? 'Player 1' : 'Player 2'}${gameState.winning_hand ? ` — ${gameState.winning_hand}` : ''}`
-                  : "Hand finished"
-                : "Hand finished"}
+                ? 'Connecting...'
+                : gameState.game_status === 'active'
+                  ? 'Hand in progress'
+                  : gameState.game_status === 'waiting'
+                    ? 'Waiting for players'
+                    : gameState.game_status === 'finished' && gameState.last_winner
+                      ? `Hand won by ${gameState.last_winner === 'p1' ? 'Player 1' : 'Player 2'}${gameState.winning_hand ? ` — ${gameState.winning_hand}` : ''}`
+                      : 'Hand finished'}
             </p>
           </div>
 
@@ -120,6 +118,7 @@ function GameContent(): ReactElement {
           <PokerTable>
             <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
               <PlayerSeat
+                key="player-1"
                 player={player1}
                 isCurrentPlayer={isPlayer1Current}
               />
@@ -131,6 +130,7 @@ function GameContent(): ReactElement {
 
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
               <PlayerSeat
+                key="player-2"
                 player={player2}
                 isCurrentPlayer={isPlayer2Current}
               />

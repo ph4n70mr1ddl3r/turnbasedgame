@@ -378,7 +378,6 @@ struct PokerGameState {
         j["min_bet"] = min_bet;
         j["max_bet"] = max_bet;
         j["game_status"] = game_status;
-        j["current_highest_bet"] = current_highest_bet;
         if (!last_winner.empty()) j["last_winner"] = last_winner;
         if (!winning_hand.empty()) j["winning_hand"] = winning_hand;
         
@@ -410,6 +409,40 @@ private:
         }
         if (current_idx < 0) return;
         
+        // Count active (non-folded, non-all-in) players
+        int active_players = 0;
+        for (const auto& p : state_.players) {
+            if (!p.is_folded && !p.is_all_in) active_players++;
+        }
+        
+        // If only one active player remains, no need to advance turn
+        if (active_players <= 1 && state_.round != "showdown") {
+            // Check if all other players are folded -> hand is over
+            int non_folded = 0;
+            std::string last_standing;
+            for (const auto& p : state_.players) {
+                if (!p.is_folded) {
+                    non_folded++;
+                    last_standing = p.id;
+                }
+            }
+            if (non_folded == 1) {
+                // Award pot to last standing player
+                for (auto& p : state_.players) {
+                    if (p.id == last_standing) {
+                        p.chip_stack += state_.pot;
+                        break;
+                    }
+                }
+                state_.pot = 0;
+                state_.game_status = "finished";
+                state_.last_winner = last_standing;
+                state_.winning_hand = "opponent folded";
+                state_.round = "showdown";
+                return;
+            }
+        }
+        
         // Search for next active player after current
         for (int offset = 1; offset <= (int)state_.players.size(); ++offset) {
             int idx = (current_idx + offset) % (int)state_.players.size();
@@ -420,8 +453,7 @@ private:
             }
         }
         
-        // All other players are folded or all-in; no valid next player
-        // This means the hand should end or only one player remains
+        // All players are folded or all-in; no valid next player
     }
     
 public:

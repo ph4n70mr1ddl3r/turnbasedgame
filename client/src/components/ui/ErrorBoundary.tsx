@@ -16,30 +16,35 @@ interface ErrorBoundaryProps {
 interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
+  retryCount: number;
 }
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, retryCount: 0 };
   }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error };
+    return { hasError: true, error, retryCount: 0 };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     logError("ErrorBoundary caught an error:", { error, errorInfo });
-    queueMicrotask(() => {
-      useGameStore.getState().reset();
-      useConnectionStore.getState().reset();
-    });
+    // Only reset stores if we haven't retried too many times
+    // to prevent infinite reset → re-render → error loops
+    if (this.state.retryCount < 3) {
+      queueMicrotask(() => {
+        useGameStore.getState().reset();
+        useConnectionStore.getState().reset();
+      });
+    }
   }
 
   private handleRetry = (): void => {
     useGameStore.getState().reset();
     useConnectionStore.getState().reset();
-    this.setState({ hasError: false, error: null });
+    this.setState((prev) => ({ hasError: false, error: null, retryCount: prev.retryCount + 1 }));
   };
 
   render(): ReactNode {

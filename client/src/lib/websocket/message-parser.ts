@@ -138,7 +138,7 @@ export class MessageParser {
       }
 
       const chipStack = player.chip_stack;
-      if (!isNumber(chipStack) || chipStack < 0 || !Number.isFinite(chipStack)) {
+      if (!isNumber(chipStack) || chipStack < 0) {
         logError("Invalid game_state_update: invalid chip_stack", player);
         return null;
       }
@@ -161,7 +161,7 @@ export class MessageParser {
       }
 
       const timeRemaining = player.time_remaining;
-      if (timeRemaining !== undefined && (!isNumber(timeRemaining) || !Number.isFinite(timeRemaining))) {
+      if (timeRemaining !== undefined && !isNumber(timeRemaining)) {
         logError("Invalid game_state_update: invalid time_remaining", player);
         return null;
       }
@@ -171,7 +171,7 @@ export class MessageParser {
         return null;
       }
 
-      if (!isNumber(player.current_bet) || player.current_bet < 0 || !Number.isFinite(player.current_bet)) {
+      if (!isNumber(player.current_bet) || player.current_bet < 0) {
         logError("Invalid game_state_update: invalid current_bet", player);
         return null;
       }
@@ -224,7 +224,7 @@ export class MessageParser {
       return null;
     }
 
-    if (data.time_remaining !== undefined && (!isNumber(data.time_remaining) || !Number.isFinite(data.time_remaining))) {
+    if (data.time_remaining !== undefined && !isNumber(data.time_remaining)) {
       logError("Invalid game_state_update: invalid time_remaining", data);
       return null;
     }
@@ -339,7 +339,7 @@ export class MessageParser {
 
     const data = msg.data;
 
-    if (!isNumber(data.timestamp) || !Number.isFinite(data.timestamp)) {
+    if (!isNumber(data.timestamp)) {
       logError("Invalid heartbeat: invalid timestamp", data);
       return null;
     }

@@ -1,7 +1,7 @@
 "use client";
 
 
-import { type ReactElement } from "react";
+import { memo, type ReactElement } from "react";
 import {
   useConnectionStore,
   connectionStatusSelector,
@@ -23,7 +23,7 @@ const STATUS_TEXT: Record<ConnectionStatusType, string> = {
   reconnecting: "Reconnecting...",
 };
 
-export function ConnectionStatusIndicator(): ReactElement {
+function ConnectionStatusIndicatorInner(): ReactElement {
   const connectionStatus = useConnectionStore(connectionStatusSelector);
   const latency = useConnectionStore(latencySelector);
 
@@ -75,4 +75,4 @@ export function ConnectionStatusIndicator(): ReactElement {
   );
 }
 
-export const ConnectionStatus = ConnectionStatusIndicator;
+export const ConnectionStatus = memo(ConnectionStatusIndicatorInner);
