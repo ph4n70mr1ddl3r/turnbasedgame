@@ -198,7 +198,15 @@ public:
                     sess_it->second.update_activity();
                     return SessionInfo{sess_it->second.player_id, sess_it->second.token, false};
                 }
+                // Clean up expired session for this connection
+                sessions_.erase(sess_it);
+                connection_to_token_.erase(conn_it);
             }
+        }
+        
+        // Clean up any stale connection mapping from a previous connection on same peeraddr
+        if (conn_it != connection_to_token_.end()) {
+            connection_to_token_.erase(conn_it);
         }
         
         std::string player_id = determine_available_player_id_locked();
@@ -243,6 +251,7 @@ public:
     }
     
     // MUST be called with mutex_ already held
+    // Note: Does NOT update activity here - only explicit operations should extend session lifetime
     Session* get_session_internal(const std::string& token) {
         auto it = sessions_.find(token);
         if (it == sessions_.end()) return nullptr;
@@ -255,7 +264,6 @@ public:
             return nullptr;
         }
         
-        it->second.update_activity();
         return &it->second;
     }
     
@@ -608,6 +616,9 @@ void cleanup_thread_func() {
         if (session_manager) {
             session_manager->cleanup_expired();
         }
+        if (rate_limiter) {
+            rate_limiter->cleanup_stale();
+        }
     }
 }
 
@@ -714,6 +725,9 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                 channel->send(error.dump());
                 return;
             }
+            
+            // Update session activity on meaningful user actions
+            session->update_activity();
             
             if (!message.contains("data") || !message["data"].is_object()) {
                 json error = {

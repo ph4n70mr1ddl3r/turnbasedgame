@@ -8,8 +8,10 @@ function getWebSocketHost(): string {
   }
   const wsHost = process.env.NEXT_PUBLIC_WS_HOST;
   if (!wsHost) {
-    console.error('NEXT_PUBLIC_WS_HOST environment variable is required in production');
-    return "wss://localhost:8080";
+    throw new Error(
+      'NEXT_PUBLIC_WS_HOST environment variable is required in production. ' +
+      'Set it to your WebSocket server hostname (e.g., "ws.example.com").'
+    );
   }
   return `wss://${wsHost}`;
 }

@@ -113,9 +113,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       return false;
     }
 
-    // Reuse existing manager or create new one
+    // Reuse existing manager if URL hasn't changed and it's still usable
     if (managerRef.current && urlRef.current === wsUrl) {
-      // reuse
+      logWarn("Reusing existing connection manager for same URL");
     } else {
       cleanupManager();
       const manager = new ConnectionManager({
@@ -184,12 +184,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     optionsUrlRef.current = options.url;
   }, [options.autoConnect, options.url]);
 
-  // Main connection lifecycle effect - runs once on mount
+  // Initialize stores and optionally auto-connect - runs once on mount
   useEffect(() => {
     if (initializedRef.current) return;
     initializedRef.current = true;
-
-    const abortController = new AbortController();
 
     try {
       initializeConnectionStore();
@@ -200,50 +198,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       return;
     }
 
+    // Auto-connect uses the same connect() callback to avoid duplicate ConnectionManager creation
     if (autoConnectRef.current !== false) {
-      try {
-        const wsUrl = optionsUrlRef.current || process.env.NEXT_PUBLIC_WS_URL || getDefaultWebSocketUrl();
-        if (wsUrl) {
-          const manager = new ConnectionManager({
-            url: wsUrl,
-            autoReconnect: true,
-          });
-          managerRef.current = manager;
-          urlRef.current = wsUrl;
-
-          if (connectingRef.current) {
-            logWarn("Connection already in progress, skipping");
-            return;
-          }
-
-          connectingRef.current = true;
-          manager.connect().then((connected) => {
-            connectingRef.current = false;
-            if (abortController.signal.aborted) {
-              manager.disconnect();
-              return;
-            }
-            if (!connected) {
-              useGameStore.getState().setError("Failed to connect to game server");
-            }
-          }).catch((error) => {
-            connectingRef.current = false;
-            if (abortController.signal.aborted) return;
-            const errorMessage = error instanceof Error ? error.message : "Connection failed";
-            logError("Auto-connect failed:", error);
-            useGameStore.getState().setError(errorMessage);
-          });
-        } else {
-          useGameStore.getState().setError("No WebSocket URL configured");
-        }
-      } catch (error) {
-        logError("Failed to setup connection:", error);
-        useGameStore.getState().setError("Failed to setup connection. Please refresh the page.");
-      }
+      connect();
     }
 
     return () => {
-      abortController.abort();
       cleanupManager();
     };
   // Intentionally empty dependency array - runs once on mount

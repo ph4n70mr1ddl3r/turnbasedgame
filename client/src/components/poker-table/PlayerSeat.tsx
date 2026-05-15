@@ -79,7 +79,7 @@ function PlayerSeatInner({ player, isCurrentPlayer }: PlayerSeatProps): ReactEle
           {hole_cards && hole_cards.length > 0 ? (
             hole_cards.map((card, index) => (
               <div
-                key={`hole-card-${card}-${index}`}
+                key={`hole-card-${index}`}
                 className="w-10 h-14 bg-white text-black rounded flex items-center justify-center font-bold shadow-md"
               >
                 {card}

@@ -92,6 +92,8 @@ export class ConnectionManager {
 
     if (this.options.autoReconnect) {
       this.reconnectHandler = new ReconnectHandler(
+        // Double-arrow: ReconnectHandler calls the outer function once to get the actual connect function.
+        // This ensures `this.connect` is captured at reconnect time, not at construction time.
         () => () => this.connect(),
         (state: ReconnectState) => {
           let connectionStatus: ConnectionStatus;
@@ -580,6 +582,11 @@ export class ConnectionManager {
       case ERROR_CODES.INVALID_TOKEN:
         SessionManager.clearSession();
         useConnectionStore.getState().clearSession();
+        break;
+      case ERROR_CODES.UNAUTHORIZED:
+        SessionManager.clearSession();
+        useConnectionStore.getState().clearSession();
+        useGameStore.getState().setError("Session expired. Please reconnect.");
         break;
       case ERROR_CODES.GAME_NOT_ACTIVE:
         break;
