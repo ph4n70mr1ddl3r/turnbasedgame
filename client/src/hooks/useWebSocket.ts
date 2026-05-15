@@ -158,7 +158,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       return false;
     }
 
-    if (!isConnected) {
+    // Read directly from store to avoid stale closure over isConnected
+    if (!useConnectionStore.getState().isConnected) {
       logError("sendBetAction called while disconnected");
       return false;
     }
@@ -169,7 +170,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     }
 
     return managerRef.current.sendBetAction(action, amount);
-  }, [isConnected]);
+  }, []);
 
   const getStatus = useCallback(() => {
     if (!managerRef.current) {

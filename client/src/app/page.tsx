@@ -114,9 +114,9 @@ function GameContent(): ReactElement {
           <PotDisplay pot={gameState?.pot ?? 0} />
         </div>
 
-        <div className="relative bg-green-700 p-8 rounded-b-lg">
+        <div className="relative bg-green-700 p-4 sm:p-8 rounded-b-lg">
           <PokerTable>
-            <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
+            <div className="sm:absolute sm:top-4 sm:left-1/2 sm:transform sm:-translate-x-1/2">
               <PlayerSeat
                 key="player-1"
                 player={player1}
@@ -124,11 +124,11 @@ function GameContent(): ReactElement {
               />
             </div>
 
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            <div className="sm:absolute sm:top-1/2 sm:left-1/2 sm:transform sm:-translate-x-1/2 sm:-translate-y-1/2">
               <CommunityCards cards={gameState?.community_cards ?? []} round={gameState?.round} />
             </div>
 
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+            <div className="sm:absolute sm:bottom-4 sm:left-1/2 sm:transform sm:-translate-x-1/2">
               <PlayerSeat
                 key="player-2"
                 player={player2}

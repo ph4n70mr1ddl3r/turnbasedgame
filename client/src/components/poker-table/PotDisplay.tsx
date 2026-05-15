@@ -33,9 +33,9 @@ function PotDisplayInner({ pot }: PotDisplayProps): ReactElement {
         <div className="mt-3 flex justify-center">
           {pot > 0 && chipCount > 0 && (
             <div className="flex -space-x-2">
-              {[...Array(chipCount)].map((_, i) => (
+              {Array.from({ length: chipCount }, (_, i) => (
                 <div
-                  key={i}
+                  key={`chip-${i}`}
                   className="w-8 h-8 bg-yellow-500 border-2 border-yellow-600 rounded-full"
                   style={{
                     transform: `translateY(${i * -2}px)`,

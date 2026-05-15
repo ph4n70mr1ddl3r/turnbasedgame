@@ -4,6 +4,7 @@ import { useEffect, useRef, useMemo, memo, type ReactElement } from "react";
 import { reloadPage } from "@/lib/utils/browser-utils";
 
 const MAX_ERROR_LENGTH = 500;
+const AUTO_DISMISS_MS = 10000;
 
 function truncateErrorMessage(error: string): string {
   if (error.length <= MAX_ERROR_LENGTH) {
@@ -26,6 +27,15 @@ export const ErrorDisplay = memo(function ErrorDisplay({ error, onClose }: Error
       errorRef.current.focus();
     }
   }, [error]);
+
+  // Auto-dismiss non-critical errors after timeout
+  useEffect(() => {
+    if (!error) return undefined;
+    const timer = setTimeout(() => {
+      onClose();
+    }, AUTO_DISMISS_MS);
+    return () => clearTimeout(timer);
+  }, [error, onClose]);
 
   return (
     <div 

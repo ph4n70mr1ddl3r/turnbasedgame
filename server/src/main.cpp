@@ -578,8 +578,10 @@ public:
             advance_turn();
         } else if (action == "raise") {
             player->last_action = "raise";
-            if (amount < state_.min_bet) {
-                amount = state_.min_bet;
+            if (amount <= 0 && player->chip_stack > to_call) {
+                response.result = ActionResult::InvalidAmount;
+                response.error_message = "Raise requires a positive amount";
+                return response;
             }
             
             int total_raise = to_call + amount;
@@ -944,6 +946,7 @@ int main() {
     
     server_running = true;
     std::thread cleanup_thread(cleanup_thread_func);
+    cleanup_thread.detach();
     
     std::cout << "Poker server starting on port 8080..." << std::endl;
     std::cout << "HTTP server serving static files from ../client/out" << std::endl;
@@ -952,9 +955,6 @@ int main() {
     server.run();
     
     server_running = false;
-    if (cleanup_thread.joinable()) {
-        cleanup_thread.join();
-    }
     
     return 0;
 }

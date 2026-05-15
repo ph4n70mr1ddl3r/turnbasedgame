@@ -25,14 +25,15 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     this.state = { hasError: false, error: null, retryCount: 0 };
   }
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error, retryCount: 0 };
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
+    return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     logError("ErrorBoundary caught an error:", { error, errorInfo });
     // Only reset stores if we haven't retried too many times
     // to prevent infinite reset → re-render → error loops
+    // Note: retryCount is preserved from state (not reset by getDerivedStateFromError)
     if (this.state.retryCount < 3) {
       queueMicrotask(() => {
         useGameStore.getState().reset();

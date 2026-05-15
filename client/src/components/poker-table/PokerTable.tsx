@@ -9,7 +9,7 @@ interface PokerTableProps {
 function PokerTableInner({ children }: PokerTableProps): ReactElement {
   return (
     <div
-      className="relative w-full h-96 bg-green-800 rounded-3xl border-8 border-yellow-900 shadow-2xl overflow-hidden"
+      className="relative w-full min-h-96 sm:h-96 bg-green-800 rounded-3xl border-8 border-yellow-900 shadow-2xl overflow-hidden"
       role="region"
       aria-label="Poker table"
     >
@@ -25,7 +25,10 @@ function PokerTableInner({ children }: PokerTableProps): ReactElement {
           </div>
         </div>
 
-        {children}
+        {/* Responsive layout: vertical stack on mobile, absolute on sm+ */}
+        <div className="flex flex-col gap-4 p-4 sm:absolute sm:inset-0 sm:p-0">
+          {children}
+        </div>
       </div>
     </div>
   );
