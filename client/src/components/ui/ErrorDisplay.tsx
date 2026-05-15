@@ -5,17 +5,6 @@ import { reloadPage } from "@/lib/utils/browser-utils";
 
 const MAX_ERROR_LENGTH = 500;
 
-function escapeHtml(text: string): string {
-  const htmlEscapes: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#x27;',
-  };
-  return text.replace(/[&<>"']/g, (char) => htmlEscapes[char] || char);
-}
-
 function truncateErrorMessage(error: string): string {
   if (error.length <= MAX_ERROR_LENGTH) {
     return error;
@@ -30,7 +19,7 @@ interface ErrorDisplayProps {
 
 export const ErrorDisplay = memo(function ErrorDisplay({ error, onClose }: ErrorDisplayProps): ReactElement | null {
   const errorRef = useRef<HTMLDivElement>(null);
-  const sanitizedError = useMemo(() => escapeHtml(truncateErrorMessage(error)), [error]);
+  const displayError = useMemo(() => truncateErrorMessage(error), [error]);
 
   useEffect(() => {
     if (error && errorRef.current) {
@@ -54,7 +43,7 @@ export const ErrorDisplay = memo(function ErrorDisplay({ error, onClose }: Error
           </div>
           <div className="ml-3 flex-1">
             <h3 className="text-lg font-bold text-white">Error</h3>
-            <p className="mt-1 text-red-200 break-words">{sanitizedError}</p>
+            <p className="mt-1 text-red-200 break-words">{displayError}</p>
           </div>
           <button
             onClick={onClose}

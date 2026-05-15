@@ -52,11 +52,11 @@ function CommunityCardsInner({ cards, round }: CommunityCardsProps): ReactElemen
       <div className="mt-4 text-center">
         <div className="inline-block bg-green-800 px-3 py-1 rounded text-sm">
           {round === 'showdown' && 'Showdown'}
-          {round !== 'showdown' && cards.length === 0 && 'Pre-flop'}
-          {round !== 'showdown' && cards.length === 3 && 'Flop'}
-          {round !== 'showdown' && cards.length === 4 && 'Turn'}
-          {round !== 'showdown' && cards.length === 5 && 'River'}
-          {round !== 'showdown' && cards.length > 0 && cards.length < 3 && 'Deal in progress'}
+          {round === 'preflop' && 'Pre-flop'}
+          {round === 'flop' && 'Flop'}
+          {round === 'turn' && 'Turn'}
+          {round === 'river' && 'River'}
+          {!round && cards.length === 0 && 'Waiting'}
         </div>
       </div>
     </div>

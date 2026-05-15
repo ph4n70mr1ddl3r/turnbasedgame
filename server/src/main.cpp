@@ -15,6 +15,7 @@
 #include <cstring>
 #include <unistd.h>
 #include <sys/random.h>
+#include <optional>
 #include <nlohmann/json.hpp>
 #include "hv/HttpServer.h"
 #include "hv/WebSocketServer.h"
@@ -44,18 +45,31 @@ std::string generate_secure_token() {
         memcpy(buf + 8, &val2, 8);
     }
     
+    // Use memcpy to avoid strict aliasing violations and buffer over-reads
+    uint32_t time_low;
+    uint16_t time_mid;
+    uint16_t time_hi;
+    uint16_t clock_seq;
+    uint16_t node_hi;
+    uint32_t node_lo;
+    memcpy(&time_low, buf, 4);
+    memcpy(&time_mid, buf + 4, 2);
+    memcpy(&time_hi, buf + 6, 2);
+    memcpy(&clock_seq, buf + 8, 2);
+    memcpy(&node_hi, buf + 10, 2);
+    memcpy(&node_lo, buf + 12, 4);
+    
+    // UUID v4 variant
+    time_hi = (time_hi & 0x0FFF) | 0x4000;
+    clock_seq = (clock_seq & 0x3FFF) | 0x8000;
+    
     std::stringstream ss;
     ss << std::hex << std::setfill('0');
-    
-    ss << std::setw(8) << (*reinterpret_cast<uint32_t*>(buf) & 0xFFFFFFFF);
-    ss << '-';
-    ss << std::setw(4) << (*reinterpret_cast<uint16_t*>(buf + 4) & 0xFFFF);
-    ss << '-';
-    ss << std::setw(4) << ((*reinterpret_cast<uint16_t*>(buf + 6) & 0x0FFF) | 0x4000);
-    ss << '-';
-    ss << std::setw(4) << ((*reinterpret_cast<uint16_t*>(buf + 8) & 0x3FFF) | 0x8000);
-    ss << '-';
-    ss << std::setw(12) << (*reinterpret_cast<uint64_t*>(buf + 10) & 0xFFFFFFFFFFFF);
+    ss << std::setw(8) << time_low << '-';
+    ss << std::setw(4) << time_mid << '-';
+    ss << std::setw(4) << time_hi << '-';
+    ss << std::setw(4) << clock_seq << '-';
+    ss << std::setw(4) << node_hi << std::setw(8) << node_lo;
     
     return ss.str();
 }
@@ -76,7 +90,13 @@ public:
         std::lock_guard<std::mutex> lock(mutex_);
         
         if (request_times_.size() >= max_entries_) {
-            request_times_.clear();
+            // Evict oldest 10% of entries instead of clearing all (prevents DoS)
+            size_t to_remove = std::max(size_t(1), max_entries_ / 10);
+            auto it = request_times_.begin();
+            while (it != request_times_.end() && to_remove > 0) {
+                it = request_times_.erase(it);
+                --to_remove;
+            }
         }
         
         auto now = std::chrono::steady_clock::now();
@@ -147,7 +167,13 @@ private:
     }
     
 public:
-    std::pair<Session*, bool> get_or_create_session(std::shared_ptr<WebSocketChannel> channel) {
+    struct SessionInfo {
+        std::string player_id;
+        std::string token;
+        bool is_new;
+    };
+    
+    std::optional<SessionInfo> get_or_create_session(std::shared_ptr<WebSocketChannel> channel) {
         std::lock_guard<std::mutex> lock(mutex_);
         
         auto conn_it = connection_to_token_.find(channel->peeraddr());
@@ -156,7 +182,7 @@ public:
             if (sess_it != sessions_.end()) {
                 if (!sess_it->second.is_expired()) {
                     sess_it->second.update_activity();
-                    return {&sess_it->second, false};
+                    return SessionInfo{sess_it->second.player_id, sess_it->second.token, false};
                 }
             }
         }
@@ -175,7 +201,7 @@ public:
         sessions_[token] = session;
         connection_to_token_[channel->peeraddr()] = token;
         
-        return {&sessions_[token], true};
+        return SessionInfo{player_id, token, true};
     }
     
     std::string create_session(const std::string& player_id, std::shared_ptr<WebSocketChannel> channel) {
@@ -258,6 +284,15 @@ public:
         }
     }
     
+    void remove_session_by_connection(const std::string& peeraddr) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto it = connection_to_token_.find(peeraddr);
+        if (it != connection_to_token_.end()) {
+            sessions_.erase(it->second);
+            connection_to_token_.erase(it);
+        }
+    }
+
     std::vector<std::shared_ptr<WebSocketChannel>> get_all_connections() {
         std::lock_guard<std::mutex> lock(mutex_);
         std::vector<std::shared_ptr<WebSocketChannel>> connections;
@@ -607,8 +642,8 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
         std::string type = message["type"];
         
         if (type == "session_init") {
-            auto [session, created] = session_manager->get_or_create_session(channel);
-            if (!session || session->player_id.empty()) {
+            auto result = session_manager->get_or_create_session(channel);
+            if (!result || result->player_id.empty()) {
                 json error = {
                     {"type", "error"},
                     {"data", {
@@ -619,7 +654,7 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                 channel->send(error.dump());
                 return;
             }
-            std::string player_id = session->player_id;
+            std::string player_id = result->player_id;
             
             json response = {
                 {"type", "connection_status"},
@@ -765,7 +800,7 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
             {"type", "error"},
             {"data", {
                 {"code", "parse_error"},
-                {"message", "Invalid JSON: " + std::string(e.what())}
+                {"message", "Invalid JSON format"}
             }}
         };
         channel->send(error.dump());
@@ -821,7 +856,7 @@ int main() {
     
     ws.onclose = [](const WebSocketChannelPtr& channel) {
         std::cout << "WebSocket connection closed: " << channel->peeraddr() << std::endl;
-        session_manager->cleanup_expired();
+        session_manager->remove_session_by_connection(channel->peeraddr());
     };
     
     WebSocketServer server(&ws);
