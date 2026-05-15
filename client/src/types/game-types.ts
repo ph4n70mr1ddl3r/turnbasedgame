@@ -179,6 +179,10 @@ export function isValidPlayerPosition(value: string): value is PlayerPosition {
   return VALID_PLAYER_POSITIONS.includes(value as PlayerPosition);
 }
 
+export function isValidConnectionStatus(value: string): value is ConnectionStatus {
+  return VALID_CONNECTION_STATUSES.includes(value as ConnectionStatus);
+}
+
 export function isValidCard(card: string): boolean {
   if (typeof card !== 'string') return false;
   return /^[2-9TJQKA][cdhs]$/.test(card);

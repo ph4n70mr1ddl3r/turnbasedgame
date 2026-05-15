@@ -3,6 +3,7 @@
 import { memo, useMemo, type ReactElement } from "react";
 import { PlayerState } from "@/types/game-types";
 import { DEFAULT_TURN_TIME_MS } from "@/lib/constants/game";
+import { formatTimeRemaining } from "@/lib/utils/format-utils";
 
 const TIMER_TRANSITION_DURATION_MS = 1000;
 
@@ -113,7 +114,7 @@ function PlayerSeatInner({ player, isCurrentPlayer }: PlayerSeatProps): ReactEle
             />
           </div>
           <div className="text-xs text-right mt-1">
-            {Math.ceil(time_remaining / 1000)}s
+            {formatTimeRemaining(time_remaining)}
           </div>
         </div>
       )}

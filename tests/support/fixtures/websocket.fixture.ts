@@ -40,7 +40,7 @@ export const test = base.extend<WebSocketFixtures>({
     // Inject session token into localStorage
     const sessionToken = createSessionToken();
     await page.addInitScript((token) => {
-      localStorage.setItem('session_token', token);
+      localStorage.setItem('poker_session_token', token);
     }, sessionToken);
 
     // Navigate to application
@@ -59,7 +59,7 @@ export const test = base.extend<WebSocketFixtures>({
 
     // Cleanup: Close connection and clear localStorage
     await page.evaluate(() => {
-      localStorage.removeItem('session_token');
+      localStorage.removeItem('poker_session_token');
     });
   },
 
@@ -75,7 +75,7 @@ export const test = base.extend<WebSocketFixtures>({
 
     const sessionToken = createSessionToken();
     await page.addInitScript((token) => {
-      localStorage.setItem('session_token', token);
+      localStorage.setItem('poker_session_token', token);
     }, sessionToken);
 
     await page.goto('http://localhost:3000');
@@ -92,7 +92,7 @@ export const test = base.extend<WebSocketFixtures>({
 
     // Cleanup
     await page.evaluate(() => {
-      localStorage.removeItem('session_token');
+      localStorage.removeItem('poker_session_token');
     });
   },
 

@@ -379,8 +379,9 @@ struct PokerGameState {
             json p;
             p["player_id"] = player.id;
             p["chip_stack"] = player.chip_stack;
-            // Only send hole cards to the owning player (or if game is finished)
-            if (!viewer_id.empty() && player.id == viewer_id) {
+            // Send hole cards to the owning player, or to everyone at showdown
+            bool should_reveal = (player.id == viewer_id) || (game_status == "finished");
+            if (!viewer_id.empty() && should_reveal) {
                 p["hole_cards"] = player.hole_cards;
             } else {
                 p["hole_cards"] = std::vector<std::string>();
@@ -686,13 +687,19 @@ void broadcast_game_state() {
     
     auto connections = session_manager->get_all_connections();
     for (auto& conn : connections) {
-        auto session_info = session_manager->lookup_session_by_connection(conn);
-        std::string viewer_id = session_info ? session_info->player_id : "";
-        json response = {
-            {"type", "game_state_update"},
-            {"data", poker_game->get_game_state(viewer_id)}
-        };
-        conn->send(response.dump());
+        try {
+            auto session_info = session_manager->lookup_session_by_connection(conn);
+            std::string viewer_id = session_info ? session_info->player_id : "";
+            json response = {
+                {"type", "game_state_update"},
+                {"data", poker_game->get_game_state(viewer_id)}
+            };
+            conn->send(response.dump());
+        } catch (const std::exception& e) {
+            std::cerr << "Error broadcasting to connection: " << e.what() << std::endl;
+        } catch (...) {
+            std::cerr << "Unknown error broadcasting to connection" << std::endl;
+        }
     }
 }
 

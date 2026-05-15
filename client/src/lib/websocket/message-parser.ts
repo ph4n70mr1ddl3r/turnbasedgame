@@ -20,6 +20,7 @@ import {
   isString,
   isNumber,
   isArray,
+  isNonNegativeInteger,
 } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
 import { WS_MAX_MESSAGE_SIZE } from "@/lib/constants/game";
@@ -98,7 +99,7 @@ export class MessageParser {
       return null;
     }
 
-    if (!isNumber(data.pot) || data.pot < 0) {
+    if (!isNonNegativeInteger(data.pot)) {
       logError("Invalid game_state_update: invalid pot", data);
       return null;
     }
@@ -113,12 +114,12 @@ export class MessageParser {
       return null;
     }
 
-    if (!isNumber(data.min_bet) || data.min_bet < 0) {
+    if (!isNonNegativeInteger(data.min_bet)) {
       logError("Invalid game_state_update: invalid min_bet", data);
       return null;
     }
 
-    if (!isNumber(data.max_bet) || data.max_bet < 0) {
+    if (!isNonNegativeInteger(data.max_bet)) {
       logError("Invalid game_state_update: invalid max_bet", data);
       return null;
     }
@@ -138,7 +139,7 @@ export class MessageParser {
       }
 
       const chipStack = player.chip_stack;
-      if (!isNumber(chipStack) || chipStack < 0) {
+      if (!isNonNegativeInteger(chipStack)) {
         logError("Invalid game_state_update: invalid chip_stack", player);
         return null;
       }
@@ -171,7 +172,7 @@ export class MessageParser {
         return null;
       }
 
-      if (!isNumber(player.current_bet) || player.current_bet < 0) {
+      if (!isNonNegativeInteger(player.current_bet)) {
         logError("Invalid game_state_update: invalid current_bet", player);
         return null;
       }
