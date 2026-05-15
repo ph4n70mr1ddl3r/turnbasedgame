@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef, useCallback, useEffect, memo } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect, memo, type ReactElement } from "react";
 import { BetAction, isValidBetAction } from "@/types/game-types";
 import { MAX_QUICK_RAISE_OPTIONS, UI_ACTION_COOLDOWN_MS, UI_ACTION_PROCESSING_DELAY_MS, UI_MAX_BET_INPUT_LENGTH } from "@/lib/constants/game";
 
@@ -18,7 +18,7 @@ function BettingControlsInner({
   onBetAction,
   minBet,
   maxBet,
-}: BettingControlsProps): React.ReactElement {
+}: BettingControlsProps): ReactElement {
   const validMinBet = Math.max(0, Number.isFinite(minBet) ? minBet : 0);
   const validMaxBet = Math.max(validMinBet, Number.isFinite(maxBet) ? maxBet : validMinBet);
   
@@ -40,6 +40,13 @@ function BettingControlsInner({
   useEffect(() => {
     setRaiseAmountInput(String(validMinBet));
   }, [validMinBet]);
+
+  useEffect(() => {
+    if (!isMyTurn) {
+      setShowRaiseInput(false);
+      setIsProcessing(false);
+    }
+  }, [isMyTurn]);
 
   const effectiveRaiseAmount = useMemo(() => {
     if (!raiseAmountInput?.trim()) return validMinBet;

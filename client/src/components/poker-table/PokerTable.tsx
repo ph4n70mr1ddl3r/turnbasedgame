@@ -1,12 +1,12 @@
 "use client";
 
-import React, { ReactNode, memo } from "react";
+import { ReactNode, memo, type ReactElement } from "react";
 
 interface PokerTableProps {
   children: ReactNode;
 }
 
-function PokerTableInner({ children }: PokerTableProps): React.ReactElement {
+function PokerTableInner({ children }: PokerTableProps): ReactElement {
   return (
     <div
       className="relative w-full h-96 bg-green-800 rounded-3xl border-8 border-yellow-900 shadow-2xl overflow-hidden"

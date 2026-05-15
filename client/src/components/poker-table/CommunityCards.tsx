@@ -1,15 +1,16 @@
 'use client';
 
-import React, { memo } from 'react';
+import { memo, type ReactElement } from 'react';
 import { Card } from '@/types/game-types';
 
 interface CommunityCardsProps {
   cards: Card[];
+  round?: string;
 }
 
 const CARD_POSITIONS = ['Flop 1', 'Flop 2', 'Flop 3', 'Turn', 'River'] as const;
 
-function CommunityCardsInner({ cards }: CommunityCardsProps): React.ReactElement {
+function CommunityCardsInner({ cards, round }: CommunityCardsProps): ReactElement {
   return (
     <div
       className="bg-green-950/70 p-6 rounded-xl border-2 border-green-800"
@@ -50,11 +51,12 @@ function CommunityCardsInner({ cards }: CommunityCardsProps): React.ReactElement
       
       <div className="mt-4 text-center">
         <div className="inline-block bg-green-800 px-3 py-1 rounded text-sm">
-          {cards.length === 0 && 'Pre-flop'}
-          {cards.length === 3 && 'Flop'}
-          {cards.length === 4 && 'Turn'}
-          {cards.length === 5 && 'River'}
-          {cards.length > 0 && cards.length < 3 && 'Deal in progress'}
+          {round === 'showdown' && 'Showdown'}
+          {round !== 'showdown' && cards.length === 0 && 'Pre-flop'}
+          {round !== 'showdown' && cards.length === 3 && 'Flop'}
+          {round !== 'showdown' && cards.length === 4 && 'Turn'}
+          {round !== 'showdown' && cards.length === 5 && 'River'}
+          {round !== 'showdown' && cards.length > 0 && cards.length < 3 && 'Deal in progress'}
         </div>
       </div>
     </div>

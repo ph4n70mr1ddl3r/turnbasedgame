@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo, useMemo } from "react";
+import { memo, useMemo, type ReactElement } from "react";
 import { PlayerState } from "@/types/game-types";
 import { DEFAULT_TURN_TIME_MS } from "@/lib/constants/game";
 
@@ -11,7 +11,7 @@ interface PlayerSeatProps {
   isCurrentPlayer: boolean;
 }
 
-function PlayerSeatInner({ player, isCurrentPlayer }: PlayerSeatProps): React.ReactElement {
+function PlayerSeatInner({ player, isCurrentPlayer }: PlayerSeatProps): ReactElement {
   const timerWidthPercent = useMemo((): number => {
     if (!player?.time_remaining) return 0;
     if (player.time_remaining <= 0) return 0;

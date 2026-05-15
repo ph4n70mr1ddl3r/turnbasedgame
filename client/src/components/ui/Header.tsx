@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
 import dynamic from "next/dynamic";
+import { type ReactElement } from "react";
 
 const ConnectionStatus = dynamic(
   () => import("@/components/ui/ConnectionStatus").then(mod => mod.ConnectionStatus),
@@ -11,7 +11,7 @@ const ConnectionStatus = dynamic(
   },
 );
 
-export function Header(): React.ReactElement {
+export function Header(): ReactElement {
   return (
     <header className="bg-green-800 border-b border-green-700 p-4">
       <div className="container mx-auto flex justify-between items-center">

@@ -202,6 +202,7 @@ public:
         return get_session_internal(token);
     }
     
+    // MUST be called with mutex_ already held
     Session* get_session_internal(const std::string& token) {
         auto it = sessions_.find(token);
         if (it == sessions_.end()) return nullptr;
@@ -277,6 +278,7 @@ struct Player {
     bool is_folded = false;
     bool is_all_in = false;
     std::string position = "none";
+    std::string last_action;
 };
 
 struct PokerGameState {
@@ -290,6 +292,8 @@ struct PokerGameState {
     int max_bet = 1500;
     std::string game_status = "waiting";
     int current_highest_bet = 0;
+    std::string last_winner;
+    std::string winning_hand;
     
     json to_json() const {
         json j;
@@ -305,6 +309,7 @@ struct PokerGameState {
             p["is_all_in"] = player.is_all_in;
             p["position"] = player.position;
             p["time_remaining"] = 30000;
+            p["last_action"] = player.last_action;
             j["players"].push_back(p);
         }
         
@@ -317,6 +322,8 @@ struct PokerGameState {
         j["max_bet"] = max_bet;
         j["game_status"] = game_status;
         j["current_highest_bet"] = current_highest_bet;
+        if (!last_winner.empty()) j["last_winner"] = last_winner;
+        if (!winning_hand.empty()) j["winning_hand"] = winning_hand;
         
         return j;
     }
@@ -419,6 +426,7 @@ public:
         
         if (action == "fold") {
             player->is_folded = true;
+            player->last_action = "fold";
             int active_players = 0;
             std::string winner_id;
             for (const auto& p : state_.players) {
@@ -435,11 +443,15 @@ public:
                     }
                 }
                 state_.pot = 0;
-                state_.game_status = "round_complete";
+                state_.game_status = "finished";
+                state_.last_winner = winner_id;
+                state_.winning_hand = "opponent folded";
+                state_.round = "showdown";
             } else {
                 advance_turn();
             }
         } else if (action == "check") {
+            player->last_action = "check";
             if (to_call > 0) {
                 response.result = ActionResult::InvalidAmount;
                 response.error_message = "Cannot check when there is a bet to call";
@@ -447,6 +459,7 @@ public:
             }
             advance_turn();
         } else if (action == "call") {
+            player->last_action = "call";
             int call_amount = std::min(to_call, player->chip_stack);
             
             player->chip_stack -= call_amount;
@@ -459,6 +472,7 @@ public:
             
             advance_turn();
         } else if (action == "raise") {
+            player->last_action = "raise";
             if (amount < state_.min_bet) {
                 amount = state_.min_bet;
             }
@@ -505,6 +519,7 @@ public:
             player.is_folded = false;
             player.is_all_in = false;
             player.hole_cards.clear();
+            player.last_action.clear();
         }
         state_.pot = 0;
         state_.community_cards.clear();
@@ -512,6 +527,8 @@ public:
         state_.round = "preflop";
         state_.game_status = "active";
         state_.current_highest_bet = 0;
+        state_.last_winner.clear();
+        state_.winning_hand.clear();
     }
 };
 
@@ -647,8 +664,8 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
             
             auto data = message["data"];
             
-            if (data.contains("token") && data["token"].is_string()) {
-                std::string message_token = data["token"];
+            if (message.contains("token") && message["token"].is_string()) {
+                std::string message_token = message["token"];
                 if (message_token != session->token) {
                     json error = {
                         {"type", "error"},

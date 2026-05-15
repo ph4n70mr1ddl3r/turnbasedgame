@@ -70,7 +70,16 @@ export default [
   {
     files: ['src/lib/websocket/reconnect-handler.ts'],
     rules: {
-      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          ignoreRestSiblings: true,
+          args: 'after-used',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
     },
   },
   {

@@ -1,13 +1,13 @@
 "use client";
 
-import React, { memo, useMemo } from "react";
+import { memo, useMemo, type ReactElement } from "react";
 import { CHIP_VISUAL_DIVISOR, MAX_CHIP_STACK_DISPLAY } from "@/lib/constants/game";
 
 interface PotDisplayProps {
   pot: number;
 }
 
-function PotDisplayInner({ pot }: PotDisplayProps): React.ReactElement {
+function PotDisplayInner({ pot }: PotDisplayProps): ReactElement {
   const chipCount = useMemo(
     () => Math.min(Math.floor(pot / CHIP_VISUAL_DIVISOR), MAX_CHIP_STACK_DISPLAY),
     [pot],

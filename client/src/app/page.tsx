@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useCallback } from "react";
+import { useMemo, useCallback, type ReactElement } from "react";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { PokerTable } from "@/components/poker-table/PokerTable";
 import { BettingControls } from "@/components/poker-table/BettingControls";
@@ -15,7 +15,7 @@ import { reloadPage } from "@/lib/utils/browser-utils";
 import { formatTimeRemaining } from "@/lib/utils/format-utils";
 import { useGameStore } from "@/lib/stores/game-store";
 
-function GameContent(): React.ReactElement {
+function GameContent(): ReactElement {
   const {
     isConnected,
     gameState,
@@ -78,6 +78,20 @@ function GameContent(): React.ReactElement {
         </div>
       )}
 
+      {gameState?.game_status === 'finished' && gameState.last_winner && (
+        <div className="w-full max-w-6xl bg-green-600 border border-green-500 rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-center space-x-3">
+            <span className="text-2xl">🏆</span>
+            <span className="text-lg font-bold">
+              {gameState.last_winner === playerId ? 'You win!' : `${gameState.last_winner === 'p1' ? 'Player 1' : 'Player 2'} wins!`}
+              {gameState.winning_hand && gameState.winning_hand !== 'opponent folded' && (
+                <span className="ml-2 text-green-100">— {gameState.winning_hand}</span>
+              )}
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-6xl">
         <div className="bg-green-800 rounded-t-lg p-4 flex justify-between items-center">
           <div>
@@ -91,6 +105,10 @@ function GameContent(): React.ReactElement {
                 ? "Hand in progress"
                 : gameState.game_status === "waiting"
                 ? "Waiting for players"
+                : gameState.game_status === "finished"
+                ? gameState.last_winner
+                  ? `Hand won by ${gameState.last_winner === 'p1' ? 'Player 1' : 'Player 2'}${gameState.winning_hand ? ` — ${gameState.winning_hand}` : ''}`
+                  : "Hand finished"
                 : "Hand finished"}
             </p>
           </div>
@@ -108,7 +126,7 @@ function GameContent(): React.ReactElement {
             </div>
 
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-              <CommunityCards cards={gameState?.community_cards ?? []} />
+              <CommunityCards cards={gameState?.community_cards ?? []} round={gameState?.round} />
             </div>
 
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
@@ -193,7 +211,7 @@ function GameContent(): React.ReactElement {
   );
 }
 
-export default function Home(): React.ReactElement {
+export default function Home(): ReactElement {
   return (
     <ErrorBoundary>
       <GameContent />
