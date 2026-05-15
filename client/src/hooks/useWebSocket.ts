@@ -62,7 +62,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   // Stable references that don't change across renders
   const autoConnectRef = useRef(options.autoConnect);
   const optionsUrlRef = useRef(options.url);
-  const initializedRef = useRef(false);
 
   const {
     isConnected,
@@ -187,9 +186,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
   // Initialize stores and optionally auto-connect - runs once on mount
   useEffect(() => {
-    if (initializedRef.current) return;
-    initializedRef.current = true;
-
     try {
       initializeConnectionStore();
       initializeGameStore();

@@ -79,7 +79,7 @@ function GameContent(): ReactElement {
       )}
 
       {gameState?.game_status === 'finished' && gameState.last_winner && (
-        <div className="w-full max-w-6xl bg-green-600 border border-green-500 rounded-lg p-4 mb-6">
+        <div className="w-full max-w-6xl bg-green-600 border border-green-500 rounded-lg p-4 mb-6" role="alert" aria-live="assertive">
           <div className="flex items-center justify-center space-x-3">
             <span className="text-2xl">🏆</span>
             <span className="text-lg font-bold">

@@ -23,14 +23,23 @@
 using namespace hv;
 using json = nlohmann::json;
 
+// Forward declarations
+class PokerGame;
+class SessionManager;
+
 constexpr int SESSION_TIMEOUT_MINUTES = 30;
 constexpr size_t MAX_RATE_LIMITER_ENTRIES = 10000;
 constexpr int MAX_BET_AMOUNT = 1000000;
 constexpr int RATE_LIMITER_CLEANUP_INTERVAL_MINUTES = 5;
 
-// Forward declarations
-class PokerGame;
-class SessionManager;
+// Get a unique identifier for a WebSocket channel.
+// peeraddr() is not unique when multiple clients share the same NAT/proxy,
+// so we combine peeraddr() with the channel's internal fd via its string representation.
+std::string channel_id(const std::shared_ptr<WebSocketChannel>& channel) {
+    // Use the channel's peeraddr plus its local fd representation for uniqueness.
+    // hv::WebSocketChannel exposes fd() which gives us a unique per-connection value.
+    return channel->peeraddr() + "#" + std::to_string(channel->fd());
+}
 
 std::string generate_secure_token() {
     unsigned char buf[16];
@@ -190,7 +199,8 @@ public:
     std::optional<SessionInfo> get_or_create_session(std::shared_ptr<WebSocketChannel> channel) {
         std::lock_guard<std::mutex> lock(mutex_);
         
-        auto conn_it = connection_to_token_.find(channel->peeraddr());
+        std::string cid = channel_id(channel);
+        auto conn_it = connection_to_token_.find(cid);
         if (conn_it != connection_to_token_.end()) {
             auto sess_it = sessions_.find(conn_it->second);
             if (sess_it != sessions_.end()) {
@@ -204,7 +214,7 @@ public:
             }
         }
         
-        // Clean up any stale connection mapping from a previous connection on same peeraddr
+        // Clean up any stale connection mapping from a previous connection on same channel
         if (conn_it != connection_to_token_.end()) {
             connection_to_token_.erase(conn_it);
         }
@@ -221,7 +231,7 @@ public:
         };
         
         sessions_[token] = session;
-        connection_to_token_[channel->peeraddr()] = token;
+        connection_to_token_[channel_id(channel)] = token;
         
         return SessionInfo{player_id, token, true};
     }
@@ -240,7 +250,7 @@ public:
         };
         
         sessions_[token] = session;
-        connection_to_token_[channel->peeraddr()] = token;
+        connection_to_token_[channel_id(channel)] = token;
         
         return token;
     }
@@ -258,7 +268,7 @@ public:
         
         if (it->second.is_expired()) {
             if (auto conn = it->second.connection.lock()) {
-                connection_to_token_.erase(conn->peeraddr());
+                connection_to_token_.erase(channel_id(conn));
             }
             sessions_.erase(it);
             return nullptr;
@@ -267,12 +277,22 @@ public:
         return &it->second;
     }
     
-    Session* get_session_by_connection(std::shared_ptr<WebSocketChannel> channel) {
+    // Returns session info (player_id + token) by connection.
+    // Returns nullopt if not found or expired. This avoids returning a raw pointer
+    // that could be invalidated by another thread.
+    struct SessionLookup {
+        std::string player_id;
+        std::string token;
+    };
+    std::optional<SessionLookup> lookup_session_by_connection(std::shared_ptr<WebSocketChannel> channel) {
         std::lock_guard<std::mutex> lock(mutex_);
-        auto it = connection_to_token_.find(channel->peeraddr());
-        if (it == connection_to_token_.end()) return nullptr;
+        auto it = connection_to_token_.find(channel_id(channel));
+        if (it == connection_to_token_.end()) return std::nullopt;
         
-        return get_session_internal(it->second);
+        Session* session = get_session_internal(it->second);
+        if (!session) return std::nullopt;
+        
+        return SessionLookup{session->player_id, session->token};
     }
     
     void remove_session(const std::string& token) {
@@ -280,7 +300,7 @@ public:
         auto it = sessions_.find(token);
         if (it != sessions_.end()) {
             if (auto conn = it->second.connection.lock()) {
-                connection_to_token_.erase(conn->peeraddr());
+                connection_to_token_.erase(channel_id(conn));
             }
             sessions_.erase(it);
         }
@@ -299,16 +319,16 @@ public:
             auto it = sessions_.find(token);
             if (it != sessions_.end()) {
                 if (auto conn = it->second.connection.lock()) {
-                    connection_to_token_.erase(conn->peeraddr());
+                    connection_to_token_.erase(channel_id(conn));
                 }
                 sessions_.erase(it);
             }
         }
     }
     
-    void remove_session_by_connection(const std::string& peeraddr) {
+    void remove_session_by_connection(const std::string& cid) {
         std::lock_guard<std::mutex> lock(mutex_);
-        auto it = connection_to_token_.find(peeraddr);
+        auto it = connection_to_token_.find(cid);
         if (it != connection_to_token_.end()) {
             sessions_.erase(it->second);
             connection_to_token_.erase(it);
@@ -352,20 +372,25 @@ struct PokerGameState {
     std::string last_winner;
     std::string winning_hand;
     
-    json to_json() const {
+    json to_json(const std::string& viewer_id = "") const {
         json j;
         j["players"] = json::array();
         for (const auto& player : players) {
             json p;
             p["player_id"] = player.id;
             p["chip_stack"] = player.chip_stack;
-            p["hole_cards"] = player.hole_cards;
+            // Only send hole cards to the owning player (or if game is finished)
+            if (!viewer_id.empty() && player.id == viewer_id) {
+                p["hole_cards"] = player.hole_cards;
+            } else {
+                p["hole_cards"] = std::vector<std::string>();
+            }
             p["current_bet"] = player.current_bet;
             p["is_active"] = !player.is_folded;
             p["is_folded"] = player.is_folded;
             p["is_all_in"] = player.is_all_in;
             p["position"] = player.position;
-            p["time_remaining"] = 30000;
+            p["time_remaining"] = time_remaining;
             p["last_action"] = player.last_action;
             j["players"].push_back(p);
         }
@@ -476,9 +501,9 @@ public:
         return state_;
     }
     
-    json get_game_state() {
+    json get_game_state(const std::string& viewer_id = "") {
         std::lock_guard<std::mutex> lock(mutex_);
-        return state_.to_json();
+        return state_.to_json(viewer_id);
     }
     
     enum class ActionResult {
@@ -659,13 +684,14 @@ void cleanup_thread_func() {
 void broadcast_game_state() {
     if (!session_manager || !poker_game) return;
     
-    json response = {
-        {"type", "game_state_update"},
-        {"data", poker_game->get_game_state()}
-    };
-    
     auto connections = session_manager->get_all_connections();
     for (auto& conn : connections) {
+        auto session_info = session_manager->lookup_session_by_connection(conn);
+        std::string viewer_id = session_info ? session_info->player_id : "";
+        json response = {
+            {"type", "game_state_update"},
+            {"data", poker_game->get_game_state(viewer_id)}
+        };
         conn->send(response.dump());
     }
 }
@@ -742,13 +768,13 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
             
             json game_response = {
                 {"type", "game_state_update"},
-                {"data", poker_game->get_game_state()}
+                {"data", poker_game->get_game_state(player_id)}
             };
             channel->send(game_response.dump());
             
         } else if (type == "bet_action") {
-            Session* session = session_manager->get_session_by_connection(channel);
-            if (!session) {
+            auto session_info = session_manager->lookup_session_by_connection(channel);
+            if (!session_info) {
                 json error = {
                     {"type", "error"},
                     {"data", {
@@ -759,9 +785,6 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                 channel->send(error.dump());
                 return;
             }
-            
-            // Update session activity on meaningful user actions
-            session->update_activity();
             
             if (!message.contains("data") || !message["data"].is_object()) {
                 json error = {
@@ -779,7 +802,7 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
             
             if (message.contains("token") && message["token"].is_string()) {
                 std::string message_token = message["token"];
-                if (message_token != session->token) {
+                if (message_token != session_info->token) {
                     json error = {
                         {"type", "error"},
                         {"data", {
@@ -832,7 +855,7 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                 }
             }
             
-            auto result = poker_game->handle_bet_action(session->player_id, action, amount);
+            auto result = poker_game->handle_bet_action(session_info->player_id, action, amount);
             
             if (result.result == PokerGame::ActionResult::Success) {
                 broadcast_game_state();
@@ -934,8 +957,8 @@ int main() {
     };
     
     ws.onclose = [](const WebSocketChannelPtr& channel) {
-        std::cout << "WebSocket connection closed: " << channel->peeraddr() << std::endl;
-        session_manager->remove_session_by_connection(channel->peeraddr());
+        std::cout << "WebSocket connection closed: " << channel_id(channel) << std::endl;
+        session_manager->remove_session_by_connection(channel_id(channel));
     };
     
     WebSocketServer server;
@@ -946,6 +969,8 @@ int main() {
     
     server_running = true;
     std::thread cleanup_thread(cleanup_thread_func);
+    // Note: cleanup_thread is intentionally detached. It checks server_running
+    // periodically and will exit when server_running becomes false.
     cleanup_thread.detach();
     
     std::cout << "Poker server starting on port 8080..." << std::endl;
@@ -955,6 +980,13 @@ int main() {
     server.run();
     
     server_running = false;
+    
+    // Graceful shutdown: clean up global state
+    poker_game.reset();
+    session_manager.reset();
+    rate_limiter.reset();
+    
+    std::cout << "Server shutdown complete." << std::endl;
     
     return 0;
 }

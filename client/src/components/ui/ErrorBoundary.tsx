@@ -29,6 +29,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     return { hasError: true, error };
   }
 
+  // Note: retryCount is intentionally NOT included in getDerivedStateFromError's return
+  // because React merges the partial state, preserving existing retryCount.
+
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     logError("ErrorBoundary caught an error:", { error, errorInfo });
     // Only reset stores if we haven't retried too many times

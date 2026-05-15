@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { GameState, PlayerState, BetAction, isValidBettingRound, isValidPlayerId, isValidGameStatus, MAX_PLAYERS } from "@/types/game-types";
+import { GameState, PlayerState, BetAction, isValidBettingRound, isValidPlayerId, isValidGameStatus, isValidCard, MAX_PLAYERS } from "@/types/game-types";
 import { registerPlayerIdCallback } from "@/lib/stores/connection-store";
 import { logError } from "@/lib/utils/logger";
 
@@ -73,6 +73,13 @@ function isValidGameState(state: unknown): state is GameState {
     return false;
   }
   
+  for (const card of s.community_cards) {
+    if (typeof card !== 'string' || !isValidCard(card)) {
+      logError('isValidGameState: invalid community card', { card });
+      return false;
+    }
+  }
+  
   for (let i = 0; i < s.players.length; i++) {
     const player = s.players[i];
     if (!player || typeof player !== 'object') {
@@ -94,6 +101,13 @@ function isValidGameState(state: unknown): state is GameState {
     if (!Array.isArray(p.hole_cards) || p.hole_cards.length > 2) {
       logError(`isValidGameState: player[${i}] has invalid hole_cards`, { hole_cards: p.hole_cards });
       return false;
+    }
+    
+    for (const card of p.hole_cards) {
+      if (typeof card !== 'string' || !isValidCard(card)) {
+        logError(`isValidGameState: player[${i}] has invalid hole card`, { card });
+        return false;
+      }
     }
   }
   

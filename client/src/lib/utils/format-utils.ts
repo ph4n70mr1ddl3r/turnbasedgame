@@ -4,7 +4,7 @@ export function formatTimeRemaining(ms: number | null | undefined): string {
   const seconds = Math.ceil(ms / 1000);
   // Cap display at a reasonable maximum (1 hour)
   if (seconds > 3600) return '3600s+';
-  // For very small values (< 1s), show milliseconds for urgency
+  // For sub-second values, show milliseconds for urgency
   if (ms < 1000) return `${Math.round(ms)}ms`;
   return `${seconds}s`;
 }
