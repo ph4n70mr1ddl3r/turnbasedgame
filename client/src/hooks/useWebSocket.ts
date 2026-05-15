@@ -59,8 +59,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   const managerRef = useRef<ConnectionManager | null>(null);
   const connectingRef = useRef(false);
   const urlRef = useRef<string | null>(null);
+  // Stable references that don't change across renders
   const autoConnectRef = useRef(options.autoConnect);
   const optionsUrlRef = useRef(options.url);
+  const initializedRef = useRef(false);
 
   const {
     isConnected,
@@ -98,53 +100,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     }
   }, []);
 
-  const getOrCreateManager = useCallback((wsUrl: string): ConnectionManager => {
-    if (managerRef.current && urlRef.current === wsUrl) {
-      return managerRef.current;
-    }
-    cleanupManager();
-    const manager = new ConnectionManager({
-      url: wsUrl,
-      autoReconnect: true,
-    });
-    managerRef.current = manager;
-    urlRef.current = wsUrl;
-    return manager;
-  }, [cleanupManager]);
-
-  const performConnection = useCallback(async (
-    manager: ConnectionManager,
-    signal?: AbortSignal
-  ): Promise<boolean> => {
-    if (connectingRef.current) {
-      logWarn("Connection already in progress, skipping");
-      return false;
-    }
-    
-    connectingRef.current = true;
-    try {
-      const connected = await manager.connect();
-      if (signal?.aborted) {
-        manager.disconnect();
-        return false;
-      }
-      if (!connected) {
-        useGameStore.getState().setError("Failed to connect to game server");
-      }
-      return connected;
-    } catch (error) {
-      if (signal?.aborted) {
-        return false;
-      }
-      const errorMessage = error instanceof Error ? error.message : "Connection failed";
-      logError("Connection failed:", error);
-      useGameStore.getState().setError(errorMessage);
-      return false;
-    } finally {
-      connectingRef.current = false;
-    }
-  }, []);
-
   const connect = useCallback(async (): Promise<boolean> => {
     if (connectingRef.current) {
       logWarn("Connection already in progress");
@@ -157,9 +112,41 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       useGameStore.getState().setError("No WebSocket URL configured");
       return false;
     }
-    const manager = getOrCreateManager(wsUrl);
-    return performConnection(manager);
-  }, [getOrCreateManager, performConnection]);
+
+    // Reuse existing manager or create new one
+    if (managerRef.current && urlRef.current === wsUrl) {
+      // reuse
+    } else {
+      cleanupManager();
+      const manager = new ConnectionManager({
+        url: wsUrl,
+        autoReconnect: true,
+      });
+      managerRef.current = manager;
+      urlRef.current = wsUrl;
+    }
+
+    connectingRef.current = true;
+    try {
+      const manager = managerRef.current;
+      if (!manager) {
+        connectingRef.current = false;
+        return false;
+      }
+      const connected = await manager.connect();
+      if (!connected) {
+        useGameStore.getState().setError("Failed to connect to game server");
+      }
+      return connected;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Connection failed";
+      logError("Connection failed:", error);
+      useGameStore.getState().setError(errorMessage);
+      return false;
+    } finally {
+      connectingRef.current = false;
+    }
+  }, [cleanupManager]);
 
   const disconnect = useCallback(() => {
     cleanupManager();
@@ -197,7 +184,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     optionsUrlRef.current = options.url;
   }, [options.autoConnect, options.url]);
 
+  // Main connection lifecycle effect - runs once on mount
   useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
     const abortController = new AbortController();
 
     try {
@@ -213,9 +204,34 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       try {
         const wsUrl = optionsUrlRef.current || process.env.NEXT_PUBLIC_WS_URL || getDefaultWebSocketUrl();
         if (wsUrl) {
-          const manager = getOrCreateManager(wsUrl);
-          performConnection(manager, abortController.signal).catch((error) => {
+          const manager = new ConnectionManager({
+            url: wsUrl,
+            autoReconnect: true,
+          });
+          managerRef.current = manager;
+          urlRef.current = wsUrl;
+
+          if (connectingRef.current) {
+            logWarn("Connection already in progress, skipping");
+            return;
+          }
+
+          connectingRef.current = true;
+          manager.connect().then((connected) => {
+            connectingRef.current = false;
+            if (abortController.signal.aborted) {
+              manager.disconnect();
+              return;
+            }
+            if (!connected) {
+              useGameStore.getState().setError("Failed to connect to game server");
+            }
+          }).catch((error) => {
+            connectingRef.current = false;
+            if (abortController.signal.aborted) return;
+            const errorMessage = error instanceof Error ? error.message : "Connection failed";
             logError("Auto-connect failed:", error);
+            useGameStore.getState().setError(errorMessage);
           });
         } else {
           useGameStore.getState().setError("No WebSocket URL configured");
@@ -230,7 +246,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       abortController.abort();
       cleanupManager();
     };
-  }, [getOrCreateManager, performConnection, cleanupManager]);
+  // Intentionally empty dependency array - runs once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return {
     connect,

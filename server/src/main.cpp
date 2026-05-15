@@ -36,6 +36,8 @@ std::string generate_secure_token() {
     unsigned char buf[16];
     ssize_t result = getrandom(buf, sizeof(buf), 0);
     if (result != sizeof(buf)) {
+        std::cerr << "WARNING: getrandom() failed (returned " << result << "), falling back to std::random_device. "
+                  << "Tokens may not be cryptographically secure." << std::endl;
         std::random_device rd;
         std::mt19937_64 gen(rd());
         std::uniform_int_distribution<uint64_t> dis;
@@ -74,9 +76,14 @@ std::string generate_secure_token() {
     return ss.str();
 }
 
+struct ClientEntry {
+    std::vector<std::chrono::steady_clock::time_point> times;
+    std::chrono::steady_clock::time_point last_activity;
+};
+
 class RateLimiter {
 private:
-    std::map<std::string, std::vector<std::chrono::steady_clock::time_point>> request_times_;
+    std::map<std::string, ClientEntry> entries_;
     mutable std::mutex mutex_;
     size_t max_requests_;
     std::chrono::milliseconds window_;
@@ -89,40 +96,47 @@ public:
     bool allow_request(const std::string& client_id) {
         std::lock_guard<std::mutex> lock(mutex_);
         
-        if (request_times_.size() >= max_entries_) {
-            // Evict oldest 10% of entries instead of clearing all (prevents DoS)
+        auto now = std::chrono::steady_clock::now();
+        
+        if (entries_.size() >= max_entries_) {
+            // Evict least-recently-used 10% of entries (prevents DoS)
             size_t to_remove = std::max(size_t(1), max_entries_ / 10);
-            auto it = request_times_.begin();
-            while (it != request_times_.end() && to_remove > 0) {
-                it = request_times_.erase(it);
-                --to_remove;
+            // Build sorted list by last_activity
+            std::vector<std::pair<std::chrono::steady_clock::time_point, std::string>> sorted;
+            sorted.reserve(entries_.size());
+            for (const auto& [id, entry] : entries_) {
+                sorted.emplace_back(entry.last_activity, id);
+            }
+            std::sort(sorted.begin(), sorted.end());
+            for (size_t i = 0; i < to_remove && i < sorted.size(); ++i) {
+                entries_.erase(sorted[i].second);
             }
         }
         
-        auto now = std::chrono::steady_clock::now();
-        auto& times = request_times_[client_id];
+        auto& entry = entries_[client_id];
+        entry.last_activity = now;
         
         auto cutoff = now - window_;
-        times.erase(
-            std::remove_if(times.begin(), times.end(),
+        entry.times.erase(
+            std::remove_if(entry.times.begin(), entry.times.end(),
                 [cutoff](const auto& t) { return t < cutoff; }),
-            times.end()
+            entry.times.end()
         );
         
-        if (times.size() >= max_requests_) {
+        if (entry.times.size() >= max_requests_) {
             return false;
         }
         
-        times.push_back(now);
+        entry.times.push_back(now);
         return true;
     }
     
     void cleanup_stale() {
         std::lock_guard<std::mutex> lock(mutex_);
         auto cutoff = std::chrono::steady_clock::now() - std::chrono::minutes(RATE_LIMITER_CLEANUP_INTERVAL_MINUTES);
-        for (auto it = request_times_.begin(); it != request_times_.end();) {
-            if (it->second.empty() || it->second.back() < cutoff) {
-                it = request_times_.erase(it);
+        for (auto it = entries_.begin(); it != entries_.end();) {
+            if (it->second.times.empty() || it->second.last_activity < cutoff) {
+                it = entries_.erase(it);
             } else {
                 ++it;
             }
@@ -378,12 +392,28 @@ private:
     }
     
     void advance_turn() {
-        for (auto& player : state_.players) {
-            if (player.id != state_.current_player && !player.is_folded && !player.is_all_in) {
+        // Find current player index
+        int current_idx = -1;
+        for (int i = 0; i < (int)state_.players.size(); ++i) {
+            if (state_.players[i].id == state_.current_player) {
+                current_idx = i;
+                break;
+            }
+        }
+        if (current_idx < 0) return;
+        
+        // Search for next active player after current
+        for (int offset = 1; offset <= (int)state_.players.size(); ++offset) {
+            int idx = (current_idx + offset) % (int)state_.players.size();
+            auto& player = state_.players[idx];
+            if (!player.is_folded && !player.is_all_in) {
                 state_.current_player = player.id;
                 return;
             }
         }
+        
+        // All other players are folded or all-in; no valid next player
+        // This means the hand should end or only one player remains
     }
     
 public:
@@ -835,7 +865,8 @@ int main() {
     HttpService http;
     WebSocketService ws;
     
-    http.static("/", "../client/out");
+    http.document_root = "../client/out";
+    http.staticDirs["/"] = "../client/out";
     
     ws.onopen = [](const WebSocketChannelPtr& channel, const HttpRequestPtr& req) {
         std::cout << "WebSocket connection opened: " << req->path << std::endl;
@@ -859,7 +890,8 @@ int main() {
         session_manager->remove_session_by_connection(channel->peeraddr());
     };
     
-    WebSocketServer server(&ws);
+    WebSocketServer server;
+    server.registerWebSocketService(&ws);
     server.registerHttpService(&http);
     server.setPort(8080);
     server.setThreadNum(4);

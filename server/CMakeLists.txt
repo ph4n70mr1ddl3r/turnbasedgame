@@ -1,12 +1,17 @@
 cmake_minimum_required(VERSION 3.15)
+
+# Silence compatibility warnings from dependencies with older cmake_minimum_required
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE INTERNAL "")
+
 project(poker_server VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Fetch libhv from GitHub
+# Fetch dependencies
 include(FetchContent)
-# Fetch libhv
+
+# Fetch libhv from GitHub
 FetchContent_Declare(
   libhv
   GIT_REPOSITORY https://github.com/ithewei/libhv.git
@@ -20,12 +25,10 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(libhv nlohmann_json)
 
-# Find libhv (assumes installed system-wide)
-find_package(libhv REQUIRED)
-
 # Main application
 add_executable(poker_server src/main.cpp)
-target_link_libraries(poker_server libhv::libhv nlohmann_json::nlohmann_json)
+target_link_libraries(poker_server hv nlohmann_json::nlohmann_json)
+target_include_directories(poker_server PRIVATE ${libhv_SOURCE_DIR}/include)
 
 # Install target
 install(TARGETS poker_server DESTINATION bin)
@@ -35,7 +38,6 @@ option(BUILD_TESTS "Build tests" ON)
 
 if(BUILD_TESTS)
   # Download and setup Google Test
-  include(FetchContent)
   FetchContent_Declare(
     googletest
     URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz
