@@ -424,6 +424,52 @@ private:
         return nullptr;
     }
     
+    // Track how many players have acted in the current betting round.
+    // When all active (non-folded, non-all-in) players have acted and bets
+    // are equalized, the round advances.
+    int players_acted_this_round_ = 0;
+    bool round_opened_ = false; // has anyone bet/raised this sub-round?
+
+    void advance_round() {
+        // Reset per-round betting state
+        for (auto& p : state_.players) {
+            p.current_bet = 0;
+            p.last_action.clear();
+        }
+        state_.current_highest_bet = 0;
+        players_acted_this_round_ = 0;
+        round_opened_ = false;
+
+        if (state_.round == "preflop") {
+            state_.round = "flop";
+            // TODO: Deal 3 community cards from deck
+        } else if (state_.round == "flop") {
+            state_.round = "turn";
+            // TODO: Deal 1 community card
+        } else if (state_.round == "turn") {
+            state_.round = "river";
+            // TODO: Deal 1 community card
+        } else if (state_.round == "river") {
+            state_.round = "showdown";
+            state_.game_status = "finished";
+            // TODO: Evaluate hands, determine winner
+            return;
+        }
+
+        // Set first active player as current for the new round
+        for (const auto& p : state_.players) {
+            if (!p.is_folded && !p.is_all_in) {
+                state_.current_player = p.id;
+                return;
+            }
+        }
+
+        // All players all-in or folded — run out remaining rounds
+        state_.round = "showdown";
+        state_.game_status = "finished";
+        // TODO: Evaluate hands at showdown
+    }
+
     void advance_turn() {
         // Find current player index
         int current_idx = -1;
@@ -467,8 +513,27 @@ private:
                 state_.round = "showdown";
                 return;
             }
+
+            // Only one active player (rest all-in) — deal remaining cards
+            advance_round();
+            return;
         }
-        
+
+        // Check if all active players have acted and bets are equal
+        bool all_bets_equal = true;
+        int first_active_bet = -1;
+        for (const auto& p : state_.players) {
+            if (!p.is_folded && !p.is_all_in) {
+                if (first_active_bet < 0) first_active_bet = p.current_bet;
+                else if (p.current_bet != first_active_bet) all_bets_equal = false;
+            }
+        }
+
+        if (all_bets_equal && players_acted_this_round_ >= active_players) {
+            advance_round();
+            return;
+        }
+
         // Search for next active player after current
         for (int offset = 1; offset <= (int)state_.players.size(); ++offset) {
             int idx = (current_idx + offset) % (int)state_.players.size();
@@ -558,6 +623,7 @@ public:
         if (action == "fold") {
             player->is_folded = true;
             player->last_action = "fold";
+            players_acted_this_round_++;
             int active_players = 0;
             std::string winner_id;
             for (const auto& p : state_.players) {
@@ -588,6 +654,7 @@ public:
                 response.error_message = "Cannot check when there is a bet to call";
                 return response;
             }
+            players_acted_this_round_++;
             advance_turn();
         } else if (action == "call") {
             player->last_action = "call";
@@ -600,7 +667,7 @@ public:
             if (player->chip_stack == 0) {
                 player->is_all_in = true;
             }
-            
+            players_acted_this_round_++;
             advance_turn();
         } else if (action == "raise") {
             player->last_action = "raise";
@@ -631,7 +698,9 @@ public:
             if (player->chip_stack == 0) {
                 player->is_all_in = true;
             }
-            
+            // Raise resets the action counter: others must respond
+            players_acted_this_round_ = 1;
+            round_opened_ = true;
             advance_turn();
         } else {
             response.result = ActionResult::InvalidAmount;
@@ -662,6 +731,8 @@ public:
         state_.current_highest_bet = 0;
         state_.last_winner.clear();
         state_.winning_hand.clear();
+        players_acted_this_round_ = 0;
+        round_opened_ = false;
     }
 };
 

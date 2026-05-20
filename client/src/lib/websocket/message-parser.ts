@@ -362,13 +362,6 @@ export class MessageParser {
     return JSON.stringify(message);
   }
 
-  static createHeartbeat(): HeartbeatMessage {
-    return {
-      type: "heartbeat",
-      data: { timestamp: Date.now() },
-    };
-  }
-
   static createSessionInit(reconnectToken?: string): SessionInitMessage {
     return {
       type: "session_init",

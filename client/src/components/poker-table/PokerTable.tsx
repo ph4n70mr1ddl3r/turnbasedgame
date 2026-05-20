@@ -26,7 +26,7 @@ function PokerTableInner({ children }: PokerTableProps): ReactElement {
         </div>
 
         {/* Responsive layout: vertical stack on mobile, absolute on sm+ */}
-        <div className="flex flex-col gap-4 p-4 sm:absolute sm:inset-0 sm:p-0">
+        <div className="flex flex-col items-center gap-4 p-4 sm:absolute sm:inset-0 sm:p-0">
           {children}
         </div>
       </div>

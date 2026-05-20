@@ -480,18 +480,6 @@ describe('MessageParser', () => {
     });
   });
 
-  describe('createHeartbeat', () => {
-    test('should create heartbeat message with current timestamp', () => {
-      const before = Date.now();
-      const message = MessageParser.createHeartbeat();
-      const after = Date.now();
-
-      expect(message.type).toBe('heartbeat');
-      expect(message.data.timestamp).toBeGreaterThanOrEqual(before);
-      expect(message.data.timestamp).toBeLessThanOrEqual(after);
-    });
-  });
-
   describe('createSessionInit', () => {
     test('should create session init without reconnect token', () => {
       const message = MessageParser.createSessionInit();

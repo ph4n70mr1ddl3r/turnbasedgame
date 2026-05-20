@@ -1,4 +1,7 @@
 import { logWarn } from "./logger";
+import { SESSION_TOKEN_KEY, PLAYER_ID_KEY, SESSION_EXPIRY_KEY } from "@/lib/constants/storage";
+
+const APP_STORAGE_KEYS = [SESSION_TOKEN_KEY, PLAYER_ID_KEY, SESSION_EXPIRY_KEY] as const;
 
 export function reloadPage(): void {
   if (typeof window !== 'undefined') {
@@ -74,7 +77,13 @@ export function safeLocalStorage(): SafeLocalStorage {
     },
     clear: (): boolean => {
       try {
-        localStorage.clear();
+        for (const key of APP_STORAGE_KEYS) {
+          try {
+            localStorage.removeItem(key);
+          } catch {
+            // Continue removing other keys even if one fails
+          }
+        }
         return true;
       } catch (error) {
         logWarn('localStorage.clear failed:', error);

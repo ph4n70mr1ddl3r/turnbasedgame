@@ -202,9 +202,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
     return () => {
       cleanupManager();
-    };
-  // Intentionally empty dependency array - runs once on mount
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+ };
+  // Mount-only effect: stores initialize once, auto-connect fires once.
+  // connect and cleanupManager are stable via useCallback, and we use
+  // refs for options — no deps needed.
   }, []);
 
   return {
