@@ -391,7 +391,9 @@ struct PokerGameState {
             p["is_folded"] = player.is_folded;
             p["is_all_in"] = player.is_all_in;
             p["position"] = player.position;
-            p["time_remaining"] = time_remaining;
+            // Only the current player has time remaining ticking
+            bool is_current = (player.id == current_player);
+            p["time_remaining"] = is_current ? time_remaining : 0;
             p["last_action"] = player.last_action;
             j["players"].push_back(p);
         }
@@ -428,7 +430,6 @@ private:
     // When all active (non-folded, non-all-in) players have acted and bets
     // are equalized, the round advances.
     int players_acted_this_round_ = 0;
-    bool round_opened_ = false; // has anyone bet/raised this sub-round?
 
     void advance_round() {
         // Reset per-round betting state
@@ -438,7 +439,6 @@ private:
         }
         state_.current_highest_bet = 0;
         players_acted_this_round_ = 0;
-        round_opened_ = false;
 
         if (state_.round == "preflop") {
             state_.round = "flop";
@@ -700,7 +700,6 @@ public:
             }
             // Raise resets the action counter: others must respond
             players_acted_this_round_ = 1;
-            round_opened_ = true;
             advance_turn();
         } else {
             response.result = ActionResult::InvalidAmount;
@@ -732,7 +731,6 @@ public:
         state_.last_winner.clear();
         state_.winning_hand.clear();
         players_acted_this_round_ = 0;
-        round_opened_ = false;
     }
 };
 
@@ -777,7 +775,7 @@ void broadcast_game_state() {
 constexpr size_t MAX_MESSAGE_SIZE = 64 * 1024;
 
 void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const std::string& msg) {
-    std::string client_id = channel->peeraddr();
+    std::string client_id = channel_id(channel);
     
     if (!rate_limiter->allow_request(client_id)) {
         json error = {
@@ -906,6 +904,18 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
             }
             
             std::string action = data["action"];
+            // Validate action is a known value
+            if (action != "check" && action != "call" && action != "raise" && action != "fold") {
+                json error = {
+                    {"type", "error"},
+                    {"data", {
+                        {"code", "invalid_action"},
+                        {"message", "Unknown action: " + action}
+                    }}
+                };
+                channel->send(error.dump());
+                return;
+            }
             int amount = 0;
             if (data.contains("amount") && data["amount"].is_number_integer()) {
                 amount = data["amount"].get<int>();
@@ -926,6 +936,18 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                         {"data", {
                             {"code", "invalid_amount"},
                             {"message", "Amount exceeds maximum allowed bet"}
+                        }}
+                    };
+                    channel->send(error.dump());
+                    return;
+                }
+                // Reject amount for non-raise actions to prevent ambiguity
+                if (action != "raise") {
+                    json error = {
+                        {"type", "error"},
+                        {"data", {
+                            {"code", "invalid_amount"},
+                            {"message", "Amount field is only valid for raise actions"}
                         }}
                     };
                     channel->send(error.dump());

@@ -42,15 +42,17 @@ function GameContent(): ReactElement {
     }
   }, [isConnected, sendBetAction]);
 
-  const { player1, player2, myPlayer, isPlayer1Current, isPlayer2Current } = useMemo(() => {
+  const { player1, player2, myPlayer, isPlayer1Current, isPlayer2Current, dealerPlayerIndex } = useMemo(() => {
     const players = gameState?.players ?? [];
     const currentPlayerId = gameState?.current_player;
+    const dealerIndex = players.findIndex((p) => p.position === 'button');
     return {
       player1: players[0] ?? null,
       player2: players[1] ?? null,
       myPlayer: playerId ? players.find((p) => p.player_id === playerId) : null,
       isPlayer1Current: currentPlayerId !== null && players[0]?.player_id === currentPlayerId,
       isPlayer2Current: currentPlayerId !== null && players[1]?.player_id === currentPlayerId,
+      dealerPlayerIndex: dealerIndex >= 0 ? dealerIndex : null,
     };
   }, [gameState, playerId]);
 
@@ -115,7 +117,7 @@ function GameContent(): ReactElement {
         </div>
 
         <div className="relative bg-green-700 p-4 sm:p-8 rounded-b-lg">
-          <PokerTable>
+          <PokerTable dealerPlayerIndex={dealerPlayerIndex}>
             <div className="sm:absolute sm:top-4 sm:left-1/2 sm:transform sm:-translate-x-1/2">
               <PlayerSeat
                 key="player-1"
@@ -141,7 +143,7 @@ function GameContent(): ReactElement {
         <div className="mt-8">
           <BettingControls
             isMyTurn={isMyTurn}
-            availableActions={availableActions ?? []}
+            availableActions={availableActions}
             onBetAction={handleBetAction}
             minBet={gameState?.min_bet ?? 0}
             maxBet={gameState?.max_bet ?? 0}

@@ -39,6 +39,9 @@ function isValidGameState(state: unknown): state is GameState {
   if (s.min_bet > s.max_bet) return false;
   if (s.current_player !== null && typeof s.current_player !== 'string') return false;
   if (!Array.isArray(s.community_cards) || s.community_cards.length > 5) return false;
+  for (const card of s.community_cards) {
+    if (typeof card !== 'string') return false;
+  }
 
   for (let i = 0; i < s.players.length; i++) {
     const p = s.players[i] as Record<string, unknown>;
