@@ -49,8 +49,7 @@ function isValidGameState(state: unknown): state is GameState {
     const p = s.players[i] as Record<string, unknown>;
     if (!p || typeof p !== 'object') return false;
     if (typeof p.player_id !== 'string' || !isValidPlayerId(p.player_id)) return false;
-    if (typeof p.chip_stack !== 'number' || !Number.isFinite(p.chip_stack) || p.chip_stack < 0) return false;
-    if (typeof p.chip_stack === 'number' && p.chip_stack > MAX_CHIP_VALUE) return false;
+    if (!isValidChipValue(p.chip_stack)) return false;
     if (!Array.isArray(p.hole_cards) || p.hole_cards.length > 2) return false;
   }
 

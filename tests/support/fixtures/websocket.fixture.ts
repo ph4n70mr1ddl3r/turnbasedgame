@@ -17,7 +17,7 @@ export interface WebSocketFixtures {
   };
   mockWebSocketServer: {
     url: string;
-    messages: Array<{ type: string; data: any }>;
+    messages: Array<{ type: string; data: Record<string, unknown> }>;
   };
 }
 
@@ -101,7 +101,7 @@ export const test = base.extend<WebSocketFixtures>({
    * Records messages sent by client and allows sending responses
    */
   mockWebSocketServer: async ({ page }, use) => {
-    const messages: Array<{ type: string; data: any }> = [];
+    const messages: Array<{ type: string; data: Record<string, unknown> }> = [];
     
     // Setup WebSocket interception
     await page.route('ws://localhost:3000/ws', async (route) => {

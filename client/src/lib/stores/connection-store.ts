@@ -56,7 +56,9 @@ function createCallbackRegistry(): {
     },
 
     notify(playerId: string | null): void {
-      state.entries.forEach(({ callback }) => {
+      // Snapshot to prevent mutation during iteration (callbacks may unregister)
+      const snapshot = [...state.entries];
+      snapshot.forEach(({ callback }) => {
         try {
           callback(playerId);
         } catch (error) {

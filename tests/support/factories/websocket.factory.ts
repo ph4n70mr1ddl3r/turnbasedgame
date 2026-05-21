@@ -14,7 +14,7 @@ export interface WebSocketSession {
 
 export interface WebSocketMessage {
   type: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   timestamp: number;
 }
 
@@ -46,9 +46,9 @@ export const createWebSocketSessions = (count: number): WebSocketSession[] => {
  */
 export const createWebSocketMessage = (
   type: string,
-  dataOverrides: Record<string, any> = {}
+  dataOverrides: Record<string, unknown> = {}
 ): WebSocketMessage => {
-  const baseData: Record<string, any> = {
+  const baseData: Record<string, unknown> = {
     timestamp: faker.date.recent().getTime(),
     ...dataOverrides,
   };

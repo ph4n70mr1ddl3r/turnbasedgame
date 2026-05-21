@@ -291,6 +291,8 @@ public:
         Session* session = get_session_internal(it->second);
         if (!session) return std::nullopt;
 
+        // Keep session alive while connection is active
+        session->update_activity();
         return SessionLookup{session->player_id, session->token};
     }
 
@@ -453,6 +455,12 @@ static HandRank evaluateHand(const std::vector<std::string>& holeCards,
         return { 0, ranks, "High Card" };
     }
 
+    // Safety: bitmask approach requires n <= 31 to avoid int overflow;
+    // hold'em has 2 hole + 5 community = 7 max
+    if (parsed.size() > 31) {
+        return { 0, {}, "Invalid" };
+    }
+
     // Generate all C(n,5) combinations
     int n = static_cast<int>(parsed.size());
     HandRank best{ -1, {}, "" };
@@ -577,7 +585,16 @@ struct PokerGameState {
         j["time_remaining"] = time_remaining;
         j["round"] = round;
         j["min_bet"] = min_bet;
-        j["max_bet"] = max_bet;
+            // max_bet reflects the current player's remaining stack
+            // so the client always shows correct raise bounds
+            int effective_max_bet = max_bet;
+            for (const auto& player : players) {
+                if (player.id == current_player) {
+                    effective_max_bet = player.chip_stack;
+                    break;
+                }
+            }
+            j["max_bet"] = effective_max_bet;
         j["game_status"] = game_status;
         if (!last_winner.empty()) j["last_winner"] = last_winner;
         if (!winning_hand.empty()) j["winning_hand"] = winning_hand;
@@ -967,11 +984,13 @@ public:
         state_.pot = SMALL_BLIND + BIG_BLIND;
         state_.current_highest_bet = BIG_BLIND;
         state_.min_bet = BIG_BLIND;
+
+        // p1 (button/SB) acts first preflop in heads-up
+        state_.current_player = "p1";
+
         // max_bet is the acting player's remaining chip stack
-        // (p1 acts first preflop in heads-up button-is-SB configuration)
         Player* actor = get_player(state_.current_player);
         state_.max_bet = actor ? actor->chip_stack : std::max(state_.players[0].chip_stack, state_.players[1].chip_stack);
-        state_.current_player = "p1";
     }
 
     void reset_game() {
