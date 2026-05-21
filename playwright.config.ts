@@ -63,7 +63,7 @@ export default defineConfig({
   /* Run your local dev server before starting the tests */
   webServer: [
     {
-      command: 'cd /home/riddler/turnbasedgame/server && cmake -B build && cmake --build build && ./build/poker_server',
+      command: 'cd server && cmake -B build && cmake --build build && ./build/poker_server',
       url: 'http://localhost:8080',
       reuseExistingServer: !process.env.CI,
       stdout: 'pipe',
@@ -71,7 +71,7 @@ export default defineConfig({
       timeout: 120000,
     },
     {
-      command: 'cd /home/riddler/turnbasedgame/client && npm run dev',
+      command: 'cd client && npm run dev',
       url: 'http://localhost:3000',
       reuseExistingServer: !process.env.CI,
       stdout: 'pipe',

@@ -49,6 +49,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     this.setState((prev) => ({ hasError: false, error: null, retryCount: prev.retryCount + 1 }));
   };
 
+  componentDidUpdate(_prevProps: ErrorBoundaryProps, prevState: ErrorBoundaryState): void {
+    // Reset retry count when we've recovered (hasError transitioned from true to false)
+    // so that future errors get a fresh retry budget.
+    if (prevState.hasError && !this.state.hasError) {
+      this.setState({ retryCount: 0 });
+    }
+  }
+
   render(): ReactNode {
     if (this.state.hasError) {
       if (this.props.fallback) {

@@ -14,6 +14,7 @@ import {
   isValidBettingRound,
   isValidGameStatus,
   isValidPlayerPosition,
+  isValidConnectionStatus,
   MAX_PLAYERS,
   MAX_COMMUNITY_CARDS,
   isObject,
@@ -310,7 +311,7 @@ export class MessageParser {
 
     const data = msg.data;
 
-    if (!isString(data.status) || !["connected", "disconnected", "reconnecting"].includes(data.status)) {
+    if (!isString(data.status) || !isValidConnectionStatus(data.status)) {
       logError("Invalid connection_status: invalid status", data);
       return null;
     }

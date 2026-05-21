@@ -40,55 +40,61 @@ function isQuotaExceededError(error: unknown): boolean {
   );
 }
 
+let cachedStorage: SafeLocalStorage | null = null;
+
 export function safeLocalStorage(): SafeLocalStorage {
   if (!isBrowser()) {
     return NOOP_STORAGE;
   }
 
-  return {
-    getItem: (key: string): string | null => {
-      try {
-        return localStorage.getItem(key);
-      } catch (error) {
-        logWarn('localStorage.getItem failed:', error);
-        return null;
-      }
-    },
-    setItem: (key: string, value: string): StorageSetResult => {
-      try {
-        localStorage.setItem(key, value);
-        return { success: true };
-      } catch (error) {
-        logWarn('localStorage.setItem failed:', error);
-        return { 
-          success: false, 
-          quotaExceeded: isQuotaExceededError(error) 
-        };
-      }
-    },
-    removeItem: (key: string): boolean => {
-      try {
-        localStorage.removeItem(key);
-        return true;
-      } catch (error) {
-        logWarn('localStorage.removeItem failed:', error);
-        return false;
-      }
-    },
-    clear: (): boolean => {
-      try {
-        for (const key of APP_STORAGE_KEYS) {
-          try {
-            localStorage.removeItem(key);
-          } catch {
-            // Continue removing other keys even if one fails
-          }
+  if (!cachedStorage) {
+    cachedStorage = {
+      getItem: (key: string): string | null => {
+        try {
+          return localStorage.getItem(key);
+        } catch (error) {
+          logWarn('localStorage.getItem failed:', error);
+          return null;
         }
-        return true;
-      } catch (error) {
-        logWarn('localStorage.clear failed:', error);
-        return false;
-      }
-    },
-  };
+      },
+      setItem: (key: string, value: string): StorageSetResult => {
+        try {
+          localStorage.setItem(key, value);
+          return { success: true };
+        } catch (error) {
+          logWarn('localStorage.setItem failed:', error);
+          return { 
+            success: false, 
+            quotaExceeded: isQuotaExceededError(error) 
+          };
+        }
+      },
+      removeItem: (key: string): boolean => {
+        try {
+          localStorage.removeItem(key);
+          return true;
+        } catch (error) {
+          logWarn('localStorage.removeItem failed:', error);
+          return false;
+        }
+      },
+      clear: (): boolean => {
+        try {
+          for (const key of APP_STORAGE_KEYS) {
+            try {
+              localStorage.removeItem(key);
+            } catch {
+              // Continue removing other keys even if one fails
+            }
+          }
+          return true;
+        } catch (error) {
+          logWarn('localStorage.clear failed:', error);
+          return false;
+        }
+      },
+    };
+  }
+
+  return cachedStorage;
 }

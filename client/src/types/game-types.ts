@@ -185,12 +185,10 @@ export function isValidCard(card: unknown): boolean {
 }
 
 export function isValidPlayerId(id: string): boolean {
-  if (typeof id !== 'string') return false;
   return VALID_PLAYER_IDS.includes(id as typeof VALID_PLAYER_IDS[number]);
 }
 
 export function isValidBetAction(action: string): action is BetAction {
-  if (typeof action !== 'string') return false;
   return ["check", "call", "raise", "fold"].includes(action);
 }
 

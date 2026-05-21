@@ -12,8 +12,8 @@ import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { BetAction } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
 import { reloadPage } from "@/lib/utils/browser-utils";
-import { formatTimeRemaining } from "@/lib/utils/format-utils";
 import { useGameStore } from "@/lib/stores/game-store";
+import { formatTimeRemaining } from "@/lib/utils/format-utils";
 
 function GameContent(): ReactElement {
   const {
@@ -56,13 +56,15 @@ function GameContent(): ReactElement {
     };
   }, [gameState, playerId]);
 
+  const gameOver = gameState?.game_status === 'finished' && gameState?.last_winner;
+
   return (
     <div className="flex flex-col items-center justify-center p-4">
       {lastError && (
         <ErrorDisplay error={lastError} onClose={clearError} />
       )}
 
-      {!isConnected && (
+      {!isConnected && !gameOver && (
         <div className="w-full max-w-6xl bg-yellow-900 border border-yellow-700 rounded-lg p-4 mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -80,7 +82,7 @@ function GameContent(): ReactElement {
         </div>
       )}
 
-      {gameState?.game_status === 'finished' && gameState.last_winner && (
+      {gameOver && (
         <div className="w-full max-w-6xl bg-green-600 border border-green-500 rounded-lg p-4 mb-6" role="alert" aria-live="assertive">
           <div className="flex items-center justify-center space-x-3">
             <span className="text-2xl">🏆</span>
