@@ -1,11 +1,11 @@
 'use client';
 
 import { memo, type ReactElement } from 'react';
-import { Card } from '@/types/game-types';
+import { Card, BettingRound } from '@/types/game-types';
 
 interface CommunityCardsProps {
   cards: Card[];
-  round?: string;
+  round?: BettingRound;
 }
 
 const CARD_POSITIONS = ['Flop 1', 'Flop 2', 'Flop 3', 'Turn', 'River'] as const;

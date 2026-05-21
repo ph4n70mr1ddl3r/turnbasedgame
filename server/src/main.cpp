@@ -719,6 +719,9 @@ private:
         }
 
         // All players are folded or all-in; no valid next player
+        // This shouldn't happen if callers check for single-active-player first,
+        // but as a safety net, advance the round
+        advance_round();
     }
 
 public:
@@ -964,7 +967,10 @@ public:
         state_.pot = SMALL_BLIND + BIG_BLIND;
         state_.current_highest_bet = BIG_BLIND;
         state_.min_bet = BIG_BLIND;
-        state_.max_bet = state_.players[0].chip_stack;
+        // max_bet is the acting player's remaining chip stack
+        // (p1 acts first preflop in heads-up button-is-SB configuration)
+        Player* actor = get_player(state_.current_player);
+        state_.max_bet = actor ? actor->chip_stack : std::max(state_.players[0].chip_stack, state_.players[1].chip_stack);
         state_.current_player = "p1";
     }
 
@@ -1269,12 +1275,14 @@ int main() {
     rate_limiter = std::make_unique<RateLimiter>(100, std::chrono::milliseconds(60000));
 
     std::signal(SIGTERM, [](int) {
-        std::cout << "\nReceived SIGTERM, shutting down gracefully..." << std::endl;
+        const char msg[] = "Received SIGTERM, shutting down...\n";
+        write(STDOUT_FILENO, msg, sizeof(msg) - 1);
         server_running = false;
     });
 
     std::signal(SIGINT, [](int) {
-        std::cout << "\nReceived SIGINT, shutting down gracefully..." << std::endl;
+        const char msg[] = "Received SIGINT, shutting down...\n";
+        write(STDOUT_FILENO, msg, sizeof(msg) - 1);
         server_running = false;
     });
 
