@@ -21,33 +21,36 @@ function isValidTimeRemaining(value: unknown): value is number {
 
 /**
  * Validates that a game state has structural integrity.
- * This is a lightweight check for state updates that have already been
- * validated by MessageParser. It focuses on invariant checks that must
- * always hold (e.g., min_bet <= max_bet) and boundary checks for
- * derived updates (chip_stack, time_remaining).
+ * Since all inbound data is already validated by MessageParser's thorough
+ * field-by-field checks, this function only verifies invariants that the
+ * parser cannot enforce (e.g., min_bet <= max_bet) and performs boundary
+ * checks on derived values (chip_stack, time_remaining).
  */
 function isValidGameState(state: unknown): state is GameState {
   if (!state || typeof state !== 'object') return false;
 
   const s = state as Record<string, unknown>;
 
+  // Structural checks — lightweight since MessageParser validates field types
   if (!Array.isArray(s.players) || s.players.length === 0 || s.players.length > MAX_PLAYERS) return false;
   if (typeof s.pot !== 'number' || !Number.isFinite(s.pot) || s.pot < 0) return false;
   if (typeof s.round !== 'string' || !isValidBettingRound(s.round)) return false;
   if (typeof s.game_status !== 'string' || !isValidGameStatus(s.game_status)) return false;
+
+  // Invariant: min_bet must not exceed max_bet
   if (typeof s.min_bet !== 'number' || typeof s.max_bet !== 'number') return false;
   if (s.min_bet > s.max_bet) return false;
+
   if (s.current_player !== null && typeof s.current_player !== 'string') return false;
   if (!Array.isArray(s.community_cards) || s.community_cards.length > 5) return false;
-  for (const card of s.community_cards) {
-    if (typeof card !== 'string') return false;
-  }
 
+  // Boundary checks on player values
   for (let i = 0; i < s.players.length; i++) {
     const p = s.players[i] as Record<string, unknown>;
     if (!p || typeof p !== 'object') return false;
     if (typeof p.player_id !== 'string' || !isValidPlayerId(p.player_id)) return false;
     if (typeof p.chip_stack !== 'number' || !Number.isFinite(p.chip_stack) || p.chip_stack < 0) return false;
+    if (typeof p.chip_stack === 'number' && p.chip_stack > MAX_CHIP_VALUE) return false;
     if (!Array.isArray(p.hole_cards) || p.hole_cards.length > 2) return false;
   }
 

@@ -34,15 +34,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     logError("ErrorBoundary caught an error:", { error, errorInfo });
-    // Only reset stores if we haven't retried too many times
-    // to prevent infinite reset → re-render → error loops
-    // Note: retryCount is preserved from state (not reset by getDerivedStateFromError)
-    if (this.state.retryCount < 3) {
-      queueMicrotask(() => {
-        useGameStore.getState().reset();
-        useConnectionStore.getState().reset();
-      });
-    }
+    // Store reset is handled in handleRetry to avoid double-reset.
+    // componentDidCatch is only responsible for logging.
   }
 
   private handleRetry = (): void => {

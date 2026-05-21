@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <sys/random.h>
 #include <optional>
+#include <set>
 #include <nlohmann/json.hpp>
 #include "hv/HttpServer.h"
 #include "hv/WebSocketServer.h"
@@ -28,7 +29,7 @@ class PokerGame;
 class SessionManager;
 
 constexpr int SESSION_TIMEOUT_MINUTES = 30;
-constexpr size_t MAX_RATE_LIMITER_ENTRIES = 10000;
+constexpr size_t MAX_RATE_LIMITER_ENTRIES = 100;
 constexpr int MAX_BET_AMOUNT = 1000000;
 constexpr int RATE_LIMITER_CLEANUP_INTERVAL_MINUTES = 5;
 
@@ -345,6 +346,180 @@ public:
     }
 };
 
+// ---------------------------------------------------------------------------
+// Deck — standard 52-card deck with Fisher-Yates shuffle
+// ---------------------------------------------------------------------------
+
+class Deck {
+private:
+    std::vector<std::string> cards_;
+    size_t index_ = 0;
+
+    static std::vector<std::string> createFullDeck() {
+        const char ranks[] = "23456789TJQKA";
+        const char suits[] = "cdhs";
+        std::vector<std::string> deck;
+        deck.reserve(52);
+        for (const char* s = suits; *s; ++s) {
+            for (const char* r = ranks; *r; ++r) {
+                deck.emplace_back(std::string{ *r, *s });
+            }
+        }
+        return deck;
+    }
+
+    // Fisher-Yates shuffle using OS-provided randomness
+    void shuffle() {
+        std::random_device rd;
+        std::mt19937_64 gen(rd());
+        for (size_t i = cards_.size() - 1; i > 0; --i) {
+            std::uniform_int_distribution<size_t> dist(0, i);
+            size_t j = dist(gen);
+            std::swap(cards_[i], cards_[j]);
+        }
+        index_ = 0;
+    }
+
+public:
+    Deck() { reset(); }
+
+    void reset() {
+        cards_ = createFullDeck();
+        shuffle();
+    }
+
+    // Deal one card. Throws if deck is exhausted (should never happen in hold'em).
+    std::string deal() {
+        if (index_ >= cards_.size()) {
+            throw std::runtime_error("Deck exhausted");
+        }
+        return cards_[index_++];
+    }
+
+    // Deal multiple cards at once.
+    std::vector<std::string> deal(size_t count) {
+        std::vector<std::string> result;
+        result.reserve(count);
+        for (size_t i = 0; i < count; ++i) {
+            result.push_back(deal());
+        }
+        return result;
+    }
+
+    size_t remaining() const { return cards_.size() - index_; }
+};
+
+// ---------------------------------------------------------------------------
+// Hand evaluation (simplified — ranks high-card to straight-flush)
+// ---------------------------------------------------------------------------
+
+struct HandRank {
+    int category;  // 8=straight-flush, 7=four-of-a-kind, ..., 0=high-card
+    std::vector<int> kickers;  // Tiebreaker values in descending priority
+    std::string name;
+};
+
+static int cardRankValue(char r) {
+    switch (r) {
+        case '2': return 2;  case '3': return 3;  case '4': return 4;
+        case '5': return 5;  case '6': return 6;  case '7': return 7;
+        case '8': return 8;  case '9': return 9;  case 'T': return 10;
+        case 'J': return 11; case 'Q': return 12; case 'K': return 13;
+        case 'A': return 14;
+        default: return 0;
+    }
+}
+
+// Evaluate the best 5-card hand from up to 7 cards (hole + community).
+// Uses brute-force combination check — acceptable for a 2-player game.
+static HandRank evaluateHand(const std::vector<std::string>& holeCards,
+                              const std::vector<std::string>& communityCards) {
+    std::vector<std::string> all = holeCards;
+    all.insert(all.end(), communityCards.begin(), communityCards.end());
+
+    // Parse cards into (rank_value, suit_char)
+    struct Card { int rank; char suit; };
+    std::vector<Card> parsed;
+    parsed.reserve(all.size());
+    for (const auto& c : all) {
+        if (c.size() >= 2) parsed.push_back({ cardRankValue(c[0]), c[1] });
+    }
+
+    if (parsed.size() < 5) {
+        // Not enough cards — return high-card rank with what we have
+        std::vector<int> ranks;
+        for (const auto& p : parsed) ranks.push_back(p.rank);
+        std::sort(ranks.rbegin(), ranks.rend());
+        return { 0, ranks, "High Card" };
+    }
+
+    // Generate all C(n,5) combinations
+    int n = static_cast<int>(parsed.size());
+    HandRank best{ -1, {}, "" };
+
+    auto eval5 = [](const std::vector<Card>& hand) -> HandRank {
+        std::vector<int> ranks;
+        for (const auto& c : hand) ranks.push_back(c.rank);
+        std::sort(ranks.rbegin(), ranks.rend());
+
+        bool flush = true;
+        char suit = hand[0].suit;
+        for (const auto& c : hand) if (c.suit != suit) flush = false;
+
+        bool straight = false;
+        int straightHigh = 0;
+        if (ranks[0] - ranks[4] == 4 && std::set<int>(ranks.begin(), ranks.end()).size() == 5) {
+            straight = true;
+            straightHigh = ranks[0];
+        }
+        // Ace-low straight (A-2-3-4-5)
+        if (ranks[0] == 14 && ranks[1] == 5 && ranks[2] == 4 && ranks[3] == 3 && ranks[4] == 2) {
+            straight = true;
+            straightHigh = 5;
+        }
+
+        // Count rank frequencies
+        std::map<int, int> freq;
+        for (int r : ranks) freq[r]++;
+        std::vector<std::pair<int, int>> freqVec(freq.begin(), freq.end());
+        std::sort(freqVec.begin(), freqVec.end(), [](auto& a, auto& b) {
+            return a.second > b.second || (a.second == b.second && a.first > b.first);
+        });
+
+        std::vector<int> kickers;
+        for (auto& [r, _] : freqVec) kickers.push_back(r);
+
+        if (straight && flush) return { 8, { straightHigh }, "Straight Flush" };
+        if (freqVec[0].second == 4) return { 7, kickers, "Four of a Kind" };
+        if (freqVec[0].second == 3 && freqVec.size() >= 2 && freqVec[1].second == 2)
+            return { 6, kickers, "Full House" };
+        if (flush) return { 5, ranks, "Flush" };
+        if (straight) return { 4, { straightHigh }, "Straight" };
+        if (freqVec[0].second == 3) return { 3, kickers, "Three of a Kind" };
+        if (freqVec[0].second == 2 && freqVec.size() >= 2 && freqVec[1].second == 2)
+            return { 2, kickers, "Two Pair" };
+        if (freqVec[0].second == 2) return { 1, kickers, "Pair" };
+        return { 0, ranks, "High Card" };
+    };
+
+    // Iterate all C(n,5) using bitmask approach
+    std::vector<Card> combo(5);
+    for (int mask = 0; mask < (1 << n); ++mask) {
+        if (__builtin_popcount(mask) != 5) continue;
+        int idx = 0;
+        for (int i = 0; i < n && idx < 5; ++i) {
+            if (mask & (1 << i)) combo[idx++] = parsed[i];
+        }
+        HandRank hr = eval5(combo);
+        if (hr.category > best.category ||
+            (hr.category == best.category && hr.kickers > best.kickers)) {
+            best = hr;
+        }
+    }
+
+    return best;
+}
+
 struct Player {
     std::string id;
     int chip_stack = 1500;
@@ -416,6 +591,7 @@ private:
     PokerGameState state_;
     SessionManager& session_manager_;
     mutable std::mutex mutex_;
+    Deck deck_;
 
     Player* get_player(const std::string& player_id) {
         for (auto& player : state_.players) {
@@ -440,17 +616,17 @@ private:
 
         if (state_.round == "preflop") {
             state_.round = "flop";
-            // TODO: Deal 3 community cards from deck
+            auto dealt = deck_.deal(3);
+            state_.community_cards.insert(state_.community_cards.end(), dealt.begin(), dealt.end());
         } else if (state_.round == "flop") {
             state_.round = "turn";
-            // TODO: Deal 1 community card
+            state_.community_cards.push_back(deck_.deal());
         } else if (state_.round == "turn") {
             state_.round = "river";
-            // TODO: Deal 1 community card
+            state_.community_cards.push_back(deck_.deal());
         } else if (state_.round == "river") {
             state_.round = "showdown";
-            state_.game_status = "finished";
-            // TODO: Evaluate hands, determine winner
+            evaluate_and_award();
             return;
         }
 
@@ -465,7 +641,7 @@ private:
         // All players all-in or folded - run out remaining rounds
         state_.round = "showdown";
         state_.game_status = "finished";
-        // TODO: Evaluate hands at showdown
+        evaluate_and_award();
     }
 
     void advance_turn() {
@@ -546,34 +722,58 @@ private:
     }
 
 public:
+    // Deal 2 hole cards to each player from the deck.
+    void deal_hole_cards() {
+        for (auto& player : state_.players) {
+            player.hole_cards = deck_.deal(2);
+        }
+    }
+
+    // Evaluate hands at showdown and award the pot to the winner.
+    void evaluate_and_award() {
+        state_.game_status = "finished";
+
+        // Only evaluate among non-folded players
+        std::vector<Player*> active_players;
+        for (auto& p : state_.players) {
+            if (!p.is_folded) active_players.push_back(&p);
+        }
+
+        if (active_players.size() == 1) {
+            active_players[0]->chip_stack += state_.pot;
+            state_.last_winner = active_players[0]->id;
+            state_.winning_hand = "opponent folded";
+        } else if (active_players.size() >= 2) {
+            // Evaluate each active player's hand
+            Player* winner = nullptr;
+            HandRank bestHand{-1, {}, ""};
+
+            for (auto* p : active_players) {
+                HandRank hr = evaluateHand(p->hole_cards, state_.community_cards);
+                if (hr.category > bestHand.category ||
+                    (hr.category == bestHand.category && hr.kickers > bestHand.kickers)) {
+                    bestHand = hr;
+                    winner = p;
+                }
+            }
+
+            if (winner) {
+                winner->chip_stack += state_.pot;
+                state_.last_winner = winner->id;
+                state_.winning_hand = bestHand.name;
+            }
+        }
+
+        state_.pot = 0;
+        state_.round = "showdown";
+    }
+
     PokerGame(SessionManager& sm) : session_manager_(sm) {
         std::lock_guard<std::mutex> lock(mutex_);
-        Player p1{"p1", 1500};
-        Player p2{"p2", 1500};
-        
-        p1.position = "button";
-        p2.position = "big_blind";
-        
-        state_.players = {p1, p2};
-        state_.game_status = "active";
-
-        // Post blinds: button posts small blind (25), big blind posts big blind (50)
-        constexpr int SMALL_BLIND = 25;
-        constexpr int BIG_BLIND = 50;
-
-        state_.players[0].chip_stack -= SMALL_BLIND;
-        state_.players[0].current_bet = SMALL_BLIND;
-
-        state_.players[1].chip_stack -= BIG_BLIND;
-        state_.players[1].current_bet = BIG_BLIND;
-
-        state_.pot = SMALL_BLIND + BIG_BLIND;
-        state_.current_highest_bet = BIG_BLIND;
-        state_.min_bet = BIG_BLIND;
-        state_.max_bet = state_.players[0].chip_stack; // Use button's stack (first to act preflop)
-
-        // Preflop: action starts with the button (heads-up rules)
-        state_.current_player = "p1";
+        state_.players = { Player{"p1", 1500}, Player{"p2", 1500} };
+        state_.players[0].position = "button";
+        state_.players[1].position = "big_blind";
+        start_new_hand();
     }
 
     PokerGameState get_state() {
@@ -726,24 +926,32 @@ public:
         return response;
     }
 
-    void reset_game() {
-        std::lock_guard<std::mutex> lock(mutex_);
+    // Initialize a new hand (used by constructor and reset_game).
+    void start_new_hand() {
+        // Reset players (preserve only chip_stacks if resetting)
         for (auto& player : state_.players) {
-            player.chip_stack = 1500;
             player.current_bet = 0;
             player.is_folded = false;
             player.is_all_in = false;
             player.hole_cards.clear();
             player.last_action.clear();
         }
+
+        // Reset game state
         state_.community_cards.clear();
         state_.last_winner.clear();
         state_.winning_hand.clear();
         state_.round = "preflop";
         state_.game_status = "active";
+        state_.pot = 0;
+        state_.current_highest_bet = 0;
         players_acted_this_round_ = 0;
 
-        // Post blinds on reset
+        // Shuffle deck and deal hole cards
+        deck_.reset();
+        deal_hole_cards();
+
+        // Post blinds: button posts small blind (25), big blind posts big blind (50)
         constexpr int SMALL_BLIND = 25;
         constexpr int BIG_BLIND = 50;
 
@@ -758,6 +966,16 @@ public:
         state_.min_bet = BIG_BLIND;
         state_.max_bet = state_.players[0].chip_stack;
         state_.current_player = "p1";
+    }
+
+    void reset_game() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        // Full chip reset for a fresh game
+        state_.players.clear();
+        state_.players = { Player{"p1", 1500}, Player{"p2", 1500} };
+        state_.players[0].position = "button";
+        state_.players[1].position = "big_blind";
+        start_new_hand();
     }
 };
 
