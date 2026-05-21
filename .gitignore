@@ -1,1 +1,30 @@
-node_modules
+node_modules/
+
+# Build output
+client/.next/
+client/out/
+server/build/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE and editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Logs
+*.log
+npm-debug.log*

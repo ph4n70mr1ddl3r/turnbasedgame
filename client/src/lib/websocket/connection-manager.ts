@@ -92,8 +92,8 @@ export class ConnectionManager {
 
     if (this.options.autoReconnect) {
       this.reconnectHandler = new ReconnectHandler(
-        // Double-arrow: ReconnectHandler calls the outer function once to get the actual connect function.
-        // This ensures `this.connect` is captured at reconnect time, not at construction time.
+        // ReconnectHandler calls this thunk at reconnect time to get the actual connect function.
+        // This ensures `this.connect` is resolved at reconnect time, not at construction time.
         () => () => this.connect(),
         (state: ReconnectState) => {
           let connectionStatus: ConnectionStatus;

@@ -46,6 +46,11 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   private handleRetry = (): void => {
+    if (this.state.retryCount >= 3) {
+      // Max retries reached — force reload since we can't recover
+      reloadPage();
+      return;
+    }
     useGameStore.getState().reset();
     useConnectionStore.getState().reset();
     this.setState((prev) => ({ hasError: false, error: null, retryCount: prev.retryCount + 1 }));

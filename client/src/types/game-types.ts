@@ -179,7 +179,7 @@ export function isValidConnectionStatus(value: string): value is ConnectionStatu
   return VALID_CONNECTION_STATUSES.includes(value as ConnectionStatus);
 }
 
-export function isValidCard(card: string): boolean {
+export function isValidCard(card: unknown): boolean {
   if (typeof card !== 'string') return false;
   return /^[2-9TJQKA][cdhs]$/.test(card);
 }

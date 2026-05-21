@@ -55,7 +55,7 @@ std::string generate_secure_token() {
         memcpy(buf, &val1, 8);
         memcpy(buf + 8, &val2, 8);
     }
-    
+
     // Use memcpy to avoid strict aliasing violations and buffer over-reads
     uint32_t time_low;
     uint16_t time_mid;
@@ -69,11 +69,11 @@ std::string generate_secure_token() {
     memcpy(&clock_seq, buf + 8, 2);
     memcpy(&node_hi, buf + 10, 2);
     memcpy(&node_lo, buf + 12, 4);
-    
+
     // UUID v4 variant
     time_hi = (time_hi & 0x0FFF) | 0x4000;
     clock_seq = (clock_seq & 0x3FFF) | 0x8000;
-    
+
     std::stringstream ss;
     ss << std::hex << std::setfill('0');
     ss << std::setw(8) << time_low << '-';
@@ -81,7 +81,7 @@ std::string generate_secure_token() {
     ss << std::setw(4) << time_hi << '-';
     ss << std::setw(4) << clock_seq << '-';
     ss << std::setw(4) << node_hi << std::setw(8) << node_lo;
-    
+
     return ss.str();
 }
 
@@ -97,16 +97,16 @@ private:
     size_t max_requests_;
     std::chrono::milliseconds window_;
     size_t max_entries_;
-    
+
 public:
     RateLimiter(size_t max_requests, std::chrono::milliseconds window, size_t max_entries = MAX_RATE_LIMITER_ENTRIES)
         : max_requests_(max_requests), window_(window), max_entries_(max_entries) {}
-    
+
     bool allow_request(const std::string& client_id) {
         std::lock_guard<std::mutex> lock(mutex_);
-        
+
         auto now = std::chrono::steady_clock::now();
-        
+
         if (entries_.size() >= max_entries_) {
             // Evict least-recently-used 10% of entries (prevents DoS)
             size_t to_remove = std::max(size_t(1), max_entries_ / 10);
@@ -121,25 +121,25 @@ public:
                 entries_.erase(sorted[i].second);
             }
         }
-        
+
         auto& entry = entries_[client_id];
         entry.last_activity = now;
-        
+
         auto cutoff = now - window_;
         entry.times.erase(
             std::remove_if(entry.times.begin(), entry.times.end(),
                 [cutoff](const auto& t) { return t < cutoff; }),
             entry.times.end()
         );
-        
+
         if (entry.times.size() >= max_requests_) {
             return false;
         }
-        
+
         entry.times.push_back(now);
         return true;
     }
-    
+
     void cleanup_stale() {
         std::lock_guard<std::mutex> lock(mutex_);
         auto cutoff = std::chrono::steady_clock::now() - std::chrono::minutes(RATE_LIMITER_CLEANUP_INTERVAL_MINUTES);
@@ -159,13 +159,13 @@ struct Session {
     std::chrono::steady_clock::time_point created_at;
     std::chrono::steady_clock::time_point last_activity;
     std::weak_ptr<WebSocketChannel> connection;
-    
+
     bool is_expired() const noexcept {
         auto now = std::chrono::steady_clock::now();
         auto inactive_duration = std::chrono::duration_cast<std::chrono::minutes>(now - last_activity);
         return inactive_duration.count() > SESSION_TIMEOUT_MINUTES;
     }
-    
+
     void update_activity() noexcept {
         last_activity = std::chrono::steady_clock::now();
     }
@@ -176,7 +176,7 @@ private:
     std::map<std::string, Session> sessions_;
     std::map<std::string, std::string> connection_to_token_;
     mutable std::mutex mutex_;
-    
+
     std::string determine_available_player_id_locked() {
         bool p1_exists = false;
         bool p2_exists = false;
@@ -188,17 +188,17 @@ private:
         if (!p2_exists) return "p2";
         return "";
     }
-    
+
 public:
     struct SessionInfo {
         std::string player_id;
         std::string token;
         bool is_new;
     };
-    
+
     std::optional<SessionInfo> get_or_create_session(std::shared_ptr<WebSocketChannel> channel) {
         std::lock_guard<std::mutex> lock(mutex_);
-        
+
         std::string cid = channel_id(channel);
         auto conn_it = connection_to_token_.find(cid);
         if (conn_it != connection_to_token_.end()) {
@@ -213,15 +213,13 @@ public:
                 connection_to_token_.erase(conn_it);
             }
         }
-        
+
         // Clean up any stale connection mapping from a previous connection on same channel
-        if (conn_it != connection_to_token_.end()) {
-            connection_to_token_.erase(conn_it);
-        }
-        
+        connection_to_token_.erase(cid);
+
         std::string player_id = determine_available_player_id_locked();
         std::string token = generate_secure_token();
-        
+
         Session session{
             .token = token,
             .player_id = player_id,
@@ -229,18 +227,18 @@ public:
             .last_activity = std::chrono::steady_clock::now(),
             .connection = channel
         };
-        
+
         sessions_[token] = session;
         connection_to_token_[channel_id(channel)] = token;
-        
+
         return SessionInfo{player_id, token, true};
     }
-    
+
     std::string create_session(const std::string& player_id, std::shared_ptr<WebSocketChannel> channel) {
         std::lock_guard<std::mutex> lock(mutex_);
-        
+
         std::string token = generate_secure_token();
-        
+
         Session session{
             .token = token,
             .player_id = player_id,
@@ -248,24 +246,24 @@ public:
             .last_activity = std::chrono::steady_clock::now(),
             .connection = channel
         };
-        
+
         sessions_[token] = session;
         connection_to_token_[channel_id(channel)] = token;
-        
+
         return token;
     }
-    
+
     Session* get_session(const std::string& token) {
         std::lock_guard<std::mutex> lock(mutex_);
         return get_session_internal(token);
     }
-    
+
     // MUST be called with mutex_ already held
     // Note: Does NOT update activity here - only explicit operations should extend session lifetime
     Session* get_session_internal(const std::string& token) {
         auto it = sessions_.find(token);
         if (it == sessions_.end()) return nullptr;
-        
+
         if (it->second.is_expired()) {
             if (auto conn = it->second.connection.lock()) {
                 connection_to_token_.erase(channel_id(conn));
@@ -273,10 +271,10 @@ public:
             sessions_.erase(it);
             return nullptr;
         }
-        
+
         return &it->second;
     }
-    
+
     // Returns session info (player_id + token) by connection.
     // Returns nullopt if not found or expired. This avoids returning a raw pointer
     // that could be invalidated by another thread.
@@ -288,13 +286,13 @@ public:
         std::lock_guard<std::mutex> lock(mutex_);
         auto it = connection_to_token_.find(channel_id(channel));
         if (it == connection_to_token_.end()) return std::nullopt;
-        
+
         Session* session = get_session_internal(it->second);
         if (!session) return std::nullopt;
-        
+
         return SessionLookup{session->player_id, session->token};
     }
-    
+
     void remove_session(const std::string& token) {
         std::lock_guard<std::mutex> lock(mutex_);
         auto it = sessions_.find(token);
@@ -305,7 +303,7 @@ public:
             sessions_.erase(it);
         }
     }
-    
+
     void cleanup_expired() {
         std::lock_guard<std::mutex> lock(mutex_);
         std::vector<std::string> expired_tokens;
@@ -314,7 +312,7 @@ public:
                 expired_tokens.push_back(token);
             }
         }
-        
+
         for (const auto& token : expired_tokens) {
             auto it = sessions_.find(token);
             if (it != sessions_.end()) {
@@ -325,7 +323,7 @@ public:
             }
         }
     }
-    
+
     void remove_session_by_connection(const std::string& cid) {
         std::lock_guard<std::mutex> lock(mutex_);
         auto it = connection_to_token_.find(cid);
@@ -371,7 +369,7 @@ struct PokerGameState {
     int current_highest_bet = 0;
     std::string last_winner;
     std::string winning_hand;
-    
+
     json to_json(const std::string& viewer_id = "") const {
         json j;
         j["players"] = json::array();
@@ -397,7 +395,7 @@ struct PokerGameState {
             p["last_action"] = player.last_action;
             j["players"].push_back(p);
         }
-        
+
         j["community_cards"] = community_cards;
         j["pot"] = pot;
         j["current_player"] = current_player;
@@ -408,7 +406,7 @@ struct PokerGameState {
         j["game_status"] = game_status;
         if (!last_winner.empty()) j["last_winner"] = last_winner;
         if (!winning_hand.empty()) j["winning_hand"] = winning_hand;
-        
+
         return j;
     }
 };
@@ -418,14 +416,14 @@ private:
     PokerGameState state_;
     SessionManager& session_manager_;
     mutable std::mutex mutex_;
-    
+
     Player* get_player(const std::string& player_id) {
         for (auto& player : state_.players) {
             if (player.id == player_id) return &player;
         }
         return nullptr;
     }
-    
+
     // Track how many players have acted in the current betting round.
     // When all active (non-folded, non-all-in) players have acted and bets
     // are equalized, the round advances.
@@ -464,7 +462,7 @@ private:
             }
         }
 
-        // All players all-in or folded — run out remaining rounds
+        // All players all-in or folded - run out remaining rounds
         state_.round = "showdown";
         state_.game_status = "finished";
         // TODO: Evaluate hands at showdown
@@ -480,13 +478,13 @@ private:
             }
         }
         if (current_idx < 0) return;
-        
+
         // Count active (non-folded, non-all-in) players
         int active_players = 0;
         for (const auto& p : state_.players) {
             if (!p.is_folded && !p.is_all_in) active_players++;
         }
-        
+
         // If only one active player remains, no need to advance turn
         if (active_players <= 1 && state_.round != "showdown") {
             // Check if all other players are folded -> hand is over
@@ -514,7 +512,7 @@ private:
                 return;
             }
 
-            // Only one active player (rest all-in) — deal remaining cards
+            // Only one active player (rest all-in) - deal remaining cards
             advance_round();
             return;
         }
@@ -543,10 +541,10 @@ private:
                 return;
             }
         }
-        
+
         // All players are folded or all-in; no valid next player
     }
-    
+
 public:
     PokerGame(SessionManager& sm) : session_manager_(sm) {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -557,21 +555,37 @@ public:
         p2.position = "big_blind";
         
         state_.players = {p1, p2};
-        state_.current_player = "p1";
         state_.game_status = "active";
-        state_.current_highest_bet = 0;
+
+        // Post blinds: button posts small blind (25), big blind posts big blind (50)
+        constexpr int SMALL_BLIND = 25;
+        constexpr int BIG_BLIND = 50;
+
+        state_.players[0].chip_stack -= SMALL_BLIND;
+        state_.players[0].current_bet = SMALL_BLIND;
+
+        state_.players[1].chip_stack -= BIG_BLIND;
+        state_.players[1].current_bet = BIG_BLIND;
+
+        state_.pot = SMALL_BLIND + BIG_BLIND;
+        state_.current_highest_bet = BIG_BLIND;
+        state_.min_bet = BIG_BLIND;
+        state_.max_bet = state_.players[0].chip_stack; // Use button's stack (first to act preflop)
+
+        // Preflop: action starts with the button (heads-up rules)
+        state_.current_player = "p1";
     }
-    
+
     PokerGameState get_state() {
         std::lock_guard<std::mutex> lock(mutex_);
         return state_;
     }
-    
+
     json get_game_state(const std::string& viewer_id = "") {
         std::lock_guard<std::mutex> lock(mutex_);
         return state_.to_json(viewer_id);
     }
-    
+
     enum class ActionResult {
         Success,
         InvalidPlayer,
@@ -581,45 +595,45 @@ public:
         PlayerFolded,
         PlayerAllIn
     };
-    
+
     struct ActionResponse {
         ActionResult result;
         json new_state;
         std::string error_message;
     };
-    
+
     ActionResponse handle_bet_action(const std::string& player_id, const std::string& action, int amount = 0) {
         std::lock_guard<std::mutex> lock(mutex_);
-        
+
         ActionResponse response;
-        
+
         Player* player = get_player(player_id);
         if (!player) {
             response.result = ActionResult::InvalidPlayer;
             response.error_message = "Invalid player ID";
             return response;
         }
-        
+
         if (state_.current_player != player_id) {
             response.result = ActionResult::NotYourTurn;
             response.error_message = "Not your turn";
             return response;
         }
-        
+
         if (player->is_folded) {
             response.result = ActionResult::PlayerFolded;
             response.error_message = "Player has already folded";
             return response;
         }
-        
+
         if (player->is_all_in && action != "fold") {
             response.result = ActionResult::PlayerAllIn;
             response.error_message = "Player is already all-in";
             return response;
         }
-        
+
         int to_call = state_.current_highest_bet - player->current_bet;
-        
+
         if (action == "fold") {
             player->is_folded = true;
             player->last_action = "fold";
@@ -659,11 +673,11 @@ public:
         } else if (action == "call") {
             player->last_action = "call";
             int call_amount = std::min(to_call, player->chip_stack);
-            
+
             player->chip_stack -= call_amount;
             player->current_bet += call_amount;
             state_.pot += call_amount;
-            
+
             if (player->chip_stack == 0) {
                 player->is_all_in = true;
             }
@@ -676,25 +690,25 @@ public:
                 response.error_message = "Raise requires a positive amount";
                 return response;
             }
-            
+
             int total_raise = to_call + amount;
-            
+
             if (total_raise > player->chip_stack) {
                 total_raise = player->chip_stack;
                 amount = total_raise - to_call;
             }
-            
+
             if (amount < state_.min_bet && player->chip_stack > to_call) {
                 response.result = ActionResult::InvalidAmount;
                 response.error_message = "Raise amount must be at least min_bet";
                 return response;
             }
-            
+
             player->chip_stack -= total_raise;
             player->current_bet += total_raise;
             state_.pot += total_raise;
             state_.current_highest_bet = player->current_bet;
-            
+
             if (player->chip_stack == 0) {
                 player->is_all_in = true;
             }
@@ -706,12 +720,12 @@ public:
             response.error_message = "Unknown action: " + action;
             return response;
         }
-        
+
         response.result = ActionResult::Success;
         response.new_state = state_.to_json();
         return response;
     }
-    
+
     void reset_game() {
         std::lock_guard<std::mutex> lock(mutex_);
         for (auto& player : state_.players) {
@@ -722,15 +736,28 @@ public:
             player.hole_cards.clear();
             player.last_action.clear();
         }
-        state_.pot = 0;
         state_.community_cards.clear();
-        state_.current_player = "p1";
-        state_.round = "preflop";
-        state_.game_status = "active";
-        state_.current_highest_bet = 0;
         state_.last_winner.clear();
         state_.winning_hand.clear();
+        state_.round = "preflop";
+        state_.game_status = "active";
         players_acted_this_round_ = 0;
+
+        // Post blinds on reset
+        constexpr int SMALL_BLIND = 25;
+        constexpr int BIG_BLIND = 50;
+
+        state_.players[0].chip_stack -= SMALL_BLIND;
+        state_.players[0].current_bet = SMALL_BLIND;
+
+        state_.players[1].chip_stack -= BIG_BLIND;
+        state_.players[1].current_bet = BIG_BLIND;
+
+        state_.pot = SMALL_BLIND + BIG_BLIND;
+        state_.current_highest_bet = BIG_BLIND;
+        state_.min_bet = BIG_BLIND;
+        state_.max_bet = state_.players[0].chip_stack;
+        state_.current_player = "p1";
     }
 };
 
@@ -753,7 +780,7 @@ void cleanup_thread_func() {
 
 void broadcast_game_state() {
     if (!session_manager || !poker_game) return;
-    
+
     auto connections = session_manager->get_all_connections();
     for (auto& conn : connections) {
         try {
@@ -776,7 +803,7 @@ constexpr size_t MAX_MESSAGE_SIZE = 64 * 1024;
 
 void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const std::string& msg) {
     std::string client_id = channel_id(channel);
-    
+
     if (!rate_limiter->allow_request(client_id)) {
         json error = {
             {"type", "error"},
@@ -788,7 +815,7 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
         channel->send(error.dump());
         return;
     }
-    
+
     if (msg.size() > MAX_MESSAGE_SIZE) {
         json error = {
             {"type", "error"},
@@ -803,7 +830,7 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
 
     try {
         json message = json::parse(msg);
-        
+
         if (!message.contains("type") || !message["type"].is_string()) {
             json error = {
                 {"type", "error"},
@@ -815,9 +842,9 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
             channel->send(error.dump());
             return;
         }
-        
+
         std::string type = message["type"];
-        
+
         if (type == "session_init") {
             auto result = session_manager->get_or_create_session(channel);
             if (!result || result->player_id.empty()) {
@@ -832,7 +859,7 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                 return;
             }
             std::string player_id = result->player_id;
-            
+
             json response = {
                 {"type", "connection_status"},
                 {"data", {
@@ -841,13 +868,13 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                 }}
             };
             channel->send(response.dump());
-            
+
             json game_response = {
                 {"type", "game_state_update"},
                 {"data", poker_game->get_game_state(player_id)}
             };
             channel->send(game_response.dump());
-            
+
         } else if (type == "bet_action") {
             auto session_info = session_manager->lookup_session_by_connection(channel);
             if (!session_info) {
@@ -861,7 +888,7 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                 channel->send(error.dump());
                 return;
             }
-            
+
             if (!message.contains("data") || !message["data"].is_object()) {
                 json error = {
                     {"type", "error"},
@@ -873,9 +900,9 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                 channel->send(error.dump());
                 return;
             }
-            
+
             auto data = message["data"];
-            
+
             if (message.contains("token") && message["token"].is_string()) {
                 std::string message_token = message["token"];
                 if (message_token != session_info->token) {
@@ -890,7 +917,7 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                     return;
                 }
             }
-            
+
             if (!data.contains("action") || !data["action"].is_string()) {
                 json error = {
                     {"type", "error"},
@@ -902,7 +929,7 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                 channel->send(error.dump());
                 return;
             }
-            
+
             std::string action = data["action"];
             // Validate action is a known value
             if (action != "check" && action != "call" && action != "raise" && action != "fold") {
@@ -954,9 +981,9 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                     return;
                 }
             }
-            
+
             auto result = poker_game->handle_bet_action(session_info->player_id, action, amount);
-            
+
             if (result.result == PokerGame::ActionResult::Success) {
                 broadcast_game_state();
             } else {
@@ -969,14 +996,14 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                 };
                 channel->send(error.dump());
             }
-            
+
         } else if (type == "heartbeat") {
             uint64_t timestamp = 0;
-            if (message.contains("data") && message["data"].is_object() && 
+            if (message.contains("data") && message["data"].is_object() &&
                 message["data"].contains("timestamp") && message["data"]["timestamp"].is_number()) {
                 timestamp = message["data"]["timestamp"];
             }
-            
+
             json response = {
                 {"type", "heartbeat"},
                 {"data", {
@@ -984,7 +1011,7 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                 }}
             };
             channel->send(response.dump());
-            
+
         } else {
             json error = {
                 {"type", "error"},
@@ -995,7 +1022,7 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
             };
             channel->send(error.dump());
         }
-        
+
     } catch (const json::parse_error& e) {
         json error = {
             {"type", "error"},
@@ -1022,26 +1049,26 @@ int main() {
     session_manager = std::make_unique<SessionManager>();
     poker_game = std::make_unique<PokerGame>(*session_manager);
     rate_limiter = std::make_unique<RateLimiter>(100, std::chrono::milliseconds(60000));
-    
+
     std::signal(SIGTERM, [](int) {
         std::cout << "\nReceived SIGTERM, shutting down gracefully..." << std::endl;
         server_running = false;
     });
-    
+
     std::signal(SIGINT, [](int) {
         std::cout << "\nReceived SIGINT, shutting down gracefully..." << std::endl;
         server_running = false;
     });
-    
+
     HttpService http;
     WebSocketService ws;
-    
+
     http.document_root = "../client/out";
     http.staticDirs["/"] = "../client/out";
-    
+
     ws.onopen = [](const WebSocketChannelPtr& channel, const HttpRequestPtr& req) {
         std::cout << "WebSocket connection opened: " << req->path << std::endl;
-        
+
         json status_msg = {
             {"type", "connection_status"},
             {"data", {
@@ -1051,42 +1078,41 @@ int main() {
         };
         channel->send(status_msg.dump());
     };
-    
+
     ws.onmessage = [](const WebSocketChannelPtr& channel, const std::string& msg) {
         handle_websocket_message(channel, msg);
     };
-    
+
     ws.onclose = [](const WebSocketChannelPtr& channel) {
         std::cout << "WebSocket connection closed: " << channel_id(channel) << std::endl;
         session_manager->remove_session_by_connection(channel_id(channel));
     };
-    
+
     WebSocketServer server;
     server.registerWebSocketService(&ws);
     server.registerHttpService(&http);
     server.setPort(8080);
     server.setThreadNum(4);
-    
+
     server_running = true;
     std::thread cleanup_thread(cleanup_thread_func);
-    // Note: cleanup_thread is intentionally detached. It checks server_running
-    // periodically and will exit when server_running becomes false.
-    cleanup_thread.detach();
-    
+
     std::cout << "Poker server starting on port 8080..." << std::endl;
     std::cout << "HTTP server serving static files from ../client/out" << std::endl;
     std::cout << "WebSocket server ready for connections" << std::endl;
-    
+
     server.run();
-    
+
     server_running = false;
-    
+    // Join cleanup thread before resetting globals to prevent use-after-free
+    cleanup_thread.join();
+
     // Graceful shutdown: clean up global state
     poker_game.reset();
     session_manager.reset();
     rate_limiter.reset();
-    
+
     std::cout << "Server shutdown complete." << std::endl;
-    
+
     return 0;
 }
