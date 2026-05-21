@@ -277,6 +277,7 @@ describe('MessageParser', () => {
         data: {
           status: 'connected',
           player_id: 'p1',
+          token: 'abc123-def456-ghi789',
         },
       });
 
@@ -286,6 +287,7 @@ describe('MessageParser', () => {
       expect(result?.type).toBe('connection_status');
       expect(result?.data.status).toBe('connected');
       expect(result?.data.player_id).toBe('p1');
+      expect(result?.data.token).toBe('abc123-def456-ghi789');
     });
 
     test('should return null for invalid status', () => {
@@ -337,6 +339,34 @@ describe('MessageParser', () => {
       const result = MessageParser.parseMessage(message);
 
       expect(result?.data.message).toBe('Welcome!');
+    });
+
+    test('should reject non-string token in connection_status', () => {
+      const message = JSON.stringify({
+        type: 'connection_status',
+        data: {
+          status: 'connected',
+          player_id: 'p1',
+          token: 12345,
+        },
+      });
+
+      expect(MessageParser.parseMessage(message)).toBeNull();
+    });
+
+    test('should accept connection_status without token', () => {
+      const message = JSON.stringify({
+        type: 'connection_status',
+        data: {
+          status: 'connected',
+          player_id: 'p1',
+        },
+      });
+
+      const result = MessageParser.parseMessage(message);
+
+      expect(result).not.toBeNull();
+      expect(result?.data.token).toBeUndefined();
     });
   });
 

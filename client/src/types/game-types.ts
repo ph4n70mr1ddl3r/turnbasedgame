@@ -72,6 +72,7 @@ export interface ConnectionStatusMessage {
   data: {
     status: ConnectionStatus;
     player_id?: string;
+    token?: string;
     message?: string;
   };
 }

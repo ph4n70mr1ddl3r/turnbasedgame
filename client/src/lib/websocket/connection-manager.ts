@@ -613,8 +613,16 @@ export class ConnectionManager {
     useConnectionStore.getState().setStatus(message.data.status);
     if (!message.data.player_id) return;
 
-    const currentToken = useConnectionStore.getState().sessionToken;
-    let token = currentToken;
+    // Prefer the server-provided token (authoritative) over any client-generated one.
+    // This fixes a critical bug where the client generated its own token that the
+    // server didn't recognize, causing all bet_action messages to fail with
+    // "Token mismatch".
+    let token = message.data.token ?? null;
+
+    if (!token) {
+      const currentToken = useConnectionStore.getState().sessionToken;
+      token = currentToken;
+    }
 
     if (!token) {
       const existingSession = SessionManager.getSession();

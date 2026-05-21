@@ -323,11 +323,17 @@ export class MessageParser {
       }
     }
 
+    if (data.token !== undefined && !isString(data.token)) {
+      logError("Invalid connection_status: invalid token", data);
+      return null;
+    }
+
     return {
       type: "connection_status",
       data: {
         status: data.status as "connected" | "disconnected" | "reconnecting",
         player_id: data.player_id as string | undefined,
+        token: isString(data.token) ? data.token : undefined,
         message: isString(data.message) ? data.message : undefined,
       },
     };

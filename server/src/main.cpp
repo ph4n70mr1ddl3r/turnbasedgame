@@ -182,6 +182,8 @@ private:
         bool p1_exists = false;
         bool p2_exists = false;
         for (const auto& [token, session] : sessions_) {
+            // Expired sessions should not block new player slots
+            if (session.is_expired()) continue;
             if (session.player_id == "p1") p1_exists = true;
             if (session.player_id == "p2") p2_exists = true;
         }
@@ -746,52 +748,6 @@ private:
     }
 
 public:
-    // Deal 2 hole cards to each player from the deck.
-    void deal_hole_cards() {
-        for (auto& player : state_.players) {
-            player.hole_cards = deck_.deal(2);
-        }
-    }
-
-    // Evaluate hands at showdown and award the pot to the winner.
-    void evaluate_and_award() {
-        state_.game_status = "finished";
-
-        // Only evaluate among non-folded players
-        std::vector<Player*> active_players;
-        for (auto& p : state_.players) {
-            if (!p.is_folded) active_players.push_back(&p);
-        }
-
-        if (active_players.size() == 1) {
-            active_players[0]->chip_stack += state_.pot;
-            state_.last_winner = active_players[0]->id;
-            state_.winning_hand = "opponent folded";
-        } else if (active_players.size() >= 2) {
-            // Evaluate each active player's hand
-            Player* winner = nullptr;
-            HandRank bestHand{-1, {}, ""};
-
-            for (auto* p : active_players) {
-                HandRank hr = evaluateHand(p->hole_cards, state_.community_cards);
-                if (hr.category > bestHand.category ||
-                    (hr.category == bestHand.category && hr.kickers > bestHand.kickers)) {
-                    bestHand = hr;
-                    winner = p;
-                }
-            }
-
-            if (winner) {
-                winner->chip_stack += state_.pot;
-                state_.last_winner = winner->id;
-                state_.winning_hand = bestHand.name;
-            }
-        }
-
-        state_.pot = 0;
-        state_.round = "showdown";
-    }
-
     PokerGame(SessionManager& sm) : session_manager_(sm) {
         std::lock_guard<std::mutex> lock(mutex_);
         state_.players = { Player{"p1", 1500}, Player{"p2", 1500} };
@@ -830,6 +786,7 @@ public:
         std::lock_guard<std::mutex> lock(mutex_);
 
         ActionResponse response;
+
 
         Player* player = get_player(player_id);
         if (!player) {
@@ -950,9 +907,56 @@ public:
         return response;
     }
 
+    // Deal 2 hole cards to each player from the deck.
+    void deal_hole_cards() {
+        for (auto& player : state_.players) {
+            player.hole_cards = deck_.deal(2);
+        }
+    }
+
+    // Evaluate hands at showdown and award the pot to the winner.
+    void evaluate_and_award() {
+        // Callers set game_status = "finished" before invoking this.
+        // Set it here as defense-in-depth.
+        state_.game_status = "finished";
+
+        // Only evaluate among non-folded players
+        std::vector<Player*> active_players;
+        for (auto& p : state_.players) {
+            if (!p.is_folded) active_players.push_back(&p);
+        }
+
+        if (active_players.size() == 1) {
+            active_players[0]->chip_stack += state_.pot;
+            state_.last_winner = active_players[0]->id;
+            state_.winning_hand = "opponent folded";
+        } else if (active_players.size() >= 2) {
+            // Evaluate each active player's hand
+            Player* winner = nullptr;
+            HandRank bestHand{-1, {}, ""};
+
+            for (auto* p : active_players) {
+                HandRank hr = evaluateHand(p->hole_cards, state_.community_cards);
+                if (hr.category > bestHand.category ||
+                    (hr.category == bestHand.category && hr.kickers > bestHand.kickers)) {
+                    bestHand = hr;
+                    winner = p;
+                }
+            }
+
+            if (winner) {
+                winner->chip_stack += state_.pot;
+                state_.last_winner = winner->id;
+                state_.winning_hand = bestHand.name;
+            }
+        }
+
+        state_.pot = 0;
+        state_.round = "showdown";
+    }
+
     // Initialize a new hand (used by constructor and reset_game).
     void start_new_hand() {
-        // Reset players (preserve only chip_stacks if resetting)
         for (auto& player : state_.players) {
             player.current_bet = 0;
             player.is_folded = false;
@@ -1102,6 +1106,39 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
         std::string type = message["type"];
 
         if (type == "session_init") {
+            // Handle reconnect_token if provided
+            if (message.contains("data") && message["data"].is_object()) {
+                auto data = message["data"];
+                if (data.contains("reconnect_token") && data["reconnect_token"].is_string()) {
+                    std::string reconnect_token = data["reconnect_token"];
+                    auto* existing_session = session_manager->get_session(reconnect_token);
+                    if (existing_session) {
+                        // Reconnect to existing session — update the connection
+                        // and send the existing player_id and token back
+                        std::string player_id = existing_session->player_id;
+                        std::string token = existing_session->token;
+
+                        json response = {
+                            {"type", "connection_status"},
+                            {"data", {
+                                {"status", "connected"},
+                                {"player_id", player_id},
+                                {"token", token}
+                            }}
+                        };
+                        channel->send(response.dump());
+
+                        json game_response = {
+                            {"type", "game_state_update"},
+                            {"data", poker_game->get_game_state(player_id)}
+                        };
+                        channel->send(game_response.dump());
+                        return;
+                    }
+                    // Token not found or expired — fall through to create new session
+                }
+            }
+
             auto result = session_manager->get_or_create_session(channel);
             if (!result || result->player_id.empty()) {
                 json error = {
@@ -1116,11 +1153,14 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
             }
             std::string player_id = result->player_id;
 
+            // Always send the session token so the client can store and use it
+            // for authenticating subsequent bet_action messages.
             json response = {
                 {"type", "connection_status"},
                 {"data", {
                     {"status", "connected"},
-                    {"player_id", player_id}
+                    {"player_id", player_id},
+                    {"token", result->token}
                 }}
             };
             channel->send(response.dump());
@@ -1337,15 +1377,10 @@ int main() {
 
     ws.onopen = [](const WebSocketChannelPtr& channel, const HttpRequestPtr& req) {
         std::cout << "WebSocket connection opened: " << req->path << std::endl;
-
-        json status_msg = {
-            {"type", "connection_status"},
-            {"data", {
-                {"status", "connected"},
-                {"message", "Welcome to poker game"}
-            }}
-        };
-        channel->send(status_msg.dump());
+        // Do not send connection_status here — the client's session_init message
+        // triggers a proper connection_status response with player_id and token.
+        // Sending a premature status without player_id caused the client to
+        // process a redundant message on every connection.
     };
 
     ws.onmessage = [](const WebSocketChannelPtr& channel, const std::string& msg) {
