@@ -552,6 +552,7 @@ struct PokerGameState {
     int current_highest_bet = 0;
     std::string last_winner;
     std::string winning_hand;
+    int hand_number = 0;
 
     json to_json(const std::string& viewer_id = "") const {
         json j;
@@ -655,7 +656,10 @@ private:
             }
         }
 
-        // All players all-in or folded - run out remaining rounds
+        // All players all-in or folded - deal remaining community cards before showdown
+        while (state_.community_cards.size() < 5) {
+            state_.community_cards.push_back(deck_.deal());
+        }
         state_.round = "showdown";
         state_.game_status = "finished";
         evaluate_and_award();
@@ -971,26 +975,36 @@ public:
         deck_.reset();
         deal_hole_cards();
 
-        // Post blinds: button posts small blind (25), big blind posts big blind (50)
+        // Alternate button position each hand for fairness
+        bool p1_is_button = (state_.hand_number % 2 == 0);
+        state_.players[0].position = p1_is_button ? "button" : "big_blind";
+        state_.players[1].position = p1_is_button ? "big_blind" : "button";
+
+        // Post blinds: button is small blind in heads-up
+        int sb_idx = p1_is_button ? 0 : 1;
+        int bb_idx = p1_is_button ? 1 : 0;
+
         constexpr int SMALL_BLIND = 25;
         constexpr int BIG_BLIND = 50;
 
-        state_.players[0].chip_stack -= SMALL_BLIND;
-        state_.players[0].current_bet = SMALL_BLIND;
+        state_.players[sb_idx].chip_stack -= SMALL_BLIND;
+        state_.players[sb_idx].current_bet = SMALL_BLIND;
 
-        state_.players[1].chip_stack -= BIG_BLIND;
-        state_.players[1].current_bet = BIG_BLIND;
+        state_.players[bb_idx].chip_stack -= BIG_BLIND;
+        state_.players[bb_idx].current_bet = BIG_BLIND;
 
         state_.pot = SMALL_BLIND + BIG_BLIND;
         state_.current_highest_bet = BIG_BLIND;
         state_.min_bet = BIG_BLIND;
 
-        // p1 (button/SB) acts first preflop in heads-up
-        state_.current_player = "p1";
+        // In heads-up, button/SB acts first preflop
+        state_.current_player = state_.players[sb_idx].id;
 
         // max_bet is the acting player's remaining chip stack
         Player* actor = get_player(state_.current_player);
         state_.max_bet = actor ? actor->chip_stack : std::max(state_.players[0].chip_stack, state_.players[1].chip_stack);
+
+        state_.hand_number++;
     }
 
     void reset_game() {
@@ -998,8 +1012,7 @@ public:
         // Full chip reset for a fresh game
         state_.players.clear();
         state_.players = { Player{"p1", 1500}, Player{"p2", 1500} };
-        state_.players[0].position = "button";
-        state_.players[1].position = "big_blind";
+        state_.hand_number = 0;
         start_new_hand();
     }
 };
@@ -1187,6 +1200,17 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                 return;
             }
             int amount = 0;
+            if (action == "raise" && (!data.contains("amount") || !data["amount"].is_number_integer())) {
+                json error = {
+                    {"type", "error"},
+                    {"data", {
+                        {"code", "invalid_amount"},
+                        {"message", "Raise action requires an integer amount"}
+                    }}
+                };
+                channel->send(error.dump());
+                return;
+            }
             if (data.contains("amount") && data["amount"].is_number_integer()) {
                 amount = data["amount"].get<int>();
                 if (amount < 0) {
