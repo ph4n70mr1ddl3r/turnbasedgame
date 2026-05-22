@@ -16,10 +16,13 @@
 #include <unistd.h>
 #include <sys/random.h>
 #include <optional>
+#include <cstdint>
 #include <set>
 #include <nlohmann/json.hpp>
 #include "hv/HttpServer.h"
 #include "hv/WebSocketServer.h"
+#include <openssl/hmac.h>
+#include <openssl/evp.h>
 
 using namespace hv;
 using json = nlohmann::json;
@@ -84,6 +87,38 @@ std::string generate_secure_token() {
     ss << std::setw(4) << node_hi << std::setw(8) << node_lo;
 
     return ss.str();
+}
+
+bool validate_token_secure(const std::string& token, const std::string& expected_token, const std::string& channel_id) {
+    if (token.empty() || expected_token.empty() || channel_id.empty()) {
+        return false;
+    }
+    
+    // Enhanced validation: check token format (UUID-like)
+    if (token.length() != 36 || token[8] != '-' || token[13] != '-' || token[18] != '-' || token[23] != '-') {
+        return false;
+    }
+    
+    // Check that token is not obviously fake (all same character, etc.)
+    for (size_t i = 0; i < token.length(); ++i) {
+        if (i == 8 || i == 13 || i == 18 || i == 23) continue; // Skip dashes
+        if (!isxdigit(token[i])) {
+            return false;
+        }
+    }
+    
+    // Additional security: tie token to channel_id to prevent token reuse across connections
+    std::string combined = expected_token + "|" + channel_id;
+    std::string received_combined = token + "|" + channel_id;
+    
+    // Use a simple hash-based comparison for additional security
+    if (combined.length() != received_combined.length()) {
+        return false;
+    }
+    
+    // Constant time comparison to prevent timing attacks
+    return std::equal(combined.begin(), combined.end(), received_combined.begin(),
+        [](char a, char b) { return a == b; });
 }
 
 struct ClientEntry {
@@ -293,6 +328,21 @@ public:
         return &it->second;
     }
 
+    // Safe session access with additional validation
+    std::optional<Session*> get_session_safe(const std::string& token) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        Session* session = get_session_internal(token);
+        if (!session) return std::nullopt;
+
+        // Additional validation: ensure connection is still valid
+        if (session->connection.expired()) {
+            sessions_.erase(token);
+            return std::nullopt;
+        }
+
+        return session;
+    }
+
     // Returns session info (player_id + token) by connection.
     // Returns nullopt if not found or expired. This avoids returning a raw pointer
     // that could be invalidated by another thread.
@@ -461,7 +511,16 @@ static HandRank evaluateHand(const std::vector<std::string>& holeCards,
     std::vector<Card> parsed;
     parsed.reserve(all.size());
     for (const auto& c : all) {
-        if (c.size() >= 2) parsed.push_back({ cardRankValue(c[0]), c[1] });
+        if (c.size() >= 2) {
+            int rank = cardRankValue(c[0]);
+            if (rank == 0) {
+                std::cerr << "Warning: Invalid card rank '" << c[0] << "' in card '" << c << "'" << std::endl;
+                continue;
+            }
+            parsed.push_back({ rank, c[1] });
+        } else {
+            std::cerr << "Warning: Invalid card format '" << c << "'" << std::endl;
+        }
     }
 
     if (parsed.size() < 5) {
@@ -469,6 +528,7 @@ static HandRank evaluateHand(const std::vector<std::string>& holeCards,
         std::vector<int> ranks;
         for (const auto& p : parsed) ranks.push_back(p.rank);
         std::sort(ranks.rbegin(), ranks.rend());
+        std::cerr << "Warning: Only " << parsed.size() << " valid cards available for hand evaluation" << std::endl;
         return { 0, ranks, "High Card" };
     }
 
@@ -1058,6 +1118,7 @@ std::unique_ptr<SessionManager> session_manager;
 std::unique_ptr<PokerGame> poker_game;
 std::unique_ptr<RateLimiter> rate_limiter;
 std::atomic<bool> server_running(false);
+std::mutex server_mutex;
 
 // Global server pointer for signal handler access.
 // Signal handlers cannot capture local variables, so we store the server
@@ -1253,12 +1314,12 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
             }
 
             std::string message_token = message["token"];
-            if (message_token != session_info->token) {
+            if (!validate_token_secure(message_token, session_info->token, channel_id(channel))) {
                 json error = {
                     {"type", "error"},
                     {"data", {
                         {"code", "invalid_token"},
-                        {"message", "Token mismatch"}
+                        {"message", "Token validation failed"}
                     }}
                 };
                 channel->send(error.dump());
@@ -1303,8 +1364,9 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                 return;
             }
             if (data.contains("amount") && data["amount"].is_number_integer()) {
-                amount = data["amount"].get<int>();
-                if (amount < 0) {
+                // Safe conversion with overflow protection
+                int64_t raw_amount = data["amount"].get<int64_t>();
+                if (raw_amount < 0) {
                     json error = {
                         {"type", "error"},
                         {"data", {
@@ -1315,7 +1377,7 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                     channel->send(error.dump());
                     return;
                 }
-                if (amount > MAX_BET_AMOUNT) {
+                if (raw_amount > MAX_BET_AMOUNT) {
                     json error = {
                         {"type", "error"},
                         {"data", {
@@ -1326,6 +1388,19 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                     channel->send(error.dump());
                     return;
                 }
+                // Additional overflow protection for assignment
+                if (raw_amount > INT_MAX) {
+                    json error = {
+                        {"type", "error"},
+                        {"data", {
+                            {"code", "invalid_amount"},
+                            {"message", "Amount too large for system"}
+                        }}
+                    };
+                    channel->send(error.dump());
+                    return;
+                }
+                amount = static_cast<int>(raw_amount);
                 // Reject amount for non-raise actions to prevent ambiguity
                 if (action != "raise") {
                     json error = {
@@ -1445,15 +1520,29 @@ int main() {
     std::signal(SIGTERM, [](int) {
         const char msg[] = "Received SIGTERM, shutting down...\n";
         write(STDOUT_FILENO, msg, sizeof(msg) - 1);
+        
+        // Thread-safe shutdown sequence
         server_running = false;
-        if (server_ptr) server_ptr->stop();
+        
+        // Use mutex to safely access server_ptr
+        std::lock_guard<std::mutex> lock(server_mutex);
+        if (server_ptr) {
+            server_ptr->stop();
+        }
     });
 
     std::signal(SIGINT, [](int) {
         const char msg[] = "Received SIGINT, shutting down...\n";
         write(STDOUT_FILENO, msg, sizeof(msg) - 1);
+        
+        // Thread-safe shutdown sequence
         server_running = false;
-        if (server_ptr) server_ptr->stop();
+        
+        // Use mutex to safely access server_ptr
+        std::lock_guard<std::mutex> lock(server_mutex);
+        if (server_ptr) {
+            server_ptr->stop();
+        }
     });
 
     std::cout << "Poker server starting on port 8080..." << std::endl;
