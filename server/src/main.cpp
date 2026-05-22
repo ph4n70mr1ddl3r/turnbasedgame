@@ -1059,6 +1059,12 @@ std::unique_ptr<PokerGame> poker_game;
 std::unique_ptr<RateLimiter> rate_limiter;
 std::atomic<bool> server_running(false);
 
+// Global server pointer for signal handler access.
+// Signal handlers cannot capture local variables, so we store the server
+// instance in a global unique_ptr. The signal handler calls server_ptr->stop()
+// to unblock server.run() and trigger graceful shutdown.
+std::unique_ptr<WebSocketServer> server_ptr;
+
 void cleanup_thread_func() {
     while (server_running) {
         std::this_thread::sleep_for(std::chrono::minutes(5));
@@ -1232,19 +1238,31 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
 
             auto data = message["data"];
 
-            if (message.contains("token") && message["token"].is_string()) {
-                std::string message_token = message["token"];
-                if (message_token != session_info->token) {
-                    json error = {
-                        {"type", "error"},
-                        {"data", {
-                            {"code", "invalid_token"},
-                            {"message", "Token mismatch"}
-                        }}
-                    };
-                    channel->send(error.dump());
-                    return;
-                }
+            // Token is REQUIRED for all bet_action messages — reject if missing or invalid.
+            // This prevents unauthenticated message injection.
+            if (!message.contains("token") || !message["token"].is_string()) {
+                json error = {
+                    {"type", "error"},
+                    {"data", {
+                        {"code", "invalid_token"},
+                        {"message", "Authentication token required"}
+                    }}
+                };
+                channel->send(error.dump());
+                return;
+            }
+
+            std::string message_token = message["token"];
+            if (message_token != session_info->token) {
+                json error = {
+                    {"type", "error"},
+                    {"data", {
+                        {"code", "invalid_token"},
+                        {"message", "Token mismatch"}
+                    }}
+                };
+                channel->send(error.dump());
+                return;
             }
 
             if (!data.contains("action") || !data["action"].is_string()) {
@@ -1390,18 +1408,6 @@ int main() {
     poker_game = std::make_unique<PokerGame>(*session_manager);
     rate_limiter = std::make_unique<RateLimiter>(100, std::chrono::milliseconds(60000));
 
-    std::signal(SIGTERM, [](int) {
-        const char msg[] = "Received SIGTERM, shutting down...\n";
-        write(STDOUT_FILENO, msg, sizeof(msg) - 1);
-        server_running = false;
-    });
-
-    std::signal(SIGINT, [](int) {
-        const char msg[] = "Received SIGINT, shutting down...\n";
-        write(STDOUT_FILENO, msg, sizeof(msg) - 1);
-        server_running = false;
-    });
-
     HttpService http;
     WebSocketService ws;
 
@@ -1425,26 +1431,43 @@ int main() {
         session_manager->remove_session_by_connection(channel_id(channel));
     };
 
-    WebSocketServer server;
-    server.registerWebSocketService(&ws);
-    server.registerHttpService(&http);
-    server.setPort(8080);
-    server.setThreadNum(4);
+    server_ptr = std::make_unique<WebSocketServer>();
+    server_ptr->registerWebSocketService(&ws);
+    server_ptr->registerHttpService(&http);
+    server_ptr->setPort(8080);
+    server_ptr->setThreadNum(4);
 
     server_running = true;
     std::thread cleanup_thread(cleanup_thread_func);
+
+    // Register signal handlers that stop the hv event loop.
+    // server_ptr is a global unique_ptr so it's accessible from the handler.
+    std::signal(SIGTERM, [](int) {
+        const char msg[] = "Received SIGTERM, shutting down...\n";
+        write(STDOUT_FILENO, msg, sizeof(msg) - 1);
+        server_running = false;
+        if (server_ptr) server_ptr->stop();
+    });
+
+    std::signal(SIGINT, [](int) {
+        const char msg[] = "Received SIGINT, shutting down...\n";
+        write(STDOUT_FILENO, msg, sizeof(msg) - 1);
+        server_running = false;
+        if (server_ptr) server_ptr->stop();
+    });
 
     std::cout << "Poker server starting on port 8080..." << std::endl;
     std::cout << "HTTP server serving static files from ../client/out" << std::endl;
     std::cout << "WebSocket server ready for connections" << std::endl;
 
-    server.run();
+    server_ptr->run();
 
     server_running = false;
     // Join cleanup thread before resetting globals to prevent use-after-free
     cleanup_thread.join();
 
     // Graceful shutdown: clean up global state
+    server_ptr.reset();
     poker_game.reset();
     session_manager.reset();
     rate_limiter.reset();

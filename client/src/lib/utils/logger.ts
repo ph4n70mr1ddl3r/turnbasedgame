@@ -39,7 +39,3 @@ export function logInfo(message: string, data?: unknown): void {
     console.info(`${LOG_PREFIX_INFO} ${message}`, data ?? '');
   }
 }
-
-export function isDevelopment(): boolean {
-  return IS_DEV;
-}
