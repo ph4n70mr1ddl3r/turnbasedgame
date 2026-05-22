@@ -8,6 +8,30 @@ export const WS_MAX_PENDING_HEARTBEATS = 10;
 export const WS_MAX_MESSAGE_SIZE = 64 * 1024; // 64KB
 export const WS_MIN_MESSAGE_SIZE = 2;
 
+// Reconnect Settings
+export const RECONNECT_MAX_ATTEMPTS = 5;
+export const RECONNECT_INITIAL_DELAY_MS = 1000;
+
+// Session Settings
+export const SESSION_DURATION_MS = 30 * 60 * 1000; // 30 minutes
+
+// UI Settings
+export const MAX_QUICK_RAISE_OPTIONS = 4;
+export const UI_ACTION_COOLDOWN_MS = 100;
+export const UI_ACTION_PROCESSING_DELAY_MS = 200;
+export const UI_MAX_BET_INPUT_LENGTH = 10;
+export const DEFAULT_TURN_TIME_MS = 30000;
+export const CHIP_VISUAL_DIVISOR = 1000;
+export const MAX_CHIP_STACK_DISPLAY = 999999;
+export const LATENCY_GOOD_THRESHOLD_MS = 100;
+
+// Default WebSocket URL
+export const DEFAULT_WEB_SOCKET_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080';
+
+export function getDefaultWebSocketUrl(): string {
+  return DEFAULT_WEB_SOCKET_URL;
+}
+
 // Game Settings
 export const MAX_PLAYERS = 2;
 export const MAX_COMMUNITY_CARDS = 5;

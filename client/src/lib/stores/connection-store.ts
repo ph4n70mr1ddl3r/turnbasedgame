@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { ConnectionStatus } from "@/types/game-types";
 import { SessionManager } from "@/lib/websocket/session-manager";
-import { logError, logInfo } from "@/lib/utils/logger";
+import { logError, logWarn, logInfo } from "@/lib/utils/logger";
 
 type PlayerIdCallback = (playerId: string | null) => void;
 
@@ -17,7 +17,11 @@ interface CallbackRegistryState {
   nextId: number;
 }
 
-function createCallbackRegistry(): {
+function createCallbackRegistry(): ReturnType<typeof createCallbackRegistryImpl> {
+  return createCallbackRegistryImpl();
+}
+
+function createCallbackRegistryImpl() {
   const state: CallbackRegistryState = {
     entries: [],
     nextId: 0,
