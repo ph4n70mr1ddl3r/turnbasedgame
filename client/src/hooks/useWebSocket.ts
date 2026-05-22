@@ -1,3 +1,21 @@
+/**
+ * Custom hook for managing WebSocket connections and game state
+ * 
+ * This hook provides a complete interface for connecting to the game server,
+ * handling WebSocket messages, managing game state, and sending player actions.
+ * It includes automatic reconnection, error handling, and session management.
+ * 
+ * @example
+ * ```tsx
+ * const { 
+ *   connect, 
+ *   disconnect, 
+ *   isConnected, 
+ *   gameState, 
+ *   sendBetAction 
+ * } = useWebSocket({ autoConnect: true });
+ * ```
+ */
 import { useEffect, useRef, useCallback } from "react";
 import { ConnectionManager } from "@/lib/websocket/connection-manager";
 import {
@@ -17,34 +35,53 @@ import { BetAction, PlayerState } from "@/types/game-types";
 import { logError, logWarn } from "@/lib/utils/logger";
 import { getDefaultWebSocketUrl } from "@/lib/constants/game";
 
+/**
+ * Configuration options for the WebSocket hook
+ */
 export interface UseWebSocketOptions {
+  /** Whether to automatically connect on component mount */
   autoConnect?: boolean;
+  /** Custom WebSocket URL to connect to */
   url?: string;
 }
 
+/**
+ * Return value from the useWebSocket hook containing all connection and game state
+ */
 export interface UseWebSocketReturn {
-  connect: () => Promise<boolean>;
-  disconnect: () => void;
-  sendBetAction: (action: BetAction, amount?: number) => boolean;
-  getStatus: () => {
+  /** Connection methods */
+  connect: () => Promise<boolean>;        /** Manually connect to the server */
+  disconnect: () => void;                 /** Disconnect from the server */
+  
+  /** Action methods */
+  sendBetAction: (action: BetAction, amount?: number) => boolean; /** Send betting action */
+  
+  /** Status methods */
+  getStatus: () => {                      /** Get comprehensive connection status */
     isConnected: boolean;
     status: 'connected' | 'disconnected' | 'reconnecting';
     latency: number | null;
     sessionToken: string | null;
     playerId: string | null;
   };
-  isConnected: boolean;
-  connectionStatus: 'connected' | 'disconnected' | 'reconnecting';
-  latency: number | null;
-  sessionToken: string | null;
-  playerId: string | null;
-  gameState: ReturnType<typeof gameStateSelector>;
-  isMyTurn: boolean;
-  availableActions: BetAction[];
-  lastError: string | null;
-  getMyPlayer: () => PlayerState | null;
-  getOpponentPlayer: () => PlayerState | null;
-  clearError: () => void;
+  
+  /** Connection state */
+  isConnected: boolean;                   /** Whether currently connected */
+  connectionStatus: 'connected' | 'disconnected' | 'reconnecting'; /** Connection status */
+  latency: number | null;                /** Connection latency in ms */
+  sessionToken: string | null;            /** Server session token */
+  playerId: string | null;                /** Player ID assigned by server */
+  
+  /** Game state */
+  gameState: ReturnType<typeof gameStateSelector>;      /** Current game state */
+  isMyTurn: boolean;                     /** Whether it's the current player's turn */
+  availableActions: BetAction[];          /** Available betting actions */
+  lastError: string | null;               /** Last error message */
+  
+  /** Utility methods */
+  getMyPlayer: () => PlayerState | null;          /** Get current player state */
+  getOpponentPlayer: () => PlayerState | null;      /** Get opponent player state */
+  clearError: () => void;                 /** Clear last error message */
 }
 
 const DISCONNECTED_STATUS = {

@@ -8,15 +8,20 @@ export const UI_ACTION_COOLDOWN_MS = 300;
 export const UI_ACTION_PROCESSING_DELAY_MS = 100;
 export const UI_MAX_BET_INPUT_LENGTH = 10;
 
+import { getValidWebSocketUrl } from "@/lib/utils/env-utils";
+
 export function getDefaultWebSocketUrl(): string {
-  if (typeof window === "undefined") {
-    return "ws://localhost:8080";
+  try {
+    return getValidWebSocketUrl();
+  } catch {
+    // Fallback for development when no env vars are set
+    if (typeof window === "undefined") {
+      return "ws://localhost:8080";
+    }
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const host = window.location.hostname || "localhost";
+    return `${protocol}//${host}:8080`;
   }
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const host = window.location.hostname;
-  const envPort = process.env.NEXT_PUBLIC_WS_PORT;
-  const port = envPort ? `:${envPort}` : ":8080";
-  return `${protocol}//${host}${port}`;
 }
 
 export const SESSION_DURATION_MS = 30 * 60 * 1000;

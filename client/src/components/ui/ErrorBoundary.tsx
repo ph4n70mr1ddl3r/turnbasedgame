@@ -1,96 +1,119 @@
 "use client";
 
 import { Component, ReactNode, ErrorInfo } from "react";
-import { logError } from "@/lib/utils/logger";
-import { reloadPage } from "@/lib/utils/browser-utils";
-import { useConnectionStore } from "@/lib/stores/connection-store";
-import { useGameStore } from "@/lib/stores/game-store";
 
-const IS_DEV = process.env.NODE_ENV === "development";
-
-interface ErrorBoundaryProps {
+interface Props {
   children: ReactNode;
   fallback?: ReactNode;
 }
 
-interface ErrorBoundaryState {
+interface State {
   hasError: boolean;
   error: Error | null;
-  retryCount: number;
+  errorInfo: ErrorInfo | null;
 }
 
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
+export class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null, retryCount: 0 };
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null,
+    };
   }
 
-  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
-    return { hasError: true, error };
+  static getDerivedStateFromError(error: Error): State {
+    return {
+      hasError: true,
+      error,
+      errorInfo: null,
+    };
   }
-
-  // Note: retryCount is intentionally NOT included in getDerivedStateFromError's return
-  // because React merges the partial state, preserving existing retryCount.
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    logError("ErrorBoundary caught an error:", { error, errorInfo });
-    // Store reset is handled in handleRetry to avoid double-reset.
-    // componentDidCatch is only responsible for logging.
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+    this.setState({
+      hasError: true,
+      error,
+      errorInfo,
+    });
+
+    // You could also send the error to a logging service here
+    // logErrorToService(error, errorInfo);
   }
 
-  private handleRetry = (): void => {
-    if (this.state.retryCount >= 3) {
-      // Max retries reached — force reload since we can't recover
-      reloadPage();
-      return;
-    }
-    useGameStore.getState().reset();
-    useConnectionStore.getState().reset();
-    this.setState((prev) => ({ hasError: false, error: null, retryCount: prev.retryCount + 1 }));
+  handleReset = (): void => {
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null,
+    });
   };
-
-  componentDidUpdate(_prevProps: ErrorBoundaryProps, prevState: ErrorBoundaryState): void {
-    // Reset retry count when we've recovered (hasError transitioned from true to false)
-    // so that future errors get a fresh retry budget.
-    if (prevState.hasError && !this.state.hasError) {
-      this.setState({ retryCount: 0 });
-    }
-  }
 
   render(): ReactNode {
     if (this.state.hasError) {
+      // You can render any custom fallback UI
       if (this.props.fallback) {
         return this.props.fallback;
       }
 
       return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 p-4">
-          <div className="max-w-md w-full bg-red-900 border border-red-700 rounded-lg p-6">
-            <h2 className="text-xl font-bold text-white mb-4">Something went wrong</h2>
-            <p className="text-red-200 mb-4">
-              An unexpected error occurred. Please try again or reload the page.
-            </p>
-            {IS_DEV && this.state.error && (
-              <div className="bg-red-950 p-3 rounded text-xs text-red-300 overflow-auto mb-4 max-h-48">
-                <p className="font-bold mb-1">{this.state.error.message}</p>
-                {this.state.error.stack && (
-                  <pre className="whitespace-pre-wrap">{this.state.error.stack}</pre>
-                )}
+        <div className="min-h-screen flex items-center justify-center p-4 bg-red-50">
+          <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 border border-red-200">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <svg
+                  className="h-6 w-6 text-red-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
               </div>
-            )}
-            <div className="flex space-x-3">
-              <button
-                onClick={this.handleRetry}
-                className="px-4 py-2 bg-red-700 hover:bg-red-600 rounded text-sm"
-              >
-                Try Again
-              </button>
-              <button
-                onClick={reloadPage}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm"
-              >
-                Reload Page
-              </button>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Something went wrong
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                The application encountered an unexpected error. Please try refreshing the page.
+              </p>
+              
+              {process.env.NODE_ENV === 'development' && this.state.error && (
+                <details className="text-left mb-4">
+                  <summary className="text-sm font-medium text-gray-700 cursor-pointer">
+                    Error Details (Development)
+                  </summary>
+                  <div className="mt-2 text-xs text-gray-600 bg-gray-100 p-2 rounded overflow-auto max-h-32">
+                    <p className="font-mono">{this.state.error.toString()}</p>
+                    {this.state.errorInfo && (
+                      <pre className="mt-2 text-xs">
+                        {this.state.errorInfo.componentStack}
+                      </pre>
+                    )}
+                  </div>
+                </details>
+              )}
+              
+              <div className="flex space-x-3">
+                <button
+                  onClick={this.handleReset}
+                  className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  Try Again
+                </button>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                >
+                  Refresh Page
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -99,4 +122,18 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
     return this.props.children;
   }
+}
+
+// Wrapper component for easier usage
+interface ErrorBoundaryWrapperProps {
+  children: ReactNode;
+  fallback?: ReactNode;
+}
+
+export function ErrorBoundaryWrapper({ children, fallback }: ErrorBoundaryWrapperProps): ReactNode {
+  return (
+    <ErrorBoundary fallback={fallback}>
+      {children}
+    </ErrorBoundary>
+  );
 }

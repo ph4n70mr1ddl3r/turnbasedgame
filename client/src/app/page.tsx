@@ -9,6 +9,7 @@ import { CommunityCards } from "@/components/poker-table/CommunityCards";
 import { PotDisplay } from "@/components/poker-table/PotDisplay";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import { PerformanceMonitorComponent } from "@/components/ui/PerformanceMonitor";
 import { BetAction } from "@/types/game-types";
 import { logError } from "@/lib/utils/logger";
 import { reloadPage } from "@/lib/utils/browser-utils";
@@ -219,6 +220,7 @@ export default function Home(): ReactElement {
   return (
     <ErrorBoundary>
       <GameContent />
+      <PerformanceMonitorComponent showWarnings={process.env.NODE_ENV === 'development'} />
     </ErrorBoundary>
   );
 }
