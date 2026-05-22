@@ -111,8 +111,12 @@ function BettingControlsInner({
   }, [validMaxBet]);
 
   const handleRaiseAmountBlur = useCallback((): void => {
+    if (!raiseAmountInput?.trim()) {
+      setRaiseAmountInput(String(validMinBet));
+      return;
+    }
     const parsed = parseInt(raiseAmountInput, 10);
-    if (isNaN(parsed) || parsed < validMinBet) {
+    if (!Number.isFinite(parsed) || parsed < validMinBet) {
       setRaiseAmountInput(String(validMinBet));
     } else if (parsed > validMaxBet) {
       setRaiseAmountInput(String(validMaxBet));

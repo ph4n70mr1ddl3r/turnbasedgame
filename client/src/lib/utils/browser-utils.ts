@@ -82,13 +82,7 @@ export function safeLocalStorage(): SafeLocalStorage {
       },
       clear: (): boolean => {
         try {
-          for (const key of APP_STORAGE_KEYS) {
-            try {
-              localStorage.removeItem(key);
-            } catch {
-              // Continue removing other keys even if one fails
-            }
-          }
+          localStorage.clear();
           return true;
         } catch (error) {
           logWarn('localStorage.clear failed:', error);

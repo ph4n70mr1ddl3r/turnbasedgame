@@ -35,7 +35,7 @@ function PotDisplayInner({ pot }: PotDisplayProps): ReactElement {
             <div className="flex -space-x-2">
               {Array.from({ length: chipCount }, (_, i) => (
                 <div
-                  key={`chip-${i}`}
+                  key={`chip-${pot}-${i}`}
                   className="w-8 h-8 bg-yellow-500 border-2 border-yellow-600 rounded-full"
                   style={{
                     transform: `translateY(${i * -2}px)`,

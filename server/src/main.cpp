@@ -768,7 +768,7 @@ public:
         state_.players = { Player{"p1", 1500}, Player{"p2", 1500} };
         state_.players[0].position = "button";
         state_.players[1].position = "big_blind";
-        start_new_hand();
+        start_new_hand_locked();
     }
 
     PokerGameState get_state() {
@@ -981,7 +981,15 @@ public:
     }
 
     // Initialize a new hand (used by constructor and reset_game).
+    // REQUIRES: mutex_ must NOT be held by the caller.
     void start_new_hand() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        start_new_hand_locked();
+    }
+
+private:
+    // Internal implementation that assumes mutex_ is already held.
+    void start_new_hand_locked() {
         for (auto& player : state_.players) {
             player.current_bet = 0;
             player.is_folded = false;
@@ -1042,7 +1050,7 @@ public:
         state_.players.clear();
         state_.players = { Player{"p1", 1500}, Player{"p2", 1500} };
         state_.hand_number = 0;
-        start_new_hand();
+        start_new_hand_locked();
     }
 };
 
