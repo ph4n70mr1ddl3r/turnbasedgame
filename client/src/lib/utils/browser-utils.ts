@@ -23,6 +23,7 @@ interface SafeLocalStorage {
   setItem: (key: string, value: string) => StorageSetResult;
   removeItem: (key: string) => boolean;
   clear: () => boolean;
+  clearAppKeys: () => boolean;
 }
 
 const NOOP_STORAGE: SafeLocalStorage = {
@@ -30,6 +31,7 @@ const NOOP_STORAGE: SafeLocalStorage = {
   setItem: () => ({ success: false }),
   removeItem: () => false,
   clear: () => false,
+  clearAppKeys: () => false,
 };
 
 function isQuotaExceededError(error: unknown): boolean {
@@ -90,6 +92,21 @@ export function safeLocalStorage(): SafeLocalStorage {
           return true;
         } catch (error) {
           logWarn('localStorage.clear failed:', error);
+          return false;
+        }
+      },
+      clearAppKeys: (): boolean => {
+        try {
+          for (const key of APP_STORAGE_KEYS) {
+            try {
+              localStorage.removeItem(key);
+            } catch {
+              // Continue removing other keys even if one fails
+            }
+          }
+          return true;
+        } catch (error) {
+          logWarn('localStorage.clearAppKeys failed:', error);
           return false;
         }
       },

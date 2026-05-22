@@ -49,7 +49,6 @@ if(BUILD_TESTS)
   # Create test executable
   add_executable(poker_server_tests
     tests/websocket_server.test.cpp
-    # tests/poker_logic.test.cpp # File doesn't exist yet
   )
   target_link_libraries(poker_server_tests
     GTest::gtest_main

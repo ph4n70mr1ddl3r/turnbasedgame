@@ -27,7 +27,7 @@
   }
   
   .animate-pulse {
-    animation: none;
+    animation: none !important;
   }
 }
 

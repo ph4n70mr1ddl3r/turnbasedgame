@@ -6,6 +6,18 @@ import { reloadPage } from "@/lib/utils/browser-utils";
 const MAX_ERROR_LENGTH = 500;
 const AUTO_DISMISS_MS = 10000;
 
+const CRITICAL_ERROR_PATTERNS = [
+  'session expired',
+  'session token',
+  'server error',
+  'failed to establish',
+];
+
+function isCriticalError(error: string): boolean {
+  const lower = error.toLowerCase();
+  return CRITICAL_ERROR_PATTERNS.some((pattern) => lower.includes(pattern));
+}
+
 function truncateErrorMessage(error: string): string {
   if (error.length <= MAX_ERROR_LENGTH) {
     return error;
@@ -28,9 +40,9 @@ export const ErrorDisplay = memo(function ErrorDisplay({ error, onClose }: Error
     }
   }, [error]);
 
-  // Auto-dismiss non-critical errors after timeout
+  // Auto-dismiss only non-critical errors after timeout
   useEffect(() => {
-    if (!error) return undefined;
+    if (!error || isCriticalError(error)) return undefined;
     const timer = setTimeout(() => {
       onClose();
     }, AUTO_DISMISS_MS);

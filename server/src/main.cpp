@@ -179,11 +179,26 @@ private:
     mutable std::mutex mutex_;
 
     std::string determine_available_player_id_locked() {
+        // First clean up expired sessions so they don't block new player slots
+        std::vector<std::string> expired_tokens;
+        for (const auto& [token, session] : sessions_) {
+            if (session.is_expired()) {
+                expired_tokens.push_back(token);
+            }
+        }
+        for (const auto& token : expired_tokens) {
+            auto it = sessions_.find(token);
+            if (it != sessions_.end()) {
+                if (auto conn = it->second.connection.lock()) {
+                    connection_to_token_.erase(channel_id(conn));
+                }
+                sessions_.erase(it);
+            }
+        }
+
         bool p1_exists = false;
         bool p2_exists = false;
         for (const auto& [token, session] : sessions_) {
-            // Expired sessions should not block new player slots
-            if (session.is_expired()) continue;
             if (session.player_id == "p1") p1_exists = true;
             if (session.player_id == "p2") p2_exists = true;
         }
@@ -588,16 +603,16 @@ struct PokerGameState {
         j["time_remaining"] = time_remaining;
         j["round"] = round;
         j["min_bet"] = min_bet;
-            // max_bet reflects the current player's remaining stack
-            // so the client always shows correct raise bounds
-            int effective_max_bet = max_bet;
-            for (const auto& player : players) {
-                if (player.id == current_player) {
-                    effective_max_bet = player.chip_stack;
-                    break;
-                }
+        // max_bet reflects the current player's remaining stack
+        // so the client always shows correct raise bounds
+        int effective_max_bet = max_bet;
+        for (const auto& player : players) {
+            if (player.id == current_player) {
+                effective_max_bet = player.chip_stack;
+                break;
             }
-            j["max_bet"] = effective_max_bet;
+        }
+        j["max_bet"] = effective_max_bet;
         j["game_status"] = game_status;
         if (!last_winner.empty()) j["last_winner"] = last_winner;
         if (!winning_hand.empty()) j["winning_hand"] = winning_hand;
@@ -866,7 +881,7 @@ public:
             advance_turn();
         } else if (action == "raise") {
             player->last_action = "raise";
-            if (amount <= 0 && player->chip_stack > to_call) {
+            if (amount <= 0) {
                 response.result = ActionResult::InvalidAmount;
                 response.error_message = "Raise requires a positive amount";
                 return response;
@@ -932,7 +947,7 @@ public:
             state_.winning_hand = "opponent folded";
         } else if (active_players.size() >= 2) {
             // Evaluate each active player's hand
-            Player* winner = nullptr;
+            std::vector<Player*> winners;
             HandRank bestHand{-1, {}, ""};
 
             for (auto* p : active_players) {
@@ -940,13 +955,23 @@ public:
                 if (hr.category > bestHand.category ||
                     (hr.category == bestHand.category && hr.kickers > bestHand.kickers)) {
                     bestHand = hr;
-                    winner = p;
+                    winners.clear();
+                    winners.push_back(p);
+                } else if (hr.category == bestHand.category && hr.kickers == bestHand.kickers) {
+                    // Tie — split the pot
+                    winners.push_back(p);
                 }
             }
 
-            if (winner) {
-                winner->chip_stack += state_.pot;
-                state_.last_winner = winner->id;
+            if (!winners.empty()) {
+                int share = state_.pot / static_cast<int>(winners.size());
+                int remainder = state_.pot % static_cast<int>(winners.size());
+                for (auto* w : winners) {
+                    w->chip_stack += share;
+                }
+                // Award remainder to first winner (first player in order)
+                winners[0]->chip_stack += remainder;
+                state_.last_winner = winners[0]->id;
                 state_.winning_hand = bestHand.name;
             }
         }
@@ -1054,7 +1079,7 @@ void broadcast_game_state() {
         } catch (const std::exception& e) {
             std::cerr << "Error broadcasting to connection: " << e.what() << std::endl;
         } catch (...) {
-            std::cerr << "Unknown error broadcasting to connection" << std::endl;
+            std::cerr << "Unknown non-exception error broadcasting to connection" << std::endl;
         }
     }
 }

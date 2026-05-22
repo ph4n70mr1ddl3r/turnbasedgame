@@ -27,7 +27,12 @@ coverage/
 
 # Test results
 test-results/
+client/test-results/
 
 # Logs
 *.log
 npm-debug.log*
+
+# BMM / opencode framework config (not project source)
+.bmad/
+.opencode/
