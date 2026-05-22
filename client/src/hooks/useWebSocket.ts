@@ -96,6 +96,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   const managerRef = useRef<ConnectionManager | null>(null);
   const connectingRef = useRef(false);
   const urlRef = useRef<string | null>(null);
+  const cleanupRequestedRef = useRef(false);
   // Stable references that don't change across renders
   const autoConnectRef = useRef(options.autoConnect);
   const optionsUrlRef = useRef(options.url);
@@ -127,13 +128,25 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   );
 
   const cleanupManager = useCallback((): void => {
+    if (cleanupRequestedRef.current) return;
+    
+    cleanupRequestedRef.current = true;
     const manager = managerRef.current;
     if (manager) {
-      managerRef.current = null;
-      urlRef.current = null;
-      connectingRef.current = false;
-      manager.disconnect();
+      try {
+        managerRef.current = null;
+        urlRef.current = null;
+        connectingRef.current = false;
+        manager.disconnect();
+      } catch (error) {
+        logError('Error during cleanup:', error);
+      }
     }
+    
+    // Reset cleanup flag after a delay to allow potential reconnects
+    setTimeout(() => {
+      cleanupRequestedRef.current = false;
+    }, 1000);
   }, []);
 
   const connect = useCallback(async (): Promise<boolean> => {
@@ -172,6 +185,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       const connected = await manager.connect();
       if (!connected) {
         useGameStore.getState().setError("Failed to connect to game server");
+        return false;
       }
       return connected;
     } catch (error) {
@@ -191,21 +205,32 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   const sendBetAction = useCallback((action: BetAction, amount?: number) => {
     if (!managerRef.current) {
       logError("sendBetAction called before connection initialized");
+      useGameStore.getState().setError("Connection not initialized. Please refresh the page.");
       return false;
     }
 
     // Read directly from store to avoid stale closure over isConnected
-    if (!useConnectionStore.getState().isConnected) {
+    const connectionState = useConnectionStore.getState();
+    if (!connectionState.isConnected) {
       logError("sendBetAction called while disconnected");
+      useGameStore.getState().setError("Not connected to server. Please check your connection.");
       return false;
     }
 
     if (typeof action !== 'string') {
-      logError("sendBetAction: invalid action type");
+      logError("sendBetAction: invalid action type", { action });
+      useGameStore.getState().setError("Invalid action type. Please try again.");
       return false;
     }
 
-    return managerRef.current.sendBetAction(action, amount);
+    try {
+      return managerRef.current.sendBetAction(action, amount);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to send bet action";
+      logError("Bet action failed:", error);
+      useGameStore.getState().setError(errorMessage);
+      return false;
+    }
   }, []);
 
   const getStatus = useCallback(() => {
@@ -223,12 +248,16 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
   // Initialize stores and optionally auto-connect - runs once on mount
   useEffect(() => {
+    let isMounted = true;
+    
     try {
       initializeConnectionStore();
       initializeGameStore();
     } catch (error) {
       logError("Failed to initialize stores:", error);
-      useGameStore.getState().setError("Failed to initialize application. Please refresh the page.");
+      if (isMounted) {
+        useGameStore.getState().setError("Failed to initialize application. Please refresh the page.");
+      }
       return;
     }
 
@@ -238,6 +267,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     }
 
     return () => {
+      isMounted = false;
       cleanupManager();
     };
     // Mount-only effect: stores initialize once, auto-connect fires once.

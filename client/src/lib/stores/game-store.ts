@@ -124,49 +124,66 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   setGameState: (gameState: GameState): void => {
-    if (!isValidGameState(gameState)) {
-      return;
+    try {
+      if (!isValidGameState(gameState)) {
+        logError('[GAME] Invalid game state received:', gameState);
+        return;
+      }
+      const { cachedPlayerId } = get();
+      const isMyTurn = cachedPlayerId !== null && gameState.current_player === cachedPlayerId;
+      const availableActions = deriveAvailableActions(gameState, cachedPlayerId);
+      set({ gameState, isMyTurn, availableActions });
+    } catch (error) {
+      logError('[GAME] Error setting game state:', error);
+      setError('Failed to update game state. Please refresh the page if this persists.');
     }
-    const { cachedPlayerId } = get();
-    const isMyTurn = cachedPlayerId !== null && gameState.current_player === cachedPlayerId;
-    const availableActions = deriveAvailableActions(gameState, cachedPlayerId);
-    set({ gameState, isMyTurn, availableActions });
   },
 
   updatePlayer: (playerId: string, updates: Partial<PlayerState>): void => {
     set((state) => {
-      if (!state.gameState) return state;
+      try {
+        if (!state.gameState) return state;
 
-      const playerExists = state.gameState.players.some(
-        (player) => player.player_id === playerId
-      );
-      if (!playerExists) return state;
+        const playerExists = state.gameState.players.some(
+          (player) => player.player_id === playerId
+        );
+        if (!playerExists) {
+          logError('[GAME] Attempted to update non-existent player:', playerId);
+          return state;
+        }
 
-      if (updates.chip_stack !== undefined && !isValidChipValue(updates.chip_stack)) {
+        if (updates.chip_stack !== undefined && !isValidChipValue(updates.chip_stack)) {
+          logError('[GAME] Invalid chip_stack value in update:', { playerId, chip_stack: updates.chip_stack });
+          return state;
+        }
+
+        if (updates.current_bet !== undefined && !isValidChipValue(updates.current_bet)) {
+          logError('[GAME] Invalid current_bet value in update:', { playerId, current_bet: updates.current_bet });
+          return state;
+        }
+
+        if (updates.time_remaining !== undefined && !isValidTimeRemaining(updates.time_remaining)) {
+          logError('[GAME] Invalid time_remaining value in update:', { playerId, time_remaining: updates.time_remaining });
+          return state;
+        }
+
+        const updatedPlayers = state.gameState.players.map((player) =>
+          player.player_id === playerId ? { ...player, ...updates } : player
+        );
+
+        const newGameState = { ...state.gameState, players: updatedPlayers };
+        const isMyTurn = newGameState.current_player === state.cachedPlayerId;
+        const availableActions = deriveAvailableActions(newGameState, state.cachedPlayerId);
+
+        return {
+          gameState: newGameState,
+          isMyTurn,
+          availableActions,
+        };
+      } catch (error) {
+        logError('[GAME] Error updating player:', { playerId, updates }, error);
         return state;
       }
-
-      if (updates.current_bet !== undefined && !isValidChipValue(updates.current_bet)) {
-        return state;
-      }
-
-      if (updates.time_remaining !== undefined && !isValidTimeRemaining(updates.time_remaining)) {
-        return state;
-      }
-
-      const updatedPlayers = state.gameState.players.map((player) =>
-        player.player_id === playerId ? { ...player, ...updates } : player
-      );
-
-      const newGameState = { ...state.gameState, players: updatedPlayers };
-      const isMyTurn = newGameState.current_player === state.cachedPlayerId;
-      const availableActions = deriveAvailableActions(newGameState, state.cachedPlayerId);
-
-      return {
-        gameState: newGameState,
-        isMyTurn,
-        availableActions,
-      };
     });
   },
 
@@ -254,9 +271,19 @@ export function initializeGameStore(): () => void {
   
   win.__gameStoreInitialized = true;
   
-  win.__gameStoreCleanup = registerPlayerIdCallback((playerId) => {
-    useGameStore.getState().setCachedPlayerId(playerId);
-  });
+  try {
+    win.__gameStoreCleanup = registerPlayerIdCallback((playerId) => {
+      try {
+        useGameStore.getState().setCachedPlayerId(playerId);
+      } catch (error) {
+        logError('Error in playerId callback:', error);
+      }
+    });
+  } catch (error) {
+    logError('Failed to initialize game store:', error);
+    win.__gameStoreInitialized = false;
+    return () => {};
+  }
   
   return win.__gameStoreCleanup;
 }
@@ -267,7 +294,11 @@ export function resetGameStoreInitialization(): void {
   const win = window as unknown as GameStoreWindowState;
   
   if (win.__gameStoreCleanup) {
-    win.__gameStoreCleanup();
+    try {
+      win.__gameStoreCleanup();
+    } catch (error) {
+      logError('Error during game store cleanup:', error);
+    }
     win.__gameStoreCleanup = undefined;
   }
   win.__gameStoreInitialized = false;

@@ -51,12 +51,49 @@ export class ErrorBoundary extends Component<Props, State> {
     });
   };
 
+  handleReload = (): void => {
+    window.location.reload();
+  };
+
+  handleBackToHome = (): void => {
+    window.location.href = '/';
+  };
+
   render(): ReactNode {
     if (this.state.hasError) {
       // You can render any custom fallback UI
       if (this.props.fallback) {
         return this.props.fallback;
       }
+
+      // User-friendly error messages based on error type
+      const getErrorMessage = () => {
+        if (!this.state.error) return 'An unexpected error occurred.';
+        
+        const errorStr = this.state.error.message.toLowerCase();
+        
+        if (errorStr.includes('network') || errorStr.includes('connection')) {
+          return 'Network connection error. Please check your internet connection and try again.';
+        }
+        
+        if (errorStr.includes('timeout')) {
+          return 'Request timeout. The server took too long to respond. Please try again.';
+        }
+        
+        if (errorStr.includes('websocket')) {
+          return 'Connection error. Unable to connect to the game server.';
+        }
+        
+        if (errorStr.includes('invalid') || errorStr.includes('unauthorized')) {
+          return 'Authentication error. Please log in again.';
+        }
+        
+        if (errorStr.includes('server') || errorStr.includes('internal')) {
+          return 'Server error. Our team has been notified. Please try again later.';
+        }
+        
+        return 'An unexpected error occurred. Please try again.';
+      };
 
       return (
         <div className="min-h-screen flex items-center justify-center p-4 bg-red-50">
@@ -78,21 +115,21 @@ export class ErrorBoundary extends Component<Props, State> {
                 </svg>
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Something went wrong
+                Oops! Something went wrong
               </h3>
               <p className="text-sm text-gray-500 mb-4">
-                The application encountered an unexpected error. Please try refreshing the page.
+                {getErrorMessage()}
               </p>
               
               {process.env.NODE_ENV === 'development' && this.state.error && (
                 <details className="text-left mb-4">
-                  <summary className="text-sm font-medium text-gray-700 cursor-pointer">
-                    Error Details (Development)
+                  <summary className="text-sm font-medium text-gray-700 cursor-pointer hover:text-gray-900">
+                    Technical Details (Development)
                   </summary>
-                  <div className="mt-2 text-xs text-gray-600 bg-gray-100 p-2 rounded overflow-auto max-h-32">
-                    <p className="font-mono">{this.state.error.toString()}</p>
+                  <div className="mt-2 text-xs text-gray-600 bg-gray-100 p-2 rounded overflow-auto max-h-40">
+                    <p className="font-mono text-red-600">{this.state.error.toString()}</p>
                     {this.state.errorInfo && (
-                      <pre className="mt-2 text-xs">
+                      <pre className="mt-2 text-xs text-gray-700 overflow-x-auto">
                         {this.state.errorInfo.componentStack}
                       </pre>
                     )}
@@ -100,20 +137,30 @@ export class ErrorBoundary extends Component<Props, State> {
                 </details>
               )}
               
-              <div className="flex space-x-3">
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 justify-center">
                 <button
                   onClick={this.handleReset}
-                  className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
                 >
                   Try Again
                 </button>
                 <button
-                  onClick={() => window.location.reload()}
-                  className="px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                  onClick={this.handleReload}
+                  className="px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors duration-200"
                 >
                   Refresh Page
                 </button>
+                <button
+                  onClick={this.handleBackToHome}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                >
+                  Back to Home
+                </button>
               </div>
+              
+              <p className="text-xs text-gray-400 mt-4">
+                Error ID: {this.state.error?.message ? this.state.error.message.slice(0, 8) : 'unknown'}
+              </p>
             </div>
           </div>
         </div>

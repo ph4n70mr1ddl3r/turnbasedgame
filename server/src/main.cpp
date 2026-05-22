@@ -31,10 +31,20 @@ using json = nlohmann::json;
 class PokerGame;
 class SessionManager;
 
+// Configuration constants
 constexpr int SESSION_TIMEOUT_MINUTES = 30;
 constexpr size_t MAX_RATE_LIMITER_ENTRIES = 100;
 constexpr int MAX_BET_AMOUNT = 1000000;
 constexpr int RATE_LIMITER_CLEANUP_INTERVAL_MINUTES = 5;
+constexpr int SMALL_BLIND = 25;
+constexpr int BIG_BLIND = 50;
+constexpr int STARTING_CHIPS = 1500;
+constexpr int MAX_PLAYERS = 2;
+constexpr int COMMUNITY_CARDS_COUNT = 5;
+constexpr int PREFLOP_CARDS = 2;
+constexpr int FLOP_CARDS = 3;
+constexpr int TURN_CARDS = 1;
+constexpr int RIVER_CARDS = 1;
 
 // Get a unique identifier for a WebSocket channel.
 // peeraddr() is not unique when multiple clients share the same NAT/proxy,
@@ -711,14 +721,14 @@ private:
 
         if (state_.round == "preflop") {
             state_.round = "flop";
-            auto dealt = deck_.deal(3);
+            auto dealt = deck_.deal(FLOP_CARDS);
             state_.community_cards.insert(state_.community_cards.end(), dealt.begin(), dealt.end());
         } else if (state_.round == "flop") {
             state_.round = "turn";
-            state_.community_cards.push_back(deck_.deal());
+            state_.community_cards.push_back(deck_.deal(TURN_CARDS));
         } else if (state_.round == "turn") {
             state_.round = "river";
-            state_.community_cards.push_back(deck_.deal());
+            state_.community_cards.push_back(deck_.deal(RIVER_CARDS));
         } else if (state_.round == "river") {
             state_.round = "showdown";
             evaluate_and_award();
@@ -825,7 +835,7 @@ private:
 public:
     PokerGame(SessionManager& sm) : session_manager_(sm) {
         std::lock_guard<std::mutex> lock(mutex_);
-        state_.players = { Player{"p1", 1500}, Player{"p2", 1500} };
+        state_.players = { Player{"p1", STARTING_CHIPS}, Player{"p2", STARTING_CHIPS} };
         state_.players[0].position = "button";
         state_.players[1].position = "big_blind";
         start_new_hand_locked();
@@ -982,10 +992,10 @@ public:
         return response;
     }
 
-    // Deal 2 hole cards to each player from the deck.
+    // Deal hole cards to each player from the deck.
     void deal_hole_cards() {
         for (auto& player : state_.players) {
-            player.hole_cards = deck_.deal(2);
+            player.hole_cards = deck_.deal(PREFLOP_CARDS);
         }
     }
 
@@ -1081,9 +1091,6 @@ private:
         int sb_idx = p1_is_button ? 0 : 1;
         int bb_idx = p1_is_button ? 1 : 0;
 
-        constexpr int SMALL_BLIND = 25;
-        constexpr int BIG_BLIND = 50;
-
         state_.players[sb_idx].chip_stack -= SMALL_BLIND;
         state_.players[sb_idx].current_bet = SMALL_BLIND;
 
@@ -1105,12 +1112,16 @@ private:
     }
 
     void reset_game() {
-        std::lock_guard<std::mutex> lock(mutex_);
-        // Full chip reset for a fresh game
-        state_.players.clear();
-        state_.players = { Player{"p1", 1500}, Player{"p2", 1500} };
-        state_.hand_number = 0;
-        start_new_hand_locked();
+        try {
+            std::lock_guard<std::mutex> lock(mutex_);
+            // Full chip reset for a fresh game
+            state_.players.clear();
+            state_.players = { Player{"p1", STARTING_CHIPS}, Player{"p2", STARTING_CHIPS} };
+            state_.hand_number = 0;
+            start_new_hand_locked();
+        } catch (const std::exception& e) {
+            std::cerr << "Error resetting game: " << e.what() << std::endl;
+        }
     }
 };
 
@@ -1144,6 +1155,11 @@ void broadcast_game_state() {
     auto connections = session_manager->get_all_connections();
     for (auto& conn : connections) {
         try {
+            if (!conn || !conn->isOpened()) {
+                std::cerr << "Skipping invalid or closed connection" << std::endl;
+                continue;
+            }
+            
             auto session_info = session_manager->lookup_session_by_connection(conn);
             std::string viewer_id = session_info ? session_info->player_id : "";
             json response = {
@@ -1164,6 +1180,7 @@ constexpr size_t MAX_MESSAGE_SIZE = 64 * 1024;
 void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const std::string& msg) {
     std::string client_id = channel_id(channel);
 
+    // Rate limiting
     if (!rate_limiter->allow_request(client_id)) {
         json error = {
             {"type", "error"},
@@ -1172,10 +1189,15 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                 {"message", "Too many requests. Please slow down."}
             }}
         };
-        channel->send(error.dump());
+        try {
+            channel->send(error.dump());
+        } catch (const std::exception& e) {
+            std::cerr << "Failed to send rate limit error: " << e.what() << std::endl;
+        }
         return;
     }
 
+    // Message size validation
     if (msg.size() > MAX_MESSAGE_SIZE) {
         json error = {
             {"type", "error"},
@@ -1184,7 +1206,11 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                 {"message", "Message exceeds maximum size limit"}
             }}
         };
-        channel->send(error.dump());
+        try {
+            channel->send(error.dump());
+        } catch (const std::exception& e) {
+            std::cerr << "Failed to send size error: " << e.what() << std::endl;
+        }
         return;
     }
 
@@ -1248,7 +1274,11 @@ void handle_websocket_message(std::shared_ptr<WebSocketChannel> channel, const s
                         {"message", "Game is full. Only two players allowed."}
                     }}
                 };
-                channel->send(error.dump());
+                try {
+                    channel->send(error.dump());
+                } catch (const std::exception& e) {
+                    std::cerr << "Failed to send game full error: " << e.what() << std::endl;
+                }
                 return;
             }
             std::string player_id = result->player_id;

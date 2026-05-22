@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { ConnectionStatus } from "@/types/game-types";
 import { SessionManager } from "@/lib/websocket/session-manager";
-import { logError } from "@/lib/utils/logger";
+import { logError, logInfo } from "@/lib/utils/logger";
 
 type PlayerIdCallback = (playerId: string | null) => void;
 
@@ -18,19 +18,21 @@ interface CallbackRegistryState {
 }
 
 function createCallbackRegistry(): {
-  clear: () => void;
-  register: (callback: PlayerIdCallback) => () => void;
-  notify: (playerId: string | null) => void;
-} {
   const state: CallbackRegistryState = {
     entries: [],
     nextId: 0,
   };
 
+  const cleanupCallbackRegistry = (): void => {
+    // Clear all entries and reset the registry
+    state.entries = [];
+    state.nextId = 0;
+    logInfo('[CONNECTION] Callback registry cleaned up');
+  };
+
   return {
     clear(): void {
-      state.entries = [];
-      state.nextId = 0;
+      cleanupCallbackRegistry();
     },
 
     register(callback: PlayerIdCallback): () => void {
@@ -43,14 +45,19 @@ function createCallbackRegistry(): {
             logError('[CONNECTION] Error during callback cleanup:', error);
           }
         }
-        logError('[CONNECTION] Callback registry overflow - oldest callback removed. Check for memory leaks.');
+        logWarn('[CONNECTION] Callback registry overflow - oldest callback removed. Consider registering fewer callbacks.');
       }
       const id = state.nextId++;
       state.entries.push({ callback, id });
+      
       return () => {
-        const index = state.entries.findIndex((e) => e.id === id);
-        if (index !== -1) {
-          state.entries.splice(index, 1);
+        try {
+          const index = state.entries.findIndex((e) => e.id === id);
+          if (index !== -1) {
+            state.entries.splice(index, 1);
+          }
+        } catch (error) {
+          logError('[CONNECTION] Error during callback unregistration:', error);
         }
       };
     },
@@ -62,7 +69,8 @@ function createCallbackRegistry(): {
         try {
           callback(playerId);
         } catch (error) {
-          logError("Error in playerId callback:", error);
+          logError('[CONNECTION] Error in playerId callback:', error);
+          // Don't remove the callback on error to prevent data loss
         }
       });
     },
@@ -217,6 +225,12 @@ export const connectionSelector = (state: ConnectionStore): ConnectionSelectorSt
 
 export function initializeConnectionStore(): void {
   if (typeof window !== "undefined") {
-    useConnectionStore.getState().initializeFromSession();
+    try {
+      useConnectionStore.getState().initializeFromSession();
+    } catch (error) {
+      logError('Failed to initialize connection store:', error);
+      // Initialize with default values on error
+      useConnectionStore.getState().reset();
+    }
   }
 }
