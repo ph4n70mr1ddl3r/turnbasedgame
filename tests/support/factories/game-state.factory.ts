@@ -57,8 +57,8 @@ export function createValidGameState(overrides: GameStateOverrides = {}): GameSt
     round: 'preflop',
     min_bet: 50,
     max_bet: 1500,
-    last_winner: null,
-    winning_hand: null,
+    last_winner: undefined,
+    winning_hand: undefined,
     game_status: 'active',
   };
 
@@ -67,8 +67,8 @@ export function createValidGameState(overrides: GameStateOverrides = {}): GameSt
     ...overrides,
     players: overrides.players ?? defaultPlayers,
     community_cards: overrides.community_cards ?? [],
-    last_winner: overrides.last_winner ?? null,
-    winning_hand: overrides.winning_hand ?? null,
+    last_winner: overrides.last_winner !== undefined ? overrides.last_winner : undefined,
+    winning_hand: overrides.winning_hand !== undefined ? overrides.winning_hand : undefined,
   };
 
   return mergedState;

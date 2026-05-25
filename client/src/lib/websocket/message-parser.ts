@@ -252,8 +252,8 @@ export class MessageParser {
         round: data.round as BettingRound,
         min_bet: data.min_bet as number,
         max_bet: data.max_bet as number,
-        last_winner: isString(data.last_winner) ? data.last_winner : null,
-        winning_hand: isString(data.winning_hand) ? data.winning_hand : null,
+        last_winner: isString(data.last_winner) ? data.last_winner : undefined,
+        winning_hand: isString(data.winning_hand) ? data.winning_hand : undefined,
         game_status: data.game_status as GameStatus,
       },
     };

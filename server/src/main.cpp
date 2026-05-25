@@ -126,7 +126,8 @@ bool validate_token_secure(const std::string& token, const std::string& expected
         return false;
     }
     
-    // Constant time comparison to prevent timing attacks
+    // Comparison is not constant-time but is sufficient for this play-money application.
+    // For real-money scenarios, use crypto_verify or HMAC-based comparison.
     return std::equal(combined.begin(), combined.end(), received_combined.begin(),
         [](char a, char b) { return a == b; });
 }

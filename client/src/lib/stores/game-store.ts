@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { GameState, PlayerState, BetAction, isValidBettingRound, isValidPlayerId, isValidGameStatus, MAX_PLAYERS } from "@/types/game-types";
 import { registerPlayerIdCallback } from "@/lib/stores/connection-store";
 import { logError } from "@/lib/utils/logger";
-import { setError } from "@/lib/stores/game-store";
 
 const MAX_CHIP_VALUE = 1_000_000_000;
 const MAX_TIME_REMAINING_MS = 24 * 60 * 60 * 1000;
@@ -137,7 +136,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       set({ gameState, isMyTurn, availableActions });
     } catch (error) {
       logError('[GAME] Error setting game state:', error);
-      setError('Failed to update game state. Please refresh the page if this persists.');
+      set({ lastError: 'Failed to update game state. Please refresh the page if this persists.' });
     }
   },
 
@@ -183,7 +182,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           availableActions,
         };
       } catch (error) {
-        logError('[GAME] Error updating player:', { playerId, updates }, error);
+        logError(`[GAME] Error updating player ${playerId}:`, error);
         return state;
       }
     });
