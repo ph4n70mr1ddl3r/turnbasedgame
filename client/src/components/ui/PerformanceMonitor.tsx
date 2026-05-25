@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import { performanceMonitor } from "@/lib/utils/performance-monitor";
 
 interface PerformanceMonitorProps {
@@ -11,7 +11,7 @@ interface PerformanceMonitorProps {
 export function PerformanceMonitorComponent({ 
   showWarnings = false, 
   maxWarnings = 3 
-}: PerformanceMonitorProps): React.ReactElement | null {
+}: PerformanceMonitorProps): ReactElement | null {
   const [metrics, setMetrics] = useState(performanceMonitor.getMetrics());
   const [warnings, setWarnings] = useState<string[]>([]);
   const [isVisible, setIsVisible] = useState(false);

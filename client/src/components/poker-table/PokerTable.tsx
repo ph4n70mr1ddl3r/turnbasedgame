@@ -8,6 +8,10 @@ interface PokerTableProps {
 }
 
 function PokerTableInner({ children, dealerPlayerIndex }: PokerTableProps): ReactElement {
+  const safeDealerIndex =
+    dealerPlayerIndex !== null && dealerPlayerIndex !== undefined && dealerPlayerIndex >= 0 && dealerPlayerIndex <= 1
+      ? dealerPlayerIndex
+      : null;
   return (
     <div
       className="relative w-full min-h-96 sm:h-96 bg-green-800 rounded-3xl border-8 border-yellow-900 shadow-2xl overflow-hidden"
@@ -21,9 +25,9 @@ function PokerTableInner({ children, dealerPlayerIndex }: PokerTableProps): Reac
         </div>
 
         <div className={`absolute pointer-events-none ${
-          dealerPlayerIndex === 0
+          safeDealerIndex === 0
             ? 'top-[15%] left-1/2 -translate-x-1/2'
-            : dealerPlayerIndex === 1
+            : safeDealerIndex === 1
               ? 'bottom-[15%] left-1/2 -translate-x-1/2'
               : 'top-1/4 left-1/2 -translate-x-1/2'
         }`} aria-hidden="true">

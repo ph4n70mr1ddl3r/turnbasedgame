@@ -10,12 +10,13 @@ interface PotDisplayProps {
 const MAX_VISUAL_CHIPS = 10;
 
 function PotDisplayInner({ pot }: PotDisplayProps): ReactElement {
+  const safePot = Math.max(0, typeof pot === 'number' && Number.isFinite(pot) ? pot : 0);
   const chipCount = useMemo(
     () => Math.min(
-      Math.floor(pot / CHIP_VISUAL_DIVISOR),
+      Math.floor(safePot / CHIP_VISUAL_DIVISOR),
       MAX_VISUAL_CHIPS,
     ),
-    [pot],
+    [safePot],
   );
   return (
     <div
@@ -28,15 +29,15 @@ function PotDisplayInner({ pot }: PotDisplayProps): ReactElement {
           Total Pot
         </div>
         <div className="text-4xl font-bold text-yellow-200 my-2">
-          ${pot}
+          ${safePot}
         </div>
         <div className="text-yellow-400 text-sm">
-          {pot === 0 ? "No bets yet" : "In the middle"}
+          {safePot === 0 ? "No bets yet" : "In the middle"}
         </div>
         
         {/* Visual chip stack — capped at MAX_VISUAL_CHIPS to avoid DOM explosion */}
         <div className="mt-3 flex justify-center">
-          {pot > 0 && chipCount > 0 && (
+          {safePot > 0 && chipCount > 0 && (
             <div className="flex -space-x-2">
               {Array.from({ length: chipCount }, (_, i) => (
                 <div

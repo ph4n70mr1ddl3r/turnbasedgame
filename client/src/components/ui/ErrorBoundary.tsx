@@ -1,6 +1,7 @@
 "use client";
 
 import { Component, ReactNode, ErrorInfo } from "react";
+import { logError } from "@/lib/utils/logger";
 
 interface Props {
   children: ReactNode;
@@ -32,7 +33,8 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    console.error("ErrorBoundary caught an error:", error, errorInfo);
+    logError("ErrorBoundary caught an error:", error);
+    logError("Component stack:", errorInfo.componentStack);
     // Only set errorInfo here since getDerivedStateFromError already set hasError and error
     this.setState({ errorInfo });
   }
