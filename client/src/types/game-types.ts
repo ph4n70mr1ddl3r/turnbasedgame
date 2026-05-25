@@ -4,7 +4,6 @@
 export const MAX_PLAYERS = 2;
 export const MAX_COMMUNITY_CARDS = 5;
 export const VALID_PLAYER_IDS = ['p1', 'p2'] as const;
-
 // Card representation: <rank><suit> e.g., "Ah", "Kd", "7c"
 export type CardRank = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'T' | 'J' | 'Q' | 'K' | 'A';
 export type CardSuit = 'c' | 'd' | 'h' | 's';
@@ -158,9 +157,12 @@ export function isArray(value: unknown): value is unknown[] {
   return Array.isArray(value);
 }
 
-export const VALID_BETTING_ROUNDS: readonly BettingRound[] = ["preflop", "flop", "turn", "river", "showdown"];
-export const VALID_GAME_STATUSES: readonly GameStatus[] = ["waiting", "active", "finished"];
-export const VALID_CONNECTION_STATUSES: readonly ConnectionStatus[] = ["connected", "disconnected", "reconnecting"];
+// Validation arrays — also defined in constants/game.ts.
+// Kept here for the validation functions below. Do NOT add new entries
+// here without also updating constants/game.ts.
+const VALID_BETTING_ROUNDS: readonly BettingRound[] = ["preflop", "flop", "turn", "river", "showdown"];
+const VALID_GAME_STATUSES: readonly GameStatus[] = ["waiting", "active", "finished"];
+const VALID_CONNECTION_STATUSES: readonly ConnectionStatus[] = ["connected", "disconnected", "reconnecting"];
 
 export function isValidBettingRound(value: string): value is BettingRound {
   return VALID_BETTING_ROUNDS.includes(value as BettingRound);
@@ -170,7 +172,7 @@ export function isValidGameStatus(value: string): value is GameStatus {
   return VALID_GAME_STATUSES.includes(value as GameStatus);
 }
 
-export const VALID_PLAYER_POSITIONS: readonly PlayerPosition[] = ["button", "small_blind", "big_blind", "none"];
+const VALID_PLAYER_POSITIONS: readonly PlayerPosition[] = ["button", "small_blind", "big_blind", "none"];
 
 export function isValidPlayerPosition(value: string): value is PlayerPosition {
   return VALID_PLAYER_POSITIONS.includes(value as PlayerPosition);

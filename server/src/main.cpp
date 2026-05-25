@@ -99,37 +99,30 @@ std::string generate_secure_token() {
     return ss.str();
 }
 
-bool validate_token_secure(const std::string& token, const std::string& expected_token, const std::string& channel_id) {
-    if (token.empty() || expected_token.empty() || channel_id.empty()) {
+bool validate_token_secure(const std::string& token, const std::string& expected_token, const std::string& /*channel_id*/) {
+    if (token.empty() || expected_token.empty()) {
         return false;
     }
     
-    // Enhanced validation: check token format (UUID-like)
+    // Validate token format (UUID-like: 8-4-4-4-12 hex digits)
     if (token.length() != 36 || token[8] != '-' || token[13] != '-' || token[18] != '-' || token[23] != '-') {
         return false;
     }
     
-    // Check that token is not obviously fake (all same character, etc.)
+    // Check that token contains only valid hex digits (excluding dash positions)
     for (size_t i = 0; i < token.length(); ++i) {
-        if (i == 8 || i == 13 || i == 18 || i == 23) continue; // Skip dashes
+        if (i == 8 || i == 13 || i == 18 || i == 23) continue;
         if (!isxdigit(token[i])) {
             return false;
         }
     }
     
-    // Additional security: tie token to channel_id to prevent token reuse across connections
-    std::string combined = expected_token + "|" + channel_id;
-    std::string received_combined = token + "|" + channel_id;
-    
-    // Use a simple hash-based comparison for additional security
-    if (combined.length() != received_combined.length()) {
-        return false;
-    }
-    
+    // Compare the received token against the expected token.
+    // The token is already tied to the connection via session_manager lookup
+    // (connection_to_token_ map), so we only need to verify the token matches.
     // Comparison is not constant-time but is sufficient for this play-money application.
     // For real-money scenarios, use crypto_verify or HMAC-based comparison.
-    return std::equal(combined.begin(), combined.end(), received_combined.begin(),
-        [](char a, char b) { return a == b; });
+    return token == expected_token;
 }
 
 struct ClientEntry {

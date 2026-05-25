@@ -1,15 +1,20 @@
 "use client";
 
 import { memo, useMemo, type ReactElement } from "react";
-import { CHIP_VISUAL_DIVISOR, MAX_CHIP_STACK_DISPLAY } from "@/lib/constants/game";
+import { CHIP_VISUAL_DIVISOR } from "@/lib/constants/game";
 
 interface PotDisplayProps {
   pot: number;
 }
 
+const MAX_VISUAL_CHIPS = 10;
+
 function PotDisplayInner({ pot }: PotDisplayProps): ReactElement {
   const chipCount = useMemo(
-    () => Math.min(Math.floor(pot / CHIP_VISUAL_DIVISOR), MAX_CHIP_STACK_DISPLAY),
+    () => Math.min(
+      Math.floor(pot / CHIP_VISUAL_DIVISOR),
+      MAX_VISUAL_CHIPS,
+    ),
     [pot],
   );
   return (
@@ -29,7 +34,7 @@ function PotDisplayInner({ pot }: PotDisplayProps): ReactElement {
           {pot === 0 ? "No bets yet" : "In the middle"}
         </div>
         
-        {/* Visual chip stack */}
+        {/* Visual chip stack — capped at MAX_VISUAL_CHIPS to avoid DOM explosion */}
         <div className="mt-3 flex justify-center">
           {pot > 0 && chipCount > 0 && (
             <div className="flex -space-x-2">
@@ -39,7 +44,7 @@ function PotDisplayInner({ pot }: PotDisplayProps): ReactElement {
                   className="w-8 h-8 bg-yellow-500 border-2 border-yellow-600 rounded-full"
                   style={{
                     transform: `translateY(${i * -2}px)`,
-                    zIndex: MAX_CHIP_STACK_DISPLAY - i,
+                    zIndex: MAX_VISUAL_CHIPS - i,
                   }}
                 />
               ))}
