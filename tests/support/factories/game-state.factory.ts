@@ -118,7 +118,6 @@ export const GameScenarios = {
       ],
       pot: 75,
       min_bet: 50,
-      current_highest_bet: 50,
     }),
 
   callRequired: (playerId: 'p1' | 'p2', callAmount: number, overrides: GameStateOverrides = {}) =>
@@ -131,7 +130,6 @@ export const GameScenarios = {
       ],
       pot: callAmount * 2,
       min_bet: callAmount,
-      current_highest_bet: callAmount,
     }),
 
   showdownPhase: (overrides: GameStateOverrides = {}) =>

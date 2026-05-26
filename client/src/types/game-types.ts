@@ -86,14 +86,11 @@ export interface ConnectionStatusInfo {
   playerId: string | null;
 }
 
-export const ERROR_CODES = {
-  INVALID_TOKEN: 'invalid_token',
-  GAME_NOT_ACTIVE: 'game_not_active',
-  INVALID_ACTION: 'invalid_action',
-  UNAUTHORIZED: 'unauthorized',
-} as const;
-
-export type ErrorCode = typeof ERROR_CODES[keyof typeof ERROR_CODES];
+// ERROR_CODES are defined in @/lib/constants/game.ts as the single source of truth.
+// Import and re-export for backward compatibility.
+import { ERROR_CODES as _ERROR_CODES } from '@/lib/constants/game';
+export { _ERROR_CODES as ERROR_CODES };
+export type ErrorCode = (typeof _ERROR_CODES)[keyof typeof _ERROR_CODES];
 
 export interface ErrorMessage {
   type: "error";
@@ -188,28 +185,5 @@ export function isValidBetAction(action: string): action is BetAction {
   return ["check", "call", "raise", "fold"].includes(action);
 }
 
-// Helper to create messages
-export function createBetActionMessage(
-  token: string,
-  action: BetAction,
-  amount?: number
-): BetActionMessage {
-  return {
-    type: "bet_action",
-    data: { action, ...(amount !== undefined && { amount }) },
-    token,
-  };
-}
-
-export function createSessionInitMessage(
-  reconnectToken?: string,
-  playerName?: string
-): SessionInitMessage {
-  return {
-    type: "session_init",
-    data: {
-      ...(reconnectToken && { reconnect_token: reconnectToken }),
-      ...(playerName && { player_name: playerName }),
-    },
-  };
-}
+// Message creation helpers are provided by MessageParser.createSessionInit().
+// The ConnectionManager handles message construction directly to avoid duplication.

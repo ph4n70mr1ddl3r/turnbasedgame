@@ -24,12 +24,12 @@ function PokerTableInner({ children, dealerPlayerIndex }: PokerTableProps): Reac
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-white rounded-full" />
         </div>
 
-        <div className={`absolute pointer-events-none ${
+        <div className={`absolute pointer-events-none z-10 ${
           safeDealerIndex === 0
             ? 'top-[15%] left-1/2 -translate-x-1/2'
             : safeDealerIndex === 1
               ? 'bottom-[15%] left-1/2 -translate-x-1/2'
-              : 'top-1/4 left-1/2 -translate-x-1/2'
+              : 'hidden'
         }`} aria-hidden="true">
           <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg">
             <span className="text-black font-bold text-xs">DEALER</span>

@@ -21,8 +21,8 @@
 #include <nlohmann/json.hpp>
 #include "hv/HttpServer.h"
 #include "hv/WebSocketServer.h"
-#include <openssl/hmac.h>
-#include <openssl/evp.h>
+// Note: HMAC/EVP headers removed — not currently used. Add back if server-side
+// HMAC token signing is implemented.
 
 using namespace hv;
 using json = nlohmann::json;
@@ -719,10 +719,10 @@ private:
             state_.community_cards.insert(state_.community_cards.end(), dealt.begin(), dealt.end());
         } else if (state_.round == "flop") {
             state_.round = "turn";
-            state_.community_cards.push_back(deck_.deal(TURN_CARDS));
+            state_.community_cards.push_back(deck_.deal());
         } else if (state_.round == "turn") {
             state_.round = "river";
-            state_.community_cards.push_back(deck_.deal(RIVER_CARDS));
+            state_.community_cards.push_back(deck_.deal());
         } else if (state_.round == "river") {
             state_.round = "showdown";
             evaluate_and_award();

@@ -214,18 +214,19 @@ export const performanceMonitor = new PerformanceMonitor();
 
 // Performance measurement decorator
 export function measurePerformance(type: PerformanceEntry['type'], metadata?: Record<string, unknown>) {
-  return function (target: unknown, propertyKey: string, descriptor: PropertyDescriptor) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return function (_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
     const originalMethod = descriptor.value;
 
-    descriptor.value = function (...args: unknown[]) {
-      const startTime = performance.now();
+    descriptor.value = function (this: unknown, ...args: unknown[]) {
+      const startTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
       
       try {
         const result = originalMethod.apply(this, args);
         
         if (result instanceof Promise) {
           return result.finally(() => {
-            const endTime = performance.now();
+            const endTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
             performanceMonitor.recordEntry({
               type,
               duration: endTime - startTime,
@@ -233,7 +234,7 @@ export function measurePerformance(type: PerformanceEntry['type'], metadata?: Re
             });
           });
         } else {
-          const endTime = performance.now();
+          const endTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
           performanceMonitor.recordEntry({
             type,
             duration: endTime - startTime,
@@ -242,7 +243,7 @@ export function measurePerformance(type: PerformanceEntry['type'], metadata?: Re
           return result;
         }
       } catch (error) {
-        const endTime = performance.now();
+        const endTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
         performanceMonitor.recordEntry({
           type,
           duration: endTime - startTime,
