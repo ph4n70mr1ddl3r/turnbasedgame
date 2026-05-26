@@ -87,10 +87,9 @@ export interface ConnectionStatusInfo {
 }
 
 // ERROR_CODES are defined in @/lib/constants/game.ts as the single source of truth.
-// Import and re-export for backward compatibility.
-import { ERROR_CODES as _ERROR_CODES } from '@/lib/constants/game';
-export { _ERROR_CODES as ERROR_CODES };
-export type ErrorCode = (typeof _ERROR_CODES)[keyof typeof _ERROR_CODES];
+export { ERROR_CODES } from '@/lib/constants/game';
+import { ERROR_CODES } from '@/lib/constants/game';
+export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
 
 export interface ErrorMessage {
   type: "error";

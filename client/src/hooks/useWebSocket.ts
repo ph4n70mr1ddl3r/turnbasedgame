@@ -142,11 +142,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
         logError('Error during cleanup:', error);
       }
     }
-    
-    // Reset cleanup flag after a delay to allow potential reconnects
-    setTimeout(() => {
-      cleanupRequestedRef.current = false;
-    }, 1000);
   }, []);
 
   const connect = useCallback(async (): Promise<boolean> => {

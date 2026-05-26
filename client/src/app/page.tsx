@@ -220,7 +220,9 @@ export default function Home(): ReactElement {
   return (
     <ErrorBoundary>
       <GameContent />
-      <PerformanceMonitorComponent showWarnings={process.env.NODE_ENV === 'development'} />
+      {process.env.NODE_ENV === 'development' && (
+        <PerformanceMonitorComponent showWarnings />
+      )}
     </ErrorBoundary>
   );
 }

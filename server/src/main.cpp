@@ -332,21 +332,6 @@ public:
         return &it->second;
     }
 
-    // Safe session access with additional validation
-    std::optional<Session*> get_session_safe(const std::string& token) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        Session* session = get_session_internal(token);
-        if (!session) return std::nullopt;
-
-        // Additional validation: ensure connection is still valid
-        if (session->connection.expired()) {
-            sessions_.erase(token);
-            return std::nullopt;
-        }
-
-        return session;
-    }
-
     // Returns session info (player_id + token) by connection.
     // Returns nullopt if not found or expired. This avoids returning a raw pointer
     // that could be invalidated by another thread.

@@ -2,9 +2,7 @@ import { create } from "zustand";
 import { GameState, PlayerState, BetAction, isValidBettingRound, isValidPlayerId, isValidGameStatus, MAX_PLAYERS } from "@/types/game-types";
 import { registerPlayerIdCallback } from "@/lib/stores/connection-store";
 import { logError } from "@/lib/utils/logger";
-
-const MAX_CHIP_VALUE = 1_000_000_000;
-const MAX_TIME_REMAINING_MS = 24 * 60 * 60 * 1000;
+import { MAX_CHIP_VALUE, MAX_TIME_REMAINING_MS } from "@/lib/constants/game";
 
 function isValidChipValue(value: unknown): value is number {
   return typeof value === 'number' && 

@@ -6,7 +6,6 @@ export const WS_HEARTBEAT_INTERVAL_MS = 30000; // 30 seconds
 export const WS_HEARTBEAT_TIMEOUT_MS = 60000; // 60 seconds
 export const WS_MAX_PENDING_HEARTBEATS = 10;
 export const WS_MAX_MESSAGE_SIZE = 64 * 1024; // 64KB
-export const WS_MIN_MESSAGE_SIZE = 2;
 
 // Reconnect Settings
 export const RECONNECT_MAX_ATTEMPTS = 5;

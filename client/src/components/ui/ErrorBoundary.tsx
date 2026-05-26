@@ -46,12 +46,11 @@ export class ErrorBoundary extends Component<Props, State> {
       errorInfo: null,
     });
     // Clear any persisted error in game store so the retry starts clean
-    try {
-      const { useGameStore } = require('@/lib/stores/game-store');
-      useGameStore.getState().clearError();
-    } catch {
-      // Game store may not be available in all contexts
-    }
+    import('@/lib/stores/game-store')
+      .then(({ useGameStore }) => useGameStore.getState().clearError())
+      .catch(() => {
+        // Game store may not be available in all contexts
+      });
   };
 
   handleReload = (): void => {
