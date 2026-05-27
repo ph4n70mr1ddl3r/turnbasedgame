@@ -212,10 +212,12 @@ class PerformanceMonitor {
 // Global instance
 export const performanceMonitor = new PerformanceMonitor();
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyClass = new (...args: any[]) => any;
+
 // Performance measurement decorator
 export function measurePerformance(type: PerformanceEntry['type'], metadata?: Record<string, unknown>) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return function (_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
+  return function (_target: AnyClass, _propertyKey: string, descriptor: PropertyDescriptor) {
     const originalMethod = descriptor.value;
 
     descriptor.value = function (this: unknown, ...args: unknown[]) {

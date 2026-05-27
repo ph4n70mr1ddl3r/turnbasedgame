@@ -10,6 +10,7 @@ import {
   VALID_GAME_STATUSES,
   VALID_CONNECTION_STATUSES,
   VALID_PLAYER_POSITIONS,
+  VALID_BET_ACTIONS,
 } from '@/lib/constants/game';
 
 export {
@@ -197,7 +198,7 @@ export function isValidPlayerId(id: string): boolean {
 }
 
 export function isValidBetAction(action: string): action is BetAction {
-  return ["check", "call", "raise", "fold"].includes(action);
+  return VALID_BET_ACTIONS.includes(action as BetAction);
 }
 
 // Message creation helpers are provided by MessageParser.createSessionInit().

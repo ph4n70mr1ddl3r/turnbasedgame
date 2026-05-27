@@ -58,7 +58,7 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   handleBackToHome = (): void => {
-    window.location.href = '/';
+    window.location.assign('/');
   };
 
   render(): ReactNode {
