@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { GameState, PlayerState, BetAction, isValidBettingRound, isValidPlayerId, isValidGameStatus, MAX_PLAYERS } from "@/types/game-types";
+import { GameState, PlayerState, BetAction, isValidBettingRound, isValidPlayerId, isValidGameStatus, MAX_PLAYERS, MAX_COMMUNITY_CARDS } from "@/types/game-types";
 import { registerPlayerIdCallback } from "@/lib/stores/connection-store";
 import { logError } from "@/lib/utils/logger";
 import { MAX_CHIP_VALUE, MAX_TIME_REMAINING_MS } from "@/lib/constants/game";
@@ -41,7 +41,7 @@ function isValidGameState(state: unknown): state is GameState {
   if (s.min_bet > s.max_bet) return false;
 
   if (s.current_player !== null && typeof s.current_player !== 'string') return false;
-  if (!Array.isArray(s.community_cards) || s.community_cards.length > 5) return false;
+  if (!Array.isArray(s.community_cards) || s.community_cards.length > MAX_COMMUNITY_CARDS) return false;
 
   // Boundary checks on player values
   for (let i = 0; i < s.players.length; i++) {

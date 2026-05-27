@@ -3,7 +3,7 @@
 import { memo, useMemo, type ReactElement } from "react";
 import { PlayerState } from "@/types/game-types";
 import { DEFAULT_TURN_TIME_MS } from "@/lib/constants/game";
-import { formatTimeRemaining } from "@/lib/utils/format-utils";
+import { formatTimeRemaining, formatChipAmount } from "@/lib/utils/format-utils";
 
 const TIMER_TRANSITION_DURATION_MS = 1000;
 
@@ -67,7 +67,7 @@ function PlayerSeatInner({ player, isCurrentPlayer }: PlayerSeatProps): ReactEle
         {/* Player status indicators */}
         <div className="text-right">
           <div className="text-2xl font-bold" aria-label={`${chip_stack} chips`}>
-            <span aria-hidden="true">$</span>{chip_stack}
+            <span aria-hidden="true">$</span>{formatChipAmount(chip_stack)}
           </div>
           <div className="text-sm text-green-300">Chips</div>
         </div>
@@ -78,9 +78,9 @@ function PlayerSeatInner({ player, isCurrentPlayer }: PlayerSeatProps): ReactEle
         <div className="text-sm text-green-300 mb-1">Cards</div>
         <div className="flex space-x-2">
           {hole_cards && hole_cards.length > 0 ? (
-            hole_cards.map((card) => (
+            hole_cards.map((card, index) => (
               <div
-                key={`hole-card-${card}`}
+                key={`hole-card-${index}-${card}`}
                 className="w-10 h-14 bg-white text-black rounded flex items-center justify-center font-bold shadow-md"
               >
                 {card}
@@ -99,7 +99,7 @@ function PlayerSeatInner({ player, isCurrentPlayer }: PlayerSeatProps): ReactEle
       {current_bet > 0 && (
         <div className="mb-2">
           <div className="text-sm text-green-300">Current bet</div>
-          <div className="text-xl font-bold text-yellow-300">${current_bet}</div>
+          <div className="text-xl font-bold text-yellow-300">${formatChipAmount(current_bet)}</div>
         </div>
       )}
       

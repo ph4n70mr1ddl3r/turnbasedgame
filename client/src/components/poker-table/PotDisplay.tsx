@@ -2,6 +2,7 @@
 
 import { memo, useMemo, type ReactElement } from "react";
 import { CHIP_VISUAL_DIVISOR } from "@/lib/constants/game";
+import { formatChipAmount } from "@/lib/utils/format-utils";
 
 interface PotDisplayProps {
   pot: number;
@@ -29,7 +30,7 @@ function PotDisplayInner({ pot }: PotDisplayProps): ReactElement {
           Total Pot
         </div>
         <div className="text-4xl font-bold text-yellow-200 my-2">
-          ${safePot}
+          ${formatChipAmount(safePot)}
         </div>
         <div className="text-yellow-400 text-sm">
           {safePot === 0 ? "No bets yet" : "In the middle"}

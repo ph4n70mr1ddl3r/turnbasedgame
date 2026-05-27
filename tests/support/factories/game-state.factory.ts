@@ -1,10 +1,10 @@
-import { GameState, PlayerState } from '@/types/game-types';
+import { GameState, PlayerState, PlayerPosition, BettingRound, GameStatus, ConnectionStatus, BetAction } from '@/types/game-types';
 
 export interface PlayerStateOverrides {
   player_id?: string;
   chip_stack?: number;
   hole_cards?: string[];
-  position?: string;
+  position?: PlayerPosition;
   current_bet?: number;
   is_active?: boolean;
   is_folded?: boolean;
@@ -19,12 +19,12 @@ export interface GameStateOverrides {
   pot?: number;
   current_player?: string | null;
   time_remaining?: number;
-  round?: string;
+  round?: BettingRound;
   min_bet?: number;
   max_bet?: number;
   last_winner?: string | null;
   winning_hand?: string | null;
-  game_status?: string;
+  game_status?: GameStatus;
 }
 
 export function createValidPlayer(overrides: PlayerStateOverrides = {}): PlayerState {

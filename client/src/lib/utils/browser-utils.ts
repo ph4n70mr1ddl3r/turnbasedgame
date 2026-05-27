@@ -43,9 +43,25 @@ function isQuotaExceededError(error: unknown): boolean {
 }
 
 let cachedStorage: SafeLocalStorage | null = null;
+let storageAvailable: boolean | null = null;
+
+function checkStorageAvailable(): boolean {
+  if (storageAvailable !== null) return storageAvailable;
+  try {
+    const testKey = '__storage_test__';
+    localStorage.setItem(testKey, '1');
+    localStorage.removeItem(testKey);
+    storageAvailable = true;
+  } catch {
+    storageAvailable = false;
+  }
+  return storageAvailable;
+}
 
 export function safeLocalStorage(): SafeLocalStorage {
-  if (!isBrowser()) {
+  if (!isBrowser() || !checkStorageAvailable()) {
+    // Invalidate cache if storage became unavailable
+    cachedStorage = null;
     return NOOP_STORAGE;
   }
 

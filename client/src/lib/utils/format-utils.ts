@@ -9,3 +9,10 @@ export function formatTimeRemaining(ms: number | null | undefined): string {
   if (ms < 1000) return `${Math.round(ms)}ms`;
   return `${seconds}s`;
 }
+
+export function formatChipAmount(amount: number | null | undefined): string {
+  if (amount === null || amount === undefined) return '0';
+  if (typeof amount !== 'number' || !Number.isFinite(amount)) return '0';
+  if (amount < 0) return '0';
+  return amount.toLocaleString();
+}
