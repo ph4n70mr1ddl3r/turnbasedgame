@@ -216,6 +216,8 @@ export const performanceMonitor = new PerformanceMonitor();
 type AnyClass = new (...args: any[]) => any;
 
 // Performance measurement decorator
+// The `any` types above are required for a generic TypeScript decorator signature
+// that can wrap any method on any class. This is a standard pattern.
 export function measurePerformance(type: PerformanceEntry['type'], metadata?: Record<string, unknown>) {
   return function (_target: AnyClass, _propertyKey: string, descriptor: PropertyDescriptor) {
     const originalMethod = descriptor.value;

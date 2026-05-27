@@ -173,16 +173,4 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-// Wrapper component for easier usage
-interface ErrorBoundaryWrapperProps {
-  children: ReactNode;
-  fallback?: ReactNode;
-}
-
-export function ErrorBoundaryWrapper({ children, fallback }: ErrorBoundaryWrapperProps): ReactNode {
-  return (
-    <ErrorBoundary fallback={fallback}>
-      {children}
-    </ErrorBoundary>
-  );
-}
+// NOTE: ErrorBoundaryWrapper removed — import ErrorBoundary directly instead.

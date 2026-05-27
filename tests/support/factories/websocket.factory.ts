@@ -53,23 +53,34 @@ export const createWebSocketMessage = (
     ...dataOverrides,
   };
   
-  // Add type-specific default data
+  // Add type-specific default data aligned with actual protocol
   switch (type) {
-    case 'session_token':
-      baseData.session_token = faker.string.uuid();
+    case 'game_state_update':
+      baseData.players = [];
+      baseData.community_cards = [];
+      baseData.pot = 0;
+      baseData.round = 'preflop';
+      baseData.game_status = 'waiting';
       break;
-    case 'ping':
-      baseData.sequence = faker.number.int({ min: 1, max: 1000 });
+    case 'connection_status':
+      baseData.status = 'connected';
+      baseData.player_id = 'p1';
       break;
-    case 'pong':
-      baseData.response_to = faker.number.int({ min: 1, max: 1000 });
+    case 'heartbeat':
+      baseData.timestamp = Date.now();
       break;
     case 'error':
-      baseData.code = faker.number.int({ min: 1000, max: 9999 });
+      baseData.code = 'server_error';
       baseData.message = faker.lorem.sentence();
       break;
-    case 'reconnected':
-      baseData.reconnected_at = faker.date.recent().toISOString();
+    case 'session_init':
+      break;
+    case 'bet_action':
+      baseData.action = 'check';
+      break;
+    case 'chat_message':
+      baseData.player_id = 'p1';
+      baseData.message = faker.lorem.sentence();
       break;
   }
   

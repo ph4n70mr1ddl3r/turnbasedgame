@@ -84,7 +84,7 @@ export const GameScenarios = {
       ...overrides,
       players: [
         createValidPlayer({ player_id: playerId, is_folded: true }),
-        createValidPlayer({ player_id: playerId === 'p1' ? 'p2' : 'p1' }),
+        createValidPlayer({ player_id: playerId === 'p1' ? 'p2' : 'p1', is_folded: false }),
       ],
     }),
 
@@ -93,7 +93,7 @@ export const GameScenarios = {
       ...overrides,
       players: [
         createValidPlayer({ player_id: playerId, is_all_in: true }),
-        createValidPlayer({ player_id: playerId === 'p1' ? 'p2' : 'p1' }),
+        createValidPlayer({ player_id: playerId === 'p1' ? 'p2' : 'p1', is_all_in: false }),
       ],
     }),
 

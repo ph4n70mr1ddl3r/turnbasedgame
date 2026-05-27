@@ -11,6 +11,7 @@ import {
   VALID_CONNECTION_STATUSES,
   VALID_PLAYER_POSITIONS,
   VALID_BET_ACTIONS,
+  ERROR_CODES,
 } from '@/lib/constants/game';
 
 export {
@@ -21,6 +22,7 @@ export {
   VALID_GAME_STATUSES,
   VALID_CONNECTION_STATUSES,
   VALID_PLAYER_POSITIONS,
+  ERROR_CODES,
 };
 
 // Card representation: <rank><suit> e.g., "Ah", "Kd", "7c"
@@ -103,9 +105,6 @@ export interface ConnectionStatusInfo {
   playerId: string | null;
 }
 
-// ERROR_CODES are defined in @/lib/constants/game.ts as the single source of truth.
-export { ERROR_CODES } from '@/lib/constants/game';
-import { ERROR_CODES } from '@/lib/constants/game';
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
 
 export interface ErrorMessage {

@@ -1102,6 +1102,10 @@ private:
             std::cerr << "Error resetting game: " << e.what() << std::endl;
         }
     }
+
+    // Called externally when a player disconnects and the game needs a full reset.
+    // Exposed so the message handler or a future admin command can trigger it.
+    // TODO: Wire this into a server-side "new_game" message type.
 };
 
 std::unique_ptr<SessionManager> session_manager;

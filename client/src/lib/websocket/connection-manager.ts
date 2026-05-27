@@ -4,7 +4,7 @@ import { SessionManager } from "./session-manager";
 import { useConnectionStore } from "@/lib/stores/connection-store";
 import { useGameStore } from "@/lib/stores/game-store";
 import { WebSocketMessage, GameStateUpdateMessage, ErrorMessage, BetAction, ConnectionStatus, ConnectionStatusInfo, ConnectionStatusMessage, isValidBetAction, ERROR_CODES } from "@/types/game-types";
-import { logError } from "@/lib/utils/logger";
+import { logError, logWarn } from "@/lib/utils/logger";
 import {
   WS_CONNECTION_TIMEOUT_MS,
   WS_HEARTBEAT_INTERVAL_MS,
@@ -613,15 +613,18 @@ export class ConnectionManager {
     useConnectionStore.getState().setStatus(message.data.status);
     if (!message.data.player_id) return;
 
-    // Prefer the server-provided token (authoritative) over any client-generated one.
-    // This fixes a critical bug where the client generated its own token that the
-    // server didn't recognize, causing all bet_action messages to fail with
-    // "Token mismatch".
+    // Token resolution priority (server is authoritative):
+    // 1. Server-provided token (connection_status message)
+    // 2. Client's current session token (from store)
+    // 3. Existing persisted session token (localStorage)
+    // 4. Fallback: generate a new client-side token (last resort)
+    //
+    // In practice, priority 1 should always succeed when the server is healthy.
+    // Fallbacks 2-4 exist as defense-in-depth for edge cases during reconnection.
     let token = message.data.token ?? null;
 
     if (!token) {
-      const currentToken = useConnectionStore.getState().sessionToken;
-      token = currentToken;
+      token = useConnectionStore.getState().sessionToken;
     }
 
     if (!token) {
@@ -632,6 +635,7 @@ export class ConnectionManager {
     if (!token) {
       try {
         token = SessionManager.generateToken();
+        logWarn('Generated fallback session token — server did not provide one');
       } catch (error) {
         logError("Failed to generate session token:", error);
         useGameStore.getState().setError("Failed to establish session. Please refresh the page.");
