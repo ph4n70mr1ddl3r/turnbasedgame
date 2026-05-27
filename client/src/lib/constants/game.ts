@@ -24,11 +24,21 @@ export const CHIP_VISUAL_DIVISOR = 1000;
 export const MAX_CHIP_STACK_DISPLAY = 999999;
 export const LATENCY_GOOD_THRESHOLD_MS = 100;
 
-// Default WebSocket URL
-export const DEFAULT_WEB_SOCKET_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080';
+// Default WebSocket URL — evaluated lazily to support env var changes in test environments.
+let _cachedWsUrl: string | null = null;
 
 export function getDefaultWebSocketUrl(): string {
-  return DEFAULT_WEB_SOCKET_URL;
+  if (!_cachedWsUrl) {
+    _cachedWsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080';
+  }
+  return _cachedWsUrl;
+}
+
+/**
+ * Reset the cached WebSocket URL. Useful in tests that change process.env.NEXT_PUBLIC_WS_URL.
+ */
+export function _resetCachedWsUrl(): void {
+  _cachedWsUrl = null;
 }
 
 // Game Settings
@@ -113,6 +123,12 @@ export const API_ENDPOINTS = {
   WS_URL: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080',
   HTTP_URL: process.env.NEXT_PUBLIC_HTTP_URL || 'http://localhost:3000',
 } as const;
+
+/**
+ * @deprecated Use getDefaultWebSocketUrl() or API_ENDPOINTS.WS_URL instead.
+ * This constant duplicates logic and will be removed in a future cleanup.
+ */
+export const DEFAULT_WEB_SOCKET_URL = API_ENDPOINTS.WS_URL;
 
 // Environment-specific settings
 export const ENV_CONFIG = {

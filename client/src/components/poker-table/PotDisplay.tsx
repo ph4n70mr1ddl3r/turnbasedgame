@@ -30,7 +30,7 @@ function PotDisplayInner({ pot }: PotDisplayProps): ReactElement {
           Total Pot
         </div>
         <div className="text-4xl font-bold text-yellow-200 my-2">
-          ${formatChipAmount(safePot)}
+          {formatChipAmount(safePot)}
         </div>
         <div className="text-yellow-400 text-sm">
           {safePot === 0 ? "No bets yet" : "In the middle"}

@@ -81,9 +81,8 @@ function createCallbackRegistryImpl() {
   };
 }
 
-interface ConnectionWindowState {
-  __callbackRegistry?: ReturnType<typeof createCallbackRegistry>;
-}
+// Use a Symbol key on window to avoid collisions with other libraries.
+const CALLBACK_REGISTRY_KEY = Symbol.for('turnbasedgame.connection.callbackRegistry');
 
 function getCallbackRegistry(): ReturnType<typeof createCallbackRegistry> {
   if (typeof window === 'undefined') {
@@ -94,11 +93,11 @@ function getCallbackRegistry(): ReturnType<typeof createCallbackRegistry> {
     };
   }
 
-  const win = window as unknown as ConnectionWindowState;
-  if (!win.__callbackRegistry) {
-    win.__callbackRegistry = createCallbackRegistry();
+  const win = window as unknown as Record<symbol, ReturnType<typeof createCallbackRegistry>>;
+  if (!win[CALLBACK_REGISTRY_KEY]) {
+    win[CALLBACK_REGISTRY_KEY] = createCallbackRegistry();
   }
-  return win.__callbackRegistry;
+  return win[CALLBACK_REGISTRY_KEY];
 }
 
 export function clearAllPlayerIdCallbacks(): void {

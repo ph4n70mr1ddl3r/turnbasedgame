@@ -98,10 +98,10 @@ export class ErrorBoundary extends Component<Props, State> {
       };
 
       return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-red-50">
-          <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 border border-red-200">
+        <div className="min-h-screen flex items-center justify-center p-4 bg-green-900">
+          <div className="max-w-md w-full bg-gray-900 rounded-lg shadow-lg p-6 border border-red-500">
             <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-900 mb-4">
                 <svg
                   className="h-6 w-6 text-red-600"
                   fill="none"
@@ -116,22 +116,22 @@ export class ErrorBoundary extends Component<Props, State> {
                   />
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+              <h3 className="text-lg font-medium text-white mb-2">
                 Oops! Something went wrong
               </h3>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-gray-300 mb-4">
                 {getErrorMessage()}
               </p>
               
               {process.env.NODE_ENV === 'development' && this.state.error && (
                 <details className="text-left mb-4">
-                  <summary className="text-sm font-medium text-gray-700 cursor-pointer hover:text-gray-900">
+                  <summary className="text-sm font-medium text-gray-300 cursor-pointer hover:text-white">
                     Technical Details (Development)
                   </summary>
-                  <div className="mt-2 text-xs text-gray-600 bg-gray-100 p-2 rounded overflow-auto max-h-40">
+                  <div className="mt-2 text-xs text-gray-400 bg-gray-800 p-2 rounded overflow-auto max-h-40">
                     <p className="font-mono text-red-600">{this.state.error.toString()}</p>
                     {this.state.errorInfo && (
-                      <pre className="mt-2 text-xs text-gray-700 overflow-x-auto">
+                      <pre className="mt-2 text-xs text-gray-300 overflow-x-auto">
                         {this.state.errorInfo.componentStack}
                       </pre>
                     )}
@@ -160,7 +160,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 </button>
               </div>
               
-              <p className="text-xs text-gray-400 mt-4">
+              <p className="text-xs text-gray-500 mt-4">
                 Error ID: {this.state.error?.message ? this.state.error.message.slice(0, 8) : 'unknown'}
               </p>
             </div>

@@ -67,7 +67,7 @@ function PlayerSeatInner({ player, isCurrentPlayer }: PlayerSeatProps): ReactEle
         {/* Player status indicators */}
         <div className="text-right">
           <div className="text-2xl font-bold" aria-label={`${chip_stack} chips`}>
-            <span aria-hidden="true">$</span>{formatChipAmount(chip_stack)}
+            {formatChipAmount(chip_stack)}
           </div>
           <div className="text-sm text-green-300">Chips</div>
         </div>
@@ -99,7 +99,7 @@ function PlayerSeatInner({ player, isCurrentPlayer }: PlayerSeatProps): ReactEle
       {current_bet > 0 && (
         <div className="mb-2">
           <div className="text-sm text-green-300">Current bet</div>
-          <div className="text-xl font-bold text-yellow-300">${formatChipAmount(current_bet)}</div>
+          <div className="text-xl font-bold text-yellow-300">{formatChipAmount(current_bet)}</div>
         </div>
       )}
       

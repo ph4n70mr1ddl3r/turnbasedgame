@@ -46,13 +46,16 @@ constexpr int FLOP_CARDS = 3;
 constexpr int TURN_CARDS = 1;
 constexpr int RIVER_CARDS = 1;
 
+// Atomic counter to guarantee unique channel identifiers even when the OS
+// reuses file descriptors after a connection closes.
+static std::atomic<uint64_t> connection_counter{0};
+
 // Get a unique identifier for a WebSocket channel.
 // peeraddr() is not unique when multiple clients share the same NAT/proxy,
-// so we combine peeraddr() with the channel's internal fd via its string representation.
+// so we combine peeraddr() with the fd and a per-process monotonic counter.
 std::string channel_id(const std::shared_ptr<WebSocketChannel>& channel) {
-    // Use the channel's peeraddr plus its local fd representation for uniqueness.
-    // hv::WebSocketChannel exposes fd() which gives us a unique per-connection value.
-    return channel->peeraddr() + "#" + std::to_string(channel->fd());
+    return channel->peeraddr() + "#" + std::to_string(channel->fd())
+         + "_" + std::to_string(connection_counter.fetch_add(1, std::memory_order_relaxed));
 }
 
 std::string generate_secure_token() {
@@ -521,12 +524,6 @@ static HandRank evaluateHand(const std::vector<std::string>& holeCards,
         return { 0, ranks, "High Card" };
     }
 
-    // Safety: bitmask approach requires n <= 31 to avoid int overflow;
-    // hold'em has 2 hole + 5 community = 7 max
-    if (parsed.size() > 31) {
-        return { 0, {}, "Invalid" };
-    }
-
     // Generate all C(n,5) combinations
     int n = static_cast<int>(parsed.size());
     HandRank best{ -1, {}, "" };
@@ -576,18 +573,29 @@ static HandRank evaluateHand(const std::vector<std::string>& holeCards,
         return { 0, ranks, "High Card" };
     };
 
-    // Iterate all C(n,5) using bitmask approach
+    // Generate all C(n,5) combinations using nested loops.
+    // For n<=7 this produces at most 21 combinations — much cheaper than
+    // iterating 2^n bitmask entries and checking popcount each time.
+    HandRank best{ -1, {}, "" };
     std::vector<Card> combo(5);
-    for (int mask = 0; mask < (1 << n); ++mask) {
-        if (__builtin_popcount(mask) != 5) continue;
-        int idx = 0;
-        for (int i = 0; i < n && idx < 5; ++i) {
-            if (mask & (1 << i)) combo[idx++] = parsed[i];
-        }
-        HandRank hr = eval5(combo);
-        if (hr.category > best.category ||
-            (hr.category == best.category && hr.kickers > best.kickers)) {
-            best = hr;
+    for (int a = 0; a < n - 4; ++a) {
+        combo[0] = parsed[a];
+        for (int b = a + 1; b < n - 3; ++b) {
+            combo[1] = parsed[b];
+            for (int c = b + 1; c < n - 2; ++c) {
+                combo[2] = parsed[c];
+                for (int d = c + 1; d < n - 1; ++d) {
+                    combo[3] = parsed[d];
+                    for (int e = d + 1; e < n; ++e) {
+                        combo[4] = parsed[e];
+                        HandRank hr = eval5(combo);
+                        if (hr.category > best.category ||
+                            (hr.category == best.category && hr.kickers > best.kickers)) {
+                            best = hr;
+                        }
+                    }
+                }
+            }
         }
     }
 

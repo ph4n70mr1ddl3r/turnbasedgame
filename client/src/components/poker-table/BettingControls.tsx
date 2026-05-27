@@ -203,44 +203,64 @@ function BettingControlsInner({
                   Raise
                 </button>
               ) : (
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    min={validMinBet}
-                    max={validMaxBet}
-                    value={raiseAmountInput}
-                    onChange={(e) => handleRaiseAmountChange(e.target.value)}
-                    onBlur={handleRaiseAmountBlur}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleRaise();
-                      } else if (e.key === 'Escape') {
-                        handleCancelRaise();
-                      }
-                    }}
-                    aria-label="Raise amount"
-                    className="w-32 px-3 py-2 bg-white text-black rounded"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleRaise}
-                    disabled={isProcessing}
-                    aria-label={`Raise by ${effectiveRaiseAmount} chips`}
-                    aria-disabled={isProcessing}
-                    className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-800 disabled:opacity-50 rounded font-bold"
-                  >
-                    Raise {effectiveRaiseAmount}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCancelRaise}
-                    aria-label="Cancel raise"
-                    className="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded"
-                  >
-                    Cancel
-                  </button>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      min={validMinBet}
+                      max={validMaxBet}
+                      value={raiseAmountInput}
+                      onChange={(e) => handleRaiseAmountChange(e.target.value)}
+                      onBlur={handleRaiseAmountBlur}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleRaise();
+                        } else if (e.key === 'Escape') {
+                          handleCancelRaise();
+                        }
+                      }}
+                      aria-label="Raise amount"
+                      className="w-32 px-3 py-2 bg-white text-black rounded"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRaise}
+                      disabled={isProcessing}
+                      aria-label={`Raise by ${effectiveRaiseAmount} chips`}
+                      aria-disabled={isProcessing}
+                      className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-800 disabled:opacity-50 rounded font-bold"
+                    >
+                      Raise {effectiveRaiseAmount}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancelRaise}
+                      aria-label="Cancel raise"
+                      className="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  {quickRaiseAmounts.length > 0 && (
+                    <div className="flex flex-wrap gap-2" role="group" aria-label="Quick raise options">
+                      <span className="text-green-300 mr-2">Quick raise:</span>
+                      {quickRaiseAmounts.map((amount) => (
+                        <button
+                          type="button"
+                          key={amount}
+                          onClick={() => handleQuickRaise(amount)}
+                          disabled={isProcessing}
+                          aria-label={amount === validMaxBet ? 'Go all-in' : `Raise to ${amount}`}
+                          aria-disabled={isProcessing}
+                          className="px-3 py-1 bg-green-700 hover:bg-green-600 disabled:bg-green-800 disabled:opacity-50 rounded text-sm"
+                        >
+                          {amount === validMaxBet ? 'All-in' : amount}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -257,25 +277,6 @@ function BettingControlsInner({
             >
               Fold
             </button>
-          )}
-
-          {showRaiseInput && quickRaiseAmounts.length > 0 && (
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Quick raise options">
-              <span className="text-green-300 mr-2">Quick raise:</span>
-              {quickRaiseAmounts.map((amount) => (
-                <button
-                  type="button"
-                  key={amount}
-                  onClick={() => handleQuickRaise(amount)}
-                  disabled={isProcessing}
-                  aria-label={amount === validMaxBet ? 'Go all-in' : `Raise to ${amount}`}
-                  aria-disabled={isProcessing}
-                  className="px-3 py-1 bg-green-700 hover:bg-green-600 disabled:bg-green-800 disabled:opacity-50 rounded text-sm"
-                >
-                  {amount === validMaxBet ? 'All-in' : amount}
-                </button>
-              ))}
-            </div>
           )}
 
           <div className="text-sm text-green-300">

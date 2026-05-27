@@ -254,24 +254,35 @@ export const lastErrorSelector = (state: GameStore): string | null => state.last
 export const cachedPlayerIdSelector = (state: GameStore): string | null =>
   state.cachedPlayerId;
 
+// Use a Symbol key on window to avoid collisions with other libraries.
+const GAME_STORE_KEY = Symbol.for('turnbasedgame.gameStore');
+
 interface GameStoreWindowState {
-  __gameStoreInitialized?: boolean;
-  __gameStoreCleanup?: () => void;
+  initialized: boolean;
+  cleanup: (() => void) | undefined;
+}
+
+function getGameStoreWindow(): GameStoreWindowState {
+  const win = window as unknown as Record<symbol, GameStoreWindowState>;
+  if (!win[GAME_STORE_KEY]) {
+    win[GAME_STORE_KEY] = { initialized: false, cleanup: undefined };
+  }
+  return win[GAME_STORE_KEY];
 }
 
 export function initializeGameStore(): () => void {
   if (typeof window === 'undefined') return () => {};
   
-  const win = window as unknown as GameStoreWindowState;
+  const store = getGameStoreWindow();
   
-  if (win.__gameStoreInitialized && win.__gameStoreCleanup) {
-    return win.__gameStoreCleanup;
+  if (store.initialized && store.cleanup) {
+    return store.cleanup;
   }
   
-  win.__gameStoreInitialized = true;
+  store.initialized = true;
   
   try {
-    win.__gameStoreCleanup = registerPlayerIdCallback((playerId) => {
+    store.cleanup = registerPlayerIdCallback((playerId) => {
       try {
         useGameStore.getState().setCachedPlayerId(playerId);
       } catch (error) {
@@ -280,25 +291,25 @@ export function initializeGameStore(): () => void {
     });
   } catch (error) {
     logError('Failed to initialize game store:', error);
-    win.__gameStoreInitialized = false;
+    store.initialized = false;
     return () => {};
   }
   
-  return win.__gameStoreCleanup;
+  return store.cleanup;
 }
 
 export function resetGameStoreInitialization(): void {
   if (typeof window === 'undefined') return;
   
-  const win = window as unknown as GameStoreWindowState;
+  const store = getGameStoreWindow();
   
-  if (win.__gameStoreCleanup) {
+  if (store.cleanup) {
     try {
-      win.__gameStoreCleanup();
+      store.cleanup();
     } catch (error) {
       logError('Error during game store cleanup:', error);
     }
-    win.__gameStoreCleanup = undefined;
+    store.cleanup = undefined;
   }
-  win.__gameStoreInitialized = false;
+  store.initialized = false;
 }
