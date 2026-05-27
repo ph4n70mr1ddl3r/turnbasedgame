@@ -215,10 +215,12 @@ export const performanceMonitor = new PerformanceMonitor();
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClass = new (...args: any[]) => any;
 
-// Performance measurement decorator
-// The `any` types above are required for a generic TypeScript decorator signature
-// that can wrap any method on any class. This is a standard pattern.
+/**
+ * Performance measurement decorator for class methods.
+ * Records execution duration via the global performanceMonitor instance.
+ */
 export function measurePerformance(type: PerformanceEntry['type'], metadata?: Record<string, unknown>) {
+   
   return function (_target: AnyClass, _propertyKey: string, descriptor: PropertyDescriptor) {
     const originalMethod = descriptor.value;
 

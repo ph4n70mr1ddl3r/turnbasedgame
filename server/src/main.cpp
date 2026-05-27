@@ -652,11 +652,14 @@ struct PokerGameState {
         j["time_remaining"] = time_remaining;
         j["round"] = round;
         j["min_bet"] = min_bet;
-        // max_bet reflects the current player's remaining stack
-        // so the client always shows correct raise bounds
+        // max_bet reflects the viewer's remaining stack so the client
+        // always shows correct raise bounds for the viewing player.
+        // Falls back to the current player's stack when no viewer_id
+        // is provided (e.g., server-side broadcasting without per-viewer context).
         int effective_max_bet = max_bet;
+        const std::string& target_id = viewer_id.empty() ? current_player : viewer_id;
         for (const auto& player : players) {
-            if (player.id == current_player) {
+            if (player.id == target_id) {
                 effective_max_bet = player.chip_stack;
                 break;
             }
@@ -1090,6 +1093,10 @@ private:
         state_.hand_number++;
     }
 
+public:
+    // Reset the game to initial state (fresh chip stacks, new hand).
+    // Can be called externally when a player disconnects or via a
+    // server-side "new_game" message type.
     void reset_game() {
         try {
             std::lock_guard<std::mutex> lock(mutex_);
@@ -1102,17 +1109,12 @@ private:
             std::cerr << "Error resetting game: " << e.what() << std::endl;
         }
     }
-
-    // Called externally when a player disconnects and the game needs a full reset.
-    // Exposed so the message handler or a future admin command can trigger it.
-    // TODO: Wire this into a server-side "new_game" message type.
 };
 
 std::unique_ptr<SessionManager> session_manager;
 std::unique_ptr<PokerGame> poker_game;
 std::unique_ptr<RateLimiter> rate_limiter;
 std::atomic<bool> server_running(false);
-std::mutex server_mutex;
 
 // Global server pointer for signal handler access.
 // Signal handlers cannot capture local variables, so we store the server
@@ -1530,15 +1532,15 @@ int main() {
 
     // Register signal handlers that stop the hv event loop.
     // server_ptr is a global unique_ptr so it's accessible from the handler.
+    // Signal handlers must only call async-signal-safe functions.
+    // std::mutex::lock() is NOT async-signal-safe and can deadlock if
+    // the signal interrupts a thread that already holds server_mutex.
+    // Instead, we atomically set a flag and call server_ptr->stop()
+    // (which is safe: it writes to an internal pipe to wake the event loop).
     std::signal(SIGTERM, [](int) {
         const char msg[] = "Received SIGTERM, shutting down...\n";
         write(STDOUT_FILENO, msg, sizeof(msg) - 1);
-        
-        // Thread-safe shutdown sequence
         server_running = false;
-        
-        // Use mutex to safely access server_ptr
-        std::lock_guard<std::mutex> lock(server_mutex);
         if (server_ptr) {
             server_ptr->stop();
         }
@@ -1547,12 +1549,7 @@ int main() {
     std::signal(SIGINT, [](int) {
         const char msg[] = "Received SIGINT, shutting down...\n";
         write(STDOUT_FILENO, msg, sizeof(msg) - 1);
-        
-        // Thread-safe shutdown sequence
         server_running = false;
-        
-        // Use mutex to safely access server_ptr
-        std::lock_guard<std::mutex> lock(server_mutex);
         if (server_ptr) {
             server_ptr->stop();
         }

@@ -97,6 +97,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   const connectingRef = useRef(false);
   const urlRef = useRef<string | null>(null);
   const cleanupRequestedRef = useRef(false);
+  const hasInitializedRef = useRef(false);
   // Stable references that don't change across renders
   const autoConnectRef = useRef(options.autoConnect);
   const optionsUrlRef = useRef(options.url);
@@ -243,6 +244,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
   // Initialize stores and optionally auto-connect - runs once on mount
   useEffect(() => {
+    if (hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
+
     let isMounted = true;
     
     try {
@@ -265,11 +269,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       isMounted = false;
       cleanupManager();
     };
-    // Mount-only effect: stores initialize once, auto-connect fires once.
-    // connect and cleanupManager are stable via useCallback with empty deps,
-    // and we use refs for options to avoid re-triggering.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [connect, cleanupManager]);
 
   return {
     connect,
